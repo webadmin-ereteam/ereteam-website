@@ -1,0 +1,970 @@
+[
+  {
+    "fields": [
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "title",
+        "type": "string",
+        "title": "Başlık"
+      },
+      {
+        "options": {
+          "source": "title",
+          "maxLength": 96
+        },
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "custom"
+              },
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "slug",
+        "type": "slug",
+        "title": "URL (Slug)"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "publishedAt",
+        "type": "datetime",
+        "title": "Yayın Tarihi"
+      },
+      {
+        "rows": 3,
+        "description": "Liste sayfasında gösterilecek kısa açıklama",
+        "name": "excerpt",
+        "type": "text",
+        "title": "Kısa Özet"
+      },
+      {
+        "options": {
+          "hotspot": true
+        },
+        "name": "mainImage",
+        "type": "image",
+        "title": "Kapak Görseli"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "uri",
+                "constraint": {
+                  "options": {
+                    "scheme": [
+                      "/^http$/",
+                      "/^https$/"
+                    ],
+                    "allowRelative": false,
+                    "relativeOnly": false,
+                    "allowCredentials": false
+                  }
+                }
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "description": "YouTube veya Vimeo video linki (opsiyonel)",
+        "name": "videoUrl",
+        "type": "url",
+        "title": "Video URL"
+      },
+      {
+        "name": "author",
+        "type": "string",
+        "title": "Yazar"
+      },
+      {
+        "of": [
+          {
+            "marks": {
+              "annotations": [
+                {
+                  "i18nTitleKey": "inputs.portable-text.annotation.link",
+                  "options": {
+                    "modal": {
+                      "type": "popover"
+                    }
+                  },
+                  "fields": [
+                    {
+                      "validation": [
+                        {
+                          "rules": [
+                            {
+                              "flag": "uri",
+                              "constraint": {
+                                "options": {
+                                  "scheme": [
+                                    "/^http$/",
+                                    "/^https$/",
+                                    "/^tel$/",
+                                    "/^mailto$/"
+                                  ],
+                                  "allowRelative": true,
+                                  "relativeOnly": false,
+                                  "allowCredentials": false
+                                }
+                              }
+                            }
+                          ],
+                          "level": "error"
+                        }
+                      ],
+                      "description": "A valid web, email, phone, or relative link.",
+                      "name": "href",
+                      "type": "url",
+                      "title": "Link"
+                    }
+                  ],
+                  "name": "link",
+                  "type": "object"
+                }
+              ],
+              "decorators": [
+                {
+                  "value": "strong",
+                  "title": "Kalın"
+                },
+                {
+                  "value": "em",
+                  "title": "İtalik"
+                },
+                {
+                  "value": "underline",
+                  "title": "Altı Çizili"
+                }
+              ]
+            },
+            "lists": [
+              {
+                "value": "bullet",
+                "title": "Bulleted list"
+              },
+              {
+                "value": "number",
+                "title": "Numbered list"
+              }
+            ],
+            "styles": [
+              {
+                "value": "normal",
+                "title": "Normal"
+              },
+              {
+                "value": "h1",
+                "title": "Başlık 1"
+              },
+              {
+                "value": "h2",
+                "title": "Başlık 2"
+              },
+              {
+                "value": "h3",
+                "title": "Başlık 3"
+              },
+              {
+                "value": "blockquote",
+                "title": "Alıntı"
+              }
+            ],
+            "of": [],
+            "type": "block"
+          },
+          {
+            "options": {
+              "hotspot": true
+            },
+            "type": "image"
+          }
+        ],
+        "name": "body",
+        "type": "array",
+        "title": "İçerik"
+      }
+    ],
+    "name": "blog",
+    "type": "document"
+  },
+  {
+    "fields": [
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "title",
+        "type": "string",
+        "title": "Başlık"
+      },
+      {
+        "options": {
+          "source": "title",
+          "maxLength": 96
+        },
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "custom"
+              },
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "slug",
+        "type": "slug",
+        "title": "URL (Slug)"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "publishedAt",
+        "type": "datetime",
+        "title": "Yayın Tarihi"
+      },
+      {
+        "rows": 3,
+        "description": "Liste sayfasında gösterilecek kısa açıklama",
+        "name": "excerpt",
+        "type": "text",
+        "title": "Kısa Özet"
+      },
+      {
+        "options": {
+          "hotspot": true
+        },
+        "name": "mainImage",
+        "type": "image",
+        "title": "Kapak Görseli"
+      },
+      {
+        "options": {
+          "list": [
+            {
+              "title": "Şirket Haberleri",
+              "value": "company"
+            },
+            {
+              "title": "Sektör Haberleri",
+              "value": "industry"
+            },
+            {
+              "title": "Ürün Güncellemeleri",
+              "value": "product"
+            },
+            {
+              "title": "Etkinlikler",
+              "value": "events"
+            }
+          ]
+        },
+        "name": "category",
+        "type": "string",
+        "title": "Kategori"
+      },
+      {
+        "description": "Haberin kaynağı (opsiyonel)",
+        "name": "source",
+        "type": "string",
+        "title": "Kaynak"
+      },
+      {
+        "of": [
+          {
+            "marks": {
+              "annotations": [
+                {
+                  "i18nTitleKey": "inputs.portable-text.annotation.link",
+                  "options": {
+                    "modal": {
+                      "type": "popover"
+                    }
+                  },
+                  "fields": [
+                    {
+                      "validation": [
+                        {
+                          "rules": [
+                            {
+                              "flag": "uri",
+                              "constraint": {
+                                "options": {
+                                  "scheme": [
+                                    "/^http$/",
+                                    "/^https$/",
+                                    "/^tel$/",
+                                    "/^mailto$/"
+                                  ],
+                                  "allowRelative": true,
+                                  "relativeOnly": false,
+                                  "allowCredentials": false
+                                }
+                              }
+                            }
+                          ],
+                          "level": "error"
+                        }
+                      ],
+                      "description": "A valid web, email, phone, or relative link.",
+                      "name": "href",
+                      "type": "url",
+                      "title": "Link"
+                    }
+                  ],
+                  "name": "link",
+                  "type": "object"
+                }
+              ],
+              "decorators": [
+                {
+                  "value": "strong",
+                  "title": "Kalın"
+                },
+                {
+                  "value": "em",
+                  "title": "İtalik"
+                },
+                {
+                  "value": "underline",
+                  "title": "Altı Çizili"
+                }
+              ]
+            },
+            "lists": [
+              {
+                "value": "bullet",
+                "title": "Bulleted list"
+              },
+              {
+                "value": "number",
+                "title": "Numbered list"
+              }
+            ],
+            "styles": [
+              {
+                "value": "normal",
+                "title": "Normal"
+              },
+              {
+                "value": "h2",
+                "title": "Başlık 2"
+              },
+              {
+                "value": "h3",
+                "title": "Başlık 3"
+              },
+              {
+                "value": "blockquote",
+                "title": "Alıntı"
+              }
+            ],
+            "of": [],
+            "type": "block"
+          },
+          {
+            "options": {
+              "hotspot": true
+            },
+            "type": "image"
+          }
+        ],
+        "name": "body",
+        "type": "array",
+        "title": "İçerik"
+      }
+    ],
+    "name": "news",
+    "type": "document",
+    "title": "Haberler"
+  },
+  {
+    "fields": [
+      {
+        "options": {
+          "list": [
+            {
+              "title": "Banking & Finance",
+              "value": "Banking & Finance"
+            },
+            {
+              "title": "Insurance",
+              "value": "Insurance"
+            },
+            {
+              "title": "Telecom",
+              "value": "Telecom"
+            },
+            {
+              "title": "Pharma & Biotech",
+              "value": "Pharma & Biotech"
+            },
+            {
+              "title": "Retail",
+              "value": "Retail"
+            },
+            {
+              "title": "Manufacturing",
+              "value": "Manufacturing"
+            },
+            {
+              "title": "Media",
+              "value": "Media"
+            },
+            {
+              "title": "Other",
+              "value": "Other"
+            }
+          ]
+        },
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "valid",
+                "constraint": [
+                  "Banking & Finance",
+                  "Insurance",
+                  "Telecom",
+                  "Pharma & Biotech",
+                  "Retail",
+                  "Manufacturing",
+                  "Media",
+                  "Other"
+                ]
+              },
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "industry",
+        "type": "string"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "project",
+        "type": "string",
+        "title": "Project Name"
+      },
+      {
+        "description": "e.g. IBM Planning Analytics, AWS, Python",
+        "of": [
+          {
+            "type": "string"
+          }
+        ],
+        "name": "technologies",
+        "type": "array"
+      },
+      {
+        "rows": 4,
+        "name": "summary",
+        "type": "text",
+        "title": "Project Summary"
+      },
+      {
+        "rows": 3,
+        "description": "Key outcomes and measurable results",
+        "name": "results",
+        "type": "text"
+      },
+      {
+        "description": "Lower numbers appear first",
+        "name": "order",
+        "type": "number",
+        "title": "Display Order"
+      }
+    ],
+    "name": "successStory",
+    "type": "document",
+    "title": "Success Stories"
+  },
+  {
+    "fields": [
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "name",
+        "type": "string",
+        "title": "Full Name"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "title",
+        "type": "string",
+        "title": "Job Title"
+      },
+      {
+        "options": {
+          "list": [
+            {
+              "title": "US",
+              "value": "US"
+            },
+            {
+              "title": "TR",
+              "value": "TR"
+            }
+          ]
+        },
+        "name": "region",
+        "type": "string"
+      },
+      {
+        "rows": 3,
+        "name": "bio",
+        "type": "text"
+      },
+      {
+        "options": {
+          "hotspot": true
+        },
+        "name": "image",
+        "type": "image",
+        "title": "Photo"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "uri",
+                "constraint": {
+                  "options": {
+                    "scheme": [
+                      "/^http$/",
+                      "/^https$/"
+                    ],
+                    "allowRelative": false,
+                    "relativeOnly": false,
+                    "allowCredentials": false
+                  }
+                }
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "linkedIn",
+        "type": "url",
+        "title": "LinkedIn URL"
+      },
+      {
+        "options": {
+          "list": [
+            {
+              "title": "Leadership Team",
+              "value": "leadership"
+            },
+            {
+              "title": "Partners Board",
+              "value": "partners_board"
+            }
+          ],
+          "layout": "tags"
+        },
+        "description": "Assign to one or both groups",
+        "of": [
+          {
+            "type": "string"
+          }
+        ],
+        "name": "groups",
+        "type": "array"
+      },
+      {
+        "description": "Lower numbers appear first",
+        "name": "order",
+        "type": "number",
+        "title": "Display Order"
+      }
+    ],
+    "name": "teamMember",
+    "type": "document",
+    "title": "Team Members"
+  },
+  {
+    "fields": [
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "name",
+        "type": "string",
+        "title": "Partner Name"
+      },
+      {
+        "options": {
+          "hotspot": true
+        },
+        "name": "logo",
+        "type": "image"
+      },
+      {
+        "rows": 3,
+        "name": "description",
+        "type": "text"
+      },
+      {
+        "description": "e.g. Cloud Migration, Data Lake, AI Deployment",
+        "of": [
+          {
+            "type": "string"
+          }
+        ],
+        "name": "areas",
+        "type": "array",
+        "title": "Expertise Areas"
+      },
+      {
+        "description": "Reference projects with this partner",
+        "of": [
+          {
+            "type": "string"
+          }
+        ],
+        "name": "useCases",
+        "type": "array"
+      },
+      {
+        "description": "Lower numbers appear first",
+        "name": "order",
+        "type": "number",
+        "title": "Display Order"
+      }
+    ],
+    "name": "partner",
+    "type": "document",
+    "title": "Partners"
+  },
+  {
+    "fields": [
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "vendor",
+        "type": "string",
+        "title": "Vendor Name"
+      },
+      {
+        "rows": 2,
+        "name": "description",
+        "type": "text"
+      },
+      {
+        "of": [
+          {
+            "fields": [
+              {
+                "name": "name",
+                "type": "string",
+                "title": "Certification Name"
+              }
+            ],
+            "type": "object"
+          }
+        ],
+        "name": "certifications",
+        "type": "array"
+      },
+      {
+        "options": {
+          "list": [
+            {
+              "title": "🔵 Blue (IBM)",
+              "value": "blue"
+            },
+            {
+              "title": "🟠 Orange (AWS)",
+              "value": "orange"
+            },
+            {
+              "title": "🔴 Red (HCL)",
+              "value": "red"
+            },
+            {
+              "title": "🩵 Sky (Alteryx)",
+              "value": "sky"
+            },
+            {
+              "title": "🩵 Cyan (Tableau)",
+              "value": "cyan"
+            },
+            {
+              "title": "🟣 Violet (DataRobot)",
+              "value": "violet"
+            },
+            {
+              "title": "🟢 Green",
+              "value": "green"
+            },
+            {
+              "title": "🌸 Pink",
+              "value": "pink"
+            },
+            {
+              "title": "🟡 Yellow",
+              "value": "yellow"
+            },
+            {
+              "title": "⚫ Gray (default)",
+              "value": "gray"
+            }
+          ],
+          "layout": "radio"
+        },
+        "description": "Background color used on the certifications page",
+        "name": "colorTheme",
+        "type": "string"
+      },
+      {
+        "description": "Lower numbers appear first",
+        "name": "order",
+        "type": "number",
+        "title": "Display Order"
+      }
+    ],
+    "name": "certificationGroup",
+    "type": "document",
+    "title": "Certifications"
+  },
+  {
+    "fields": [
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "title",
+        "type": "string",
+        "title": "Job Title"
+      },
+      {
+        "options": {
+          "list": [
+            {
+              "title": "Data Engineering",
+              "value": "Data Engineering"
+            },
+            {
+              "title": "Analytics & BI",
+              "value": "Analytics & BI"
+            },
+            {
+              "title": "Financial Performance",
+              "value": "Financial Performance"
+            },
+            {
+              "title": "AI & Data Science",
+              "value": "AI & Data Science"
+            },
+            {
+              "title": "Cloud & Platform",
+              "value": "Cloud & Platform"
+            },
+            {
+              "title": "Software Engineering (R&D)",
+              "value": "Software Engineering (R&D)"
+            },
+            {
+              "title": "Other",
+              "value": "Other"
+            }
+          ]
+        },
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "valid",
+                "constraint": [
+                  "Data Engineering",
+                  "Analytics & BI",
+                  "Financial Performance",
+                  "AI & Data Science",
+                  "Cloud & Platform",
+                  "Software Engineering (R&D)",
+                  "Other"
+                ]
+              },
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "department",
+        "type": "string"
+      },
+      {
+        "description": "e.g. Istanbul, Turkey / Remote / USA",
+        "name": "location",
+        "type": "string"
+      },
+      {
+        "options": {
+          "list": [
+            {
+              "title": "Full-time",
+              "value": "Full-time"
+            },
+            {
+              "title": "Part-time",
+              "value": "Part-time"
+            },
+            {
+              "title": "Contract",
+              "value": "Contract"
+            },
+            {
+              "title": "Remote",
+              "value": "Remote"
+            }
+          ]
+        },
+        "name": "type",
+        "type": "string",
+        "title": "Employment Type"
+      },
+      {
+        "rows": 4,
+        "name": "description",
+        "type": "text",
+        "title": "Job Description"
+      },
+      {
+        "description": "List of requirements/qualifications",
+        "of": [
+          {
+            "type": "string"
+          }
+        ],
+        "name": "requirements",
+        "type": "array"
+      },
+      {
+        "initialValue": true,
+        "description": "Uncheck to hide this position from the site",
+        "name": "isActive",
+        "type": "boolean",
+        "title": "Active Posting"
+      },
+      {
+        "name": "publishedAt",
+        "type": "datetime",
+        "title": "Published Date"
+      }
+    ],
+    "name": "jobPosting",
+    "type": "document",
+    "title": "Job Postings"
+  }
+]
