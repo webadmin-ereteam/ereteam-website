@@ -62,7 +62,7 @@ export const useCases: UseCase[] = [
     client: "Akbank",
     domain: "akbank.com",
     industry: "Banking & Finance",
-    project: "ARGUS – Enterprise Risk & Performance Analytics Platform",
+    project: "Enterprise Risk & Performance Analytics Platform",
     technologies: [
       "IBM Cognos Analytics",
       "IBM Planning Analytics",
@@ -70,7 +70,7 @@ export const useCases: UseCase[] = [
       "Oracle",
     ],
     summary:
-      "Led the end-to-end delivery of ARGUS — Akbank's enterprise risk and performance analytics platform. The platform integrates credit risk, market risk, and financial performance data into a single analytical layer, providing executive dashboards and regulatory capital calculations.",
+      "Led the end-to-end delivery of an enterprise risk and performance analytics platform. The platform integrates credit risk, market risk, and financial performance data into a single analytical layer, providing executive dashboards and regulatory capital calculations.",
     results:
       "Single integrated risk/finance data mart serving 500+ internal users. Real-time Basel III capital ratio monitoring. 60% reduction in manual report preparation.",
   },

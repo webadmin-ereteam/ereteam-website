@@ -126,15 +126,17 @@ export default function Navbar() {
               onMouseEnter={() => handleMouseEnter("services")}
               onMouseLeave={handleMouseLeave}
             >
-              <button
+              <Link
+                href="/services"
                 className={`flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-md transition-colors hover:text-brand-primary ${navTextColor}`}
+                onClick={() => setActiveDropdown(null)}
               >
                 Services
                 <ChevronDown
                   size={14}
                   className={`transition-transform ${activeDropdown === "services" ? "rotate-180" : ""}`}
                 />
-              </button>
+              </Link>
               {activeDropdown === "services" && (
                 <div className="absolute top-full left-0 mt-1 w-80 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50">
                   {servicesDropdown.map((item) => (
@@ -159,15 +161,17 @@ export default function Navbar() {
               onMouseEnter={() => handleMouseEnter("products")}
               onMouseLeave={handleMouseLeave}
             >
-              <button
+              <Link
+                href="/products"
                 className={`flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-md transition-colors hover:text-brand-primary ${navTextColor}`}
+                onClick={() => setActiveDropdown(null)}
               >
                 Products
                 <ChevronDown
                   size={14}
                   className={`transition-transform ${activeDropdown === "products" ? "rotate-180" : ""}`}
                 />
-              </button>
+              </Link>
               {activeDropdown === "products" && (
                 <div className="absolute top-full left-0 mt-1 w-72 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50">
                   {productsDropdown.map((item) => (
@@ -199,15 +203,17 @@ export default function Navbar() {
               onMouseEnter={() => handleMouseEnter("about")}
               onMouseLeave={handleMouseLeave}
             >
-              <button
+              <Link
+                href="/about"
                 className={`flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-md transition-colors hover:text-brand-primary ${navTextColor}`}
+                onClick={() => setActiveDropdown(null)}
               >
                 About
                 <ChevronDown
                   size={14}
                   className={`transition-transform ${activeDropdown === "about" ? "rotate-180" : ""}`}
                 />
-              </button>
+              </Link>
               {activeDropdown === "about" && (
                 <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50">
                   {aboutDropdown.map((item) => (
@@ -309,6 +315,13 @@ export default function Navbar() {
               </button>
               {mobileExpanded === "services" && (
                 <div className="ml-4 mt-1 space-y-1">
+                  <Link
+                    href="/services"
+                    className="block px-3 py-2 text-sm font-semibold text-brand-primary hover:bg-brand-light rounded-lg"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    All Services →
+                  </Link>
                   {servicesDropdown.map((item) => (
                     <Link
                       key={item.href}
@@ -341,6 +354,13 @@ export default function Navbar() {
               </button>
               {mobileExpanded === "products" && (
                 <div className="ml-4 mt-1 space-y-1">
+                  <Link
+                    href="/products"
+                    className="block px-3 py-2 text-sm font-semibold text-brand-primary hover:bg-brand-light rounded-lg"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    All Products →
+                  </Link>
                   {productsDropdown.map((item) => (
                     <Link
                       key={item.href}
@@ -381,6 +401,13 @@ export default function Navbar() {
               </button>
               {mobileExpanded === "about" && (
                 <div className="ml-4 mt-1 space-y-1">
+                  <Link
+                    href="/about"
+                    className="block px-3 py-2 text-sm font-semibold text-brand-primary hover:bg-brand-light rounded-lg"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    About Ereteam →
+                  </Link>
                   {aboutDropdown.map((item) => (
                     <Link
                       key={item.href}

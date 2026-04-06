@@ -343,6 +343,16 @@ export default function ContactPage() {
 
             {/* Contact details */}
             <div className="lg:col-span-2 space-y-6">
+              {/* General email */}
+              <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+                <p className="text-xs font-semibold text-brand-magenta uppercase tracking-widest mb-2">General Inquiries</p>
+                <h3 className="font-bold text-brand-dark mb-3">Email Us</h3>
+                <a href="mailto:info@ereteam.com" className="flex items-center gap-2 text-sm text-text-body hover:text-brand-primary transition-colors">
+                  <Mail size={16} className="text-brand-primary flex-shrink-0" />
+                  info@ereteam.com
+                </a>
+              </div>
+
               {/* US HQ */}
               <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
                 <p className="text-xs font-semibold text-brand-magenta uppercase tracking-widest mb-2">US Headquarters</p>
@@ -363,16 +373,10 @@ export default function ContactPage() {
                 <p className="text-sm text-text-muted leading-relaxed mb-3">
                   Mehmet Akif Mah. Tavukçuyolu Cad.<br />No:150 K:2 D:3<br />Ümraniye / İstanbul, Türkiye
                 </p>
-                <div className="space-y-2">
-                  <a href="tel:+902165184440" className="flex items-center gap-2 text-sm text-text-body hover:text-brand-primary transition-colors">
-                    <Phone size={14} className="text-brand-primary flex-shrink-0" />
-                    +90 216 518 44 40
-                  </a>
-                  <a href="mailto:info@ereteam.com" className="flex items-center gap-2 text-sm text-text-body hover:text-brand-primary transition-colors">
-                    <Mail size={16} className="text-brand-primary flex-shrink-0" />
-                    info@ereteam.com
-                  </a>
-                </div>
+                <a href="tel:+902165184440" className="flex items-center gap-2 text-sm text-text-body hover:text-brand-primary transition-colors">
+                  <Phone size={14} className="text-brand-primary flex-shrink-0" />
+                  +90 216 518 44 40
+                </a>
               </div>
 
 

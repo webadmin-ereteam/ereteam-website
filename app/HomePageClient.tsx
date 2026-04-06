@@ -83,7 +83,7 @@ const selectedWork = [
   },
   {
     industry: "Banking & Finance",
-    project: "ARGUS – Enterprise Risk & Performance Analytics",
+    project: "Enterprise Risk & Performance Analytics",
     result: "Real-time Basel III monitoring. 60% less manual report preparation.",
     href: "/use-cases",
     tags: ["IBM Cognos", "Planning Analytics", "Python"],

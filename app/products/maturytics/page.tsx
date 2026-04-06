@@ -149,8 +149,8 @@ export default function MaturyticsPage() {
                 Data Maturity Assessment Platform
               </p>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-4">
-                You can&apos;t improve what you can&apos;t measure.{" "}
-                <span className="text-[#F15A29]">Where does your data organization actually stand?</span>
+                You can&apos;t improve{" "}
+                <span className="text-[#F15A29]">what you can&apos;t measure.</span>
               </h1>
               <p className="text-lg text-gray-300 mb-6 max-w-xl">
                 Maturytics benchmarks your organization&apos;s data and analytics maturity against 200+ industry peers, generates a prioritized improvement roadmap, and tracks your transformation progress over time.
