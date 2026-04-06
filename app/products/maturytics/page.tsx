@@ -5,7 +5,7 @@ import { ExternalLink, Globe, Target, BarChart2, Map, Award, ArrowRight } from "
 export const metadata: Metadata = {
   title: "Maturytics – Data Maturity Assessment Platform",
   description:
-    "Maturytics benchmarks your organization's data maturity against industry peers and generates actionable roadmaps for data transformation.",
+    "Maturytics assesses your organization's data and analytics maturity across 5 dimensions and generates actionable roadmaps for data transformation.",
 };
 
 const steps = [
@@ -19,7 +19,7 @@ const steps = [
     id: "BENCHMARK",
     color: "bg-[#c44a1f]",
     title: "See Where You Stand",
-    description: "Your scores are instantly benchmarked against 200+ organizations across 12 industries. See peer percentile rankings and identify your biggest gaps relative to leaders.",
+    description: "Your scores are mapped against the Maturytics maturity framework, reflecting best practices across industries. See where each dimension stands and identify your biggest improvement opportunities.",
   },
   {
     id: "ROADMAP",
@@ -44,9 +44,9 @@ const capabilities = [
   },
   {
     icon: BarChart2,
-    title: "Industry Peer Benchmarking",
+    title: "Industry-Calibrated Scoring",
     description:
-      "Compare your maturity scores against a curated database of 200+ organizations across 12 industries. Understand where you stand relative to your peers and identify which dimensions offer the highest competitive differentiation potential.",
+      "Maturytics scores are calibrated against established best practices and maturity patterns across 12 industry sectors. Understand where each dimension stands on the 1–5 scale and identify which areas offer the highest improvement potential for your specific context.",
   },
   {
     icon: Map,
@@ -64,8 +64,8 @@ const capabilities = [
 
 const metrics = [
   { value: "4 hrs", label: "Time to complete assessment" },
-  { value: "200+", label: "Organizations benchmarked" },
-  { value: "12", label: "Industries covered" },
+  { value: "5 dims", label: "Dimensions assessed" },
+  { value: "12", label: "Industry sectors covered" },
   { value: "100%", label: "Actionable recommendations" },
 ];
 
@@ -99,7 +99,7 @@ const dimensions = [
 
 const comparison = [
   { criterion: "Time to Complete", internal: "Weeks of meetings", consulting: "2–3 months", maturytics: "4 hours" },
-  { criterion: "Peer Benchmarks", internal: "None", consulting: "Limited", maturytics: "200+ orgs" },
+  { criterion: "Industry Context", internal: "None", consulting: "Limited", maturytics: "Built-in" },
   { criterion: "Roadmap Output", internal: "Opinions", consulting: "Slides", maturytics: "Automated" },
   { criterion: "Progress Tracking", internal: "None", consulting: "Ad-hoc", maturytics: "Quarterly" },
   { criterion: "Cost", internal: "High (staff time)", consulting: "Very High", maturytics: "Predictable" },
@@ -153,7 +153,7 @@ export default function MaturyticsPage() {
                 <span className="text-[#F15A29]">what you can&apos;t measure.</span>
               </h1>
               <p className="text-lg text-gray-300 mb-6 max-w-xl">
-                Maturytics benchmarks your organization&apos;s data and analytics maturity against 200+ industry peers, generates a prioritized improvement roadmap, and tracks your transformation progress over time.
+                Maturytics assesses your organization&apos;s data and analytics maturity across 5 dimensions, generates a prioritized improvement roadmap, and tracks your transformation progress over time.
               </p>
               <div className="flex flex-wrap gap-4">
                 <Link

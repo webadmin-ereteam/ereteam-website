@@ -56,10 +56,10 @@ const products = [
     href: "/products/maturytics",
     externalHref: "https://maturytics.com",
     description:
-      "Benchmark your organization's data and analytics maturity against industry peers. Maturytics provides a structured assessment framework, generates actionable improvement roadmaps, and tracks progress over time — helping data leaders make the case for investment and prioritize initiatives.",
+      "Assess your organization's data and analytics maturity across 5 dimensions. Maturytics provides a structured assessment framework, generates actionable improvement roadmaps, and tracks progress over time — helping data leaders make the case for investment and prioritize initiatives.",
     capabilities: [
       "5-dimension maturity framework",
-      "Industry peer benchmarking",
+      "Industry-calibrated maturity scoring",
       "Automated roadmap generation",
       "Progress tracking over time",
       "Executive presentation output",
