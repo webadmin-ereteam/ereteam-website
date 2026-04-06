@@ -66,6 +66,13 @@ const departments = [
     roles: ["BI Developer", "Analytics Consultant", "Tableau Developer", "IBM Cognos Consultant"],
   },
   {
+    icon: Zap,
+    title: "Marketing Technology",
+    description:
+      "Implement and optimize enterprise marketing platforms for global FMCG, retail, and telecom clients. Deep hands-on expertise in HCL Unica — campaign management, audience segmentation, and omnichannel execution at scale.",
+    roles: ["HCL Unica Consultant", "Marketing Automation Specialist", "Campaign Technical Lead", "MarTech Integration Engineer"],
+  },
+  {
     icon: TrendingUp,
     title: "Financial Performance",
     description:
