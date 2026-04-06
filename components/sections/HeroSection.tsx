@@ -227,13 +227,6 @@ export default function HeroSection() {
 
           {/* Left: Text */}
           <motion.div variants={containerVariants} initial="hidden" animate="visible">
-            <motion.div variants={itemVariants}>
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#1A6FA8]/20 border border-[#1A6FA8]/30 text-[#4fa8d8] text-sm font-medium mb-6">
-                <span className="w-2 h-2 rounded-full bg-[#1A6FA8] animate-pulse" />
-                Enterprise Data &amp; Analytics Consultancy
-              </span>
-            </motion.div>
-
             <motion.h1 variants={itemVariants} className="text-4xl sm:text-5xl lg:text-7xl font-extrabold text-white leading-tight mb-4">
               Where Data{" "}
               <span style={{ background: "linear-gradient(90deg, #1A6FA8, #38bdf8, #0C9472)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
