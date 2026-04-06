@@ -65,7 +65,7 @@ const capabilities = [
 const metrics = [
   { value: "90%", label: "Reduction in manual mapping time" },
   { value: "80%+", label: "Auto-match rate" },
-  { value: "Hours→Min", label: "New product onboarding time" },
+  { value: "Hrs→Min", label: "New product onboarding time" },
   { value: "4–6 weeks", label: "Time to value" },
 ];
 

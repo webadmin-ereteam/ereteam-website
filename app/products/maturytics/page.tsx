@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { ExternalLink, Globe, Target, BarChart2, Map, Award } from "lucide-react";
+import { ExternalLink, Globe, Target, BarChart2, Map, Award, ArrowRight } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Maturytics – Data Maturity Assessment Platform",
@@ -8,12 +8,39 @@ export const metadata: Metadata = {
     "Maturytics benchmarks your organization's data maturity against industry peers and generates actionable roadmaps for data transformation.",
 };
 
+const steps = [
+  {
+    id: "ASSESS",
+    color: "bg-teal-600",
+    title: "Complete the Assessment",
+    description: "Answer structured questions across 5 dimensions in under 4 hours. Covers strategy, architecture, governance, culture, and analytics capability with granular sub-criteria.",
+  },
+  {
+    id: "BENCHMARK",
+    color: "bg-[#c44a1f]",
+    title: "See Where You Stand",
+    description: "Your scores are instantly benchmarked against 200+ organizations across 12 industries. See peer percentile rankings and identify your biggest gaps relative to leaders.",
+  },
+  {
+    id: "ROADMAP",
+    color: "bg-[#e05520]",
+    title: "Get Your Roadmap",
+    description: "Maturytics automatically generates a prioritized improvement roadmap with sized initiatives, expected outcomes, and investment guidance — ready for executive presentation.",
+  },
+  {
+    id: "TRACK",
+    color: "bg-[#F15A29]",
+    title: "Track Progress Over Time",
+    description: "Run quarterly assessments to measure progress. Certify milestones and demonstrate your data transformation journey to stakeholders, partners, and regulators.",
+  },
+];
+
 const capabilities = [
   {
     icon: Target,
     title: "5-Dimension Maturity Framework",
     description:
-      "Maturytics assesses your organization across five critical dimensions: Data Strategy, Data Architecture, Data Governance, Data Culture, and Analytics Capability. Each dimension is scored on a 1-5 maturity scale with granular sub-criteria.",
+      "Maturytics assesses your organization across five critical dimensions: Data Strategy, Data Architecture, Data Governance, Data Culture, and Analytics Capability. Each dimension is scored on a 1–5 maturity scale with granular sub-criteria.",
   },
   {
     icon: BarChart2,
@@ -33,6 +60,13 @@ const capabilities = [
     description:
       "Run assessments quarterly to track progress over time. Celebrate milestones with Maturytics maturity certifications — shareable credentials that demonstrate your data transformation progress to stakeholders, partners, and regulators.",
   },
+];
+
+const metrics = [
+  { value: "4 hrs", label: "Time to complete assessment" },
+  { value: "200+", label: "Organizations benchmarked" },
+  { value: "12", label: "Industries covered" },
+  { value: "100%", label: "Actionable recommendations" },
 ];
 
 const dimensions = [
@@ -63,6 +97,15 @@ const dimensions = [
   },
 ];
 
+const comparison = [
+  { criterion: "Time to Complete", internal: "Weeks of meetings", consulting: "2–3 months", maturytics: "4 hours" },
+  { criterion: "Peer Benchmarks", internal: "None", consulting: "Limited", maturytics: "200+ orgs" },
+  { criterion: "Roadmap Output", internal: "Opinions", consulting: "Slides", maturytics: "Automated" },
+  { criterion: "Progress Tracking", internal: "None", consulting: "Ad-hoc", maturytics: "Quarterly" },
+  { criterion: "Cost", internal: "High (staff time)", consulting: "Very High", maturytics: "Predictable" },
+  { criterion: "Executive Ready", internal: "Rarely", consulting: "Yes", maturytics: "Built-in" },
+];
+
 const useCases = [
   {
     type: "Strategic Planning",
@@ -82,13 +125,6 @@ const useCases = [
   },
 ];
 
-const benefits = [
-  { metric: "4 hrs", label: "Time to complete assessment" },
-  { metric: "200+", label: "Organizations benchmarked" },
-  { metric: "12", label: "Industries covered" },
-  { metric: "100%", label: "Actionable recommendations" },
-];
-
 export default function MaturyticsPage() {
   return (
     <>
@@ -103,21 +139,21 @@ export default function MaturyticsPage() {
               ← Products
             </Link>
           </div>
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
-            <div>
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-10">
+            <div className="flex-1">
               <div className="mb-6 pb-6 border-b border-white/10">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/logos/products/maturytics.svg" alt="Maturytics" className="h-10 w-auto max-w-[200px] object-contain brightness-0 invert" />
+                <img src="/logos/products/maturytics.svg" alt="Maturytics" className="h-10 w-auto max-w-[200px] object-contain" />
               </div>
               <p className="text-sm font-medium text-[#F15A29] uppercase tracking-widest mb-3">
-                Maturity Assessment Platform
+                Data Maturity Assessment Platform
               </p>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-4">
-                Maturytics
+                You can&apos;t improve what you can&apos;t measure.{" "}
+                <span className="text-[#F15A29]">Where does your data organization actually stand?</span>
               </h1>
               <p className="text-lg text-gray-300 mb-6 max-w-xl">
-                Benchmark your organization&apos;s data maturity against industry peers.
-                Get an actionable roadmap to accelerate your data transformation journey.
+                Maturytics benchmarks your organization&apos;s data and analytics maturity against 200+ industry peers, generates a prioritized improvement roadmap, and tracks your transformation progress over time.
               </p>
               <div className="flex flex-wrap gap-4">
                 <Link
@@ -136,20 +172,87 @@ export default function MaturyticsPage() {
                 </a>
               </div>
             </div>
-            {/* Benefits */}
+            {/* Metrics */}
             <div className="grid grid-cols-2 gap-4 lg:w-72 flex-shrink-0">
-              {benefits.map((b) => (
+              {metrics.map((m) => (
                 <div
-                  key={b.label}
+                  key={m.label}
                   className="bg-white/10 rounded-xl p-4 text-center border border-white/10"
                 >
-                  <div className="text-2xl font-extrabold text-[#F15A29] mb-1">
-                    {b.metric}
-                  </div>
-                  <div className="text-xs text-gray-300 leading-tight">{b.label}</div>
+                  <div className="text-2xl font-extrabold text-[#F15A29] mb-1">{m.value}</div>
+                  <div className="text-xs text-gray-300 leading-tight">{m.label}</div>
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* The Problem */}
+      <section className="py-20 bg-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <p className="text-sm font-medium text-[#F15A29] uppercase tracking-widest mb-2">The Real Problem</p>
+            <h2 className="text-3xl font-extrabold text-brand-dark mb-4">
+              Everyone has a data strategy. Few know if it&apos;s working.
+            </h2>
+            <p className="text-text-muted max-w-2xl mx-auto">
+              Without an objective baseline, data transformation programs run on gut feel. Investments get made in the wrong areas, and the business never sees ROI.
+            </p>
+          </div>
+          <div className="space-y-2 mb-10">
+            {[
+              { label: "Data Strategy", status: "Undocumented", note: "Exists in CDO's head, not aligned with business units" },
+              { label: "Data Architecture", status: "Fragmented", note: "14 different BI tools, no single source of truth" },
+              { label: "Data Governance", status: "Ad-hoc", note: "No data ownership, no quality standards, no lineage" },
+              { label: "Data Culture", status: "Low", note: "Decisions made on intuition, not data" },
+            ].map((row) => (
+              <div key={row.label} className="flex items-center gap-3 rounded-xl overflow-hidden border border-gray-200">
+                <div className="bg-[#3d1800] text-white text-xs font-semibold px-4 py-3 w-36 flex-shrink-0">{row.label}</div>
+                <div className="bg-[#F15A29] text-white text-xs font-bold px-3 py-3 w-28 flex-shrink-0">{row.status}</div>
+                <div className="bg-[#1e1e3f] text-white text-xs px-4 py-3 flex-1">{row.note}</div>
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[
+              { chain: "No Baseline → Wrong Priorities → Wasted Investment", outcome: "Budget Waste", color: "bg-orange-50 border-orange-200" },
+              { chain: "No Benchmarks → No Context → No Board Buy-in", outcome: "Stalled Programs", color: "bg-red-50 border-red-200" },
+              { chain: "No Roadmap → No Direction → Low ROI", outcome: "Missed Value", color: "bg-yellow-50 border-yellow-200" },
+            ].map((item) => (
+              <div key={item.outcome} className={`rounded-xl p-4 border ${item.color}`}>
+                <p className="text-xs text-text-muted mb-2">{item.chain}</p>
+                <p className="font-bold text-brand-dark flex items-center gap-1">
+                  <ArrowRight size={14} className="text-[#F15A29]" /> {item.outcome}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section className="py-20 bg-brand-light">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <p className="text-sm font-medium text-[#F15A29] uppercase tracking-widest mb-2">How It Works</p>
+            <h2 className="text-3xl font-extrabold text-brand-dark mb-4">
+              From gut feel to a data-driven transformation roadmap
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {steps.map((step, i) => (
+              <div key={step.id} className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm relative">
+                <span className={`inline-block text-xs font-bold text-white px-3 py-1 rounded-full mb-4 ${step.color}`}>
+                  {step.id}
+                </span>
+                {i < steps.length - 1 && (
+                  <ArrowRight size={16} className="absolute -right-3 top-8 text-gray-300 hidden lg:block" />
+                )}
+                <h3 className="font-bold text-brand-dark mb-2 text-sm">{step.title}</h3>
+                <p className="text-xs text-text-muted leading-relaxed">{step.description}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -158,9 +261,8 @@ export default function MaturyticsPage() {
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-extrabold text-brand-dark mb-4">
-              Platform Capabilities
-            </h2>
+            <p className="text-sm font-medium text-[#F15A29] uppercase tracking-widest mb-2">Platform</p>
+            <h2 className="text-3xl font-extrabold text-brand-dark">Built for Data Leaders</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {capabilities.map((cap) => {
@@ -173,12 +275,8 @@ export default function MaturyticsPage() {
                   <div className="w-12 h-12 bg-[#F15A29]/10 rounded-xl flex items-center justify-center mb-5">
                     <Icon size={24} className="text-[#c4461e]" />
                   </div>
-                  <h3 className="text-lg font-bold text-brand-dark mb-3">
-                    {cap.title}
-                  </h3>
-                  <p className="text-sm text-text-body leading-relaxed">
-                    {cap.description}
-                  </p>
+                  <h3 className="text-lg font-bold text-brand-dark mb-3">{cap.title}</h3>
+                  <p className="text-sm text-text-body leading-relaxed">{cap.description}</p>
                 </div>
               );
             })}
@@ -186,12 +284,40 @@ export default function MaturyticsPage() {
         </div>
       </section>
 
+      {/* Comparison */}
+      <section className="py-20 bg-brand-light">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <p className="text-sm font-medium text-[#F15A29] uppercase tracking-widest mb-2">Comparison</p>
+            <h2 className="text-3xl font-extrabold text-brand-dark mb-2">Faster Than Consulting. More Rigorous Than Internal Reviews.</h2>
+            <p className="text-text-muted">See how Maturytics compares</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+            <div className="grid grid-cols-4 text-xs font-bold uppercase tracking-wider">
+              <div className="p-4 bg-gray-50 border-b border-gray-200"></div>
+              <div className="p-4 bg-gray-50 border-b border-gray-200 text-center text-blue-500">Internal Review</div>
+              <div className="p-4 bg-gray-50 border-b border-gray-200 text-center text-blue-600">Big Consulting</div>
+              <div className="p-4 bg-[#F15A29]/10 border-b border-[#F15A29]/20 text-center text-[#F15A29]">maturytics</div>
+            </div>
+            {comparison.map((row, i) => (
+              <div key={row.criterion} className={`grid grid-cols-4 text-sm ${i % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`}>
+                <div className="p-4 font-medium text-brand-dark border-b border-gray-100">{row.criterion}</div>
+                <div className="p-4 text-center text-text-muted border-b border-gray-100">{row.internal}</div>
+                <div className="p-4 text-center text-text-muted border-b border-gray-100">{row.consulting}</div>
+                <div className="p-4 text-center font-semibold text-[#F15A29] bg-[#F15A29]/5 border-b border-[#F15A29]/10">{row.maturytics}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Maturity Dimensions */}
-      <section className="py-16 bg-brand-light">
+      <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
+            <p className="text-sm font-medium text-[#F15A29] uppercase tracking-widest mb-2">Framework</p>
             <h2 className="text-2xl font-extrabold text-brand-dark mb-2">
-              The 5-Dimension Framework
+              The 5-Dimension Assessment Framework
             </h2>
             <p className="text-text-muted">
               Each dimension is assessed on a 1–5 maturity scale.
@@ -201,7 +327,7 @@ export default function MaturyticsPage() {
             {dimensions.map((dim, index) => (
               <div
                 key={dim.name}
-                className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm"
+                className="bg-brand-light rounded-xl p-6 border border-gray-200 shadow-sm"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                   <div className="sm:w-48 flex-shrink-0">
@@ -209,9 +335,7 @@ export default function MaturyticsPage() {
                       <span className="w-6 h-6 bg-[#F15A29] text-white rounded-full text-xs font-bold flex items-center justify-center">
                         {index + 1}
                       </span>
-                      <span className="font-bold text-brand-dark text-sm">
-                        {dim.name}
-                      </span>
+                      <span className="font-bold text-brand-dark text-sm">{dim.name}</span>
                     </div>
                     <p className="text-xs text-text-muted pl-8">{dim.description}</p>
                   </div>
@@ -243,23 +367,17 @@ export default function MaturyticsPage() {
       </section>
 
       {/* Use Cases */}
-      <section className="py-20 bg-white">
+      <section className="py-16 bg-brand-light">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-2xl font-extrabold text-brand-dark mb-2">
-              How Organizations Use Maturytics
-            </h2>
+            <p className="text-sm font-medium text-[#F15A29] uppercase tracking-widest mb-2">Use Cases</p>
+            <h2 className="text-2xl font-extrabold text-brand-dark">How Organizations Use Maturytics</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {useCases.map((uc) => (
-              <div
-                key={uc.type}
-                className="bg-brand-light rounded-xl p-6 border border-gray-200"
-              >
+              <div key={uc.type} className="bg-white rounded-xl p-6 border border-gray-200 hover:border-[#F15A29] transition-all">
                 <Globe size={20} className="text-[#F15A29] mb-3" />
-                <h3 className="font-bold text-brand-dark mb-2 text-sm">
-                  {uc.type}
-                </h3>
+                <h3 className="font-bold text-brand-dark mb-2 text-sm">{uc.type}</h3>
                 <p className="text-xs text-text-muted leading-relaxed">{uc.desc}</p>
               </div>
             ))}
@@ -277,7 +395,7 @@ export default function MaturyticsPage() {
             Discover your data maturity level
           </h2>
           <p className="text-gray-300 mb-8">
-            Start a free assessment and receive your personalized maturity report.
+            Start a free assessment and receive your personalized maturity report in hours — not months.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
