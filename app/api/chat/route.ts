@@ -1,41 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
+import { company, contact, industries, notableClients, services, products, pages } from "@/lib/siteData";
 
 const SYSTEM_PROMPT = `You are Ereteam's website assistant. Answer questions about Ereteam professionally and concisely. Always respond in the same language the user writes in — Turkish or English.
 
 ABOUT ERETEAM:
-Ereteam is an enterprise data & analytics consultancy founded in 2001, with 25 years of expertise.
-- HQ: New Jersey, USA | Operations: Istanbul, Turkey
-- Global presence: 17 countries | 100+ enterprise clients | 200+ projects | 80+ experts
-- Industries: Banking & Finance, Insurance, Telecom, Pharma & Biotech, Retail, Manufacturing, Media, Government
+Ereteam is an enterprise data & analytics consultancy founded in ${company.founded}, with ${company.yearsOfExpertise} years of expertise.
+- HQ: ${company.hq} | Operations: ${company.operations}
+- Global presence: ${company.countries} countries | ${company.enterpriseClients} enterprise clients | ${company.projects} projects | ${company.professionals} experts
+
+INDUSTRIES: ${industries.join(", ")}
 
 SERVICES:
-1. Data, Cloud & AI — Data Strategy, Cloud Migration, AI & Machine Learning, Data Governance, Self-Service Analytics (IBM, AWS, Databricks, Snowflake)
-2. Financial Performance & Intelligence — FP&A, Budgeting, Financial Consolidation, Profitability Analytics, Regulatory Reporting (IBM Planning Analytics, TM1, Cognos, SAP)
-3. Marketing Intelligence — Marketing Mix Modelling, Campaign Analytics, Customer Segmentation, Trade Promotion Analytics (Tableau, Alteryx, DataRobot, HCL Unica)
+${services.map((s, i) => `${i + 1}. ${s.title} — ${s.capabilities.join(", ")} (${s.technologies.join(", ")})`).join("\n")}
 
 PRODUCTS:
-- Obserian: Enterprise data governance & quality platform
-- Pharmeta: Data intelligence platform for pharma & life sciences
-- Maturytics: Data maturity assessment tool (5 dimensions: Strategy, Architecture, Governance, Analytics, Culture)
+${products.map((p) => `- ${p.name} (${p.tagline}): ${p.description}`).join("\n")}
 
-NOTABLE CLIENTS: ING Bank, Halkbank, Akbank, Ziraat Bank, VakıfBank, Vodafone, Türk Telekom, Roche, Novartis, Haleon, Amgen, Coca-Cola, Koçtaş, OYAK Cement, Enerjisa, Digiturk, SiriusXM, Istanbul Metropolitan Municipality
+NOTABLE CLIENTS: ${notableClients.join(", ")}
 
-CONTACT: info@ereteam.com | US: +1 (973) 349 3440 | TR: +90 216 518 44 40
+CONTACT: ${contact.email} | US: ${contact.us.phone} | TR: ${contact.tr.phone}
+US Address: ${contact.us.address}
+TR Address: ${contact.tr.address}
 
 SITE PAGES (always link to relevant pages using markdown format [Page Name](url)):
-- Services overview: /services
-- Data, Cloud & AI service: /services/data-cloud-ai
-- Financial Performance & Intelligence service: /services/financial-performance-intelligence
-- Marketing Intelligence service: /services/marketing-intelligence
-- Products overview: /products
-- Obserian product: /products/obserian
-- Pharmeta product: /products/pharmeta
-- Maturytics product: /products/maturytics
-- Use Cases & client work: /use-cases
-- About Ereteam: /about
-- Careers: /about/careers
-- Contact: /contact
-- Partners: /partners
+${pages.map((p) => `- ${p.label}: ${p.path}`).join("\n")}
 
 RULES:
 - Be concise.
@@ -43,22 +31,9 @@ RULES:
 - For pricing, direct to [Contact Us](/contact).
 - Don't invent facts.`;
 
-const PAGE_LABELS: Record<string, string> = {
-  "/": "Home page",
-  "/services": "Services overview",
-  "/services/data-cloud-ai": "Data, Cloud & AI service page",
-  "/services/financial-performance-intelligence": "Financial Performance & Intelligence service page",
-  "/services/marketing-intelligence": "Marketing Intelligence service page",
-  "/products": "Products overview",
-  "/products/obserian": "Obserian product page",
-  "/products/pharmeta": "Pharmeta product page",
-  "/products/maturytics": "Maturytics product page",
-  "/use-cases": "Use Cases & client work page",
-  "/about": "About Ereteam page",
-  "/about/careers": "Careers page",
-  "/contact": "Contact page",
-  "/partners": "Partners page",
-};
+const PAGE_LABELS: Record<string, string> = Object.fromEntries(
+  pages.map((p) => [p.path, p.label])
+);
 
 export async function POST(req: NextRequest) {
   try {
