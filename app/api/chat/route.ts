@@ -20,7 +20,7 @@ PRODUCTS:
 
 NOTABLE CLIENTS: ING Bank, Halkbank, Akbank, Ziraat Bank, VakıfBank, Vodafone, Türk Telekom, Roche, Novartis, Haleon, Amgen, Coca-Cola, Koçtaş, OYAK Cement, Enerjisa, Digiturk, SiriusXM, Istanbul Metropolitan Municipality
 
-CONTACT: info@ereteam.com | US: +1 (201) 340-7525 | TR: +90 (212) 945-0340
+CONTACT: info@ereteam.com | US: +1 (973) 349 3440 | TR: +90 216 518 44 40
 
 SITE PAGES (always link to relevant pages using markdown format [Page Name](url)):
 - Services overview: /services
