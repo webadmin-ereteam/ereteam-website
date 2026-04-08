@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@google/genai": "^1.48.0",
+    "@google/generative-ai": "^0.24.1",
     "@sanity/image-url": "^1.0.2",
     "@sanity/vision": "^3.99.0",
     "@tsparticles/react": "^3.0.0",
@@ -17,15 +19,18 @@
     "lucide-react": "^1.7.0",
     "next": "14.2.35",
     "next-sanity": "^9.12.3",
+    "nodemailer": "^8.0.5",
     "react": "^18",
     "react-dom": "^18",
     "react-hook-form": "^7.72.0",
+    "resend": "^6.10.0",
     "sanity": "^3.99.0",
     "styled-components": "^6.3.12",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/nodemailer": "^8.0.0",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "eslint": "^8",
