@@ -196,10 +196,6 @@ export default function ChatWidget() {
                 </div>
                 <div>
                   <div className="text-sm font-bold text-white">Ereteam AI</div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-                    <span className="text-[11px] text-green-400">Online</span>
-                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
