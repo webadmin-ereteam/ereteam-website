@@ -16,6 +16,17 @@ function formatDate(dateStr: string) {
   });
 }
 
+function getYoutubeEmbedUrl(url: string): string {
+  if (!url) return "";
+  if (url.includes("/embed/")) return url;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  if (match && match[2].length === 11) {
+    return `https://www.youtube.com/embed/${match[2]}`;
+  }
+  return url;
+}
+
 export async function generateStaticParams() {
   const posts = await getAllBlogPosts();
   return posts.map((post) => ({ slug: post.slug.current }));
@@ -68,7 +79,7 @@ export default async function BlogPostPage({
             <div className="mb-10">
               <div className="aspect-video rounded-2xl overflow-hidden bg-gray-100">
                 <iframe
-                  src={post.videoUrl.replace("watch?v=", "embed/")}
+                  src={getYoutubeEmbedUrl(post.videoUrl)}
                   title={post.title}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen

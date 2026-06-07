@@ -130,7 +130,7 @@ export default function ChatWidget() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: history.filter((m) => m !== WELCOME),
+          messages: history.filter((m) => m.content !== WELCOME.content),
           currentPage: pathname,
         }),
       });

@@ -267,10 +267,10 @@ export default function HeroSection() {
                 { name: "Pharmeta", href: "/products/pharmeta", logo: "/logos/products/pharmeta_logo.png" },
                 { name: "Maturytics", href: "/products/maturytics", logo: "/logos/products/maturytics.svg" },
               ].map((p) => (
-                <a key={p.name} href={p.href} className="opacity-40 hover:opacity-80 transition-opacity">
+                <Link key={p.name} href={p.href} className="opacity-40 hover:opacity-80 transition-opacity">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={p.logo} alt={p.name} className="h-6 w-auto max-w-[100px] object-contain brightness-0 invert" />
-                </a>
+                </Link>
               ))}
             </motion.div>
           </motion.div>
