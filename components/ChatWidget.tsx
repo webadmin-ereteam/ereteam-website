@@ -5,18 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Send, Sparkles, RotateCcw, UserRound, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-}
-
-const STORAGE_KEY = "ereteam-chat-v1";
-
-const WELCOME: Message = {
-  role: "assistant",
-  content: "Hi! I'm Ereteam's AI assistant. Ask me anything about our services, products, clients, or expertise.",
-};
+import { useChat } from "../hooks/useChat";
+import { useLeadForm } from "../hooks/useLeadForm";
 
 const SUGGESTIONS = [
   "What services do you offer?",
@@ -70,35 +60,33 @@ function BotAvatar() {
   );
 }
 
-interface LeadForm { name: string; email: string; company: string; message: string; }
-
 export default function ChatWidget() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([WELCOME]);
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [showLead, setShowLead] = useState(false);
-  const [leadForm, setLeadForm] = useState<LeadForm>({ name: "", email: "", company: "", message: "" });
-  const [leadSent, setLeadSent] = useState(false);
-  const [leadLoading, setLeadLoading] = useState(false);
+  
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Restore from localStorage
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) setMessages(JSON.parse(saved));
-    } catch {}
-  }, []);
+  const {
+    messages,
+    loading,
+    hasConversation,
+    sendMessage,
+    clearChat,
+    setMessages
+  } = useChat(pathname);
 
-  // Save to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
-    } catch {}
-  }, [messages]);
+  const {
+    showLead,
+    setShowLead,
+    leadForm,
+    setLeadForm,
+    leadSent,
+    leadLoading,
+    submitLead,
+    resetLeadForm
+  } = useLeadForm(pathname, setMessages);
 
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 300);
@@ -108,65 +96,18 @@ export default function ChatWidget() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading, showLead]);
 
-  const clearChat = () => {
-    setMessages([WELCOME]);
-    setShowLead(false);
-    setLeadSent(false);
-    localStorage.removeItem(STORAGE_KEY);
+  const handleClearChat = () => {
+    clearChat();
+    resetLeadForm();
   };
 
-  const send = async (text?: string) => {
+  const handleSend = async (text?: string) => {
     const content = (text ?? input).trim();
-    if (!content || loading) return;
-
-    const userMsg: Message = { role: "user", content };
-    const history = [...messages, userMsg];
-    setMessages(history);
+    if (!content) return;
+    
     setInput("");
-    setLoading(true);
-
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: history.filter((m) => m.content !== WELCOME.content),
-          currentPage: pathname,
-        }),
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setMessages([...history, { role: "assistant", content: data.content }]);
-    } catch {
-      setMessages([...history, { role: "assistant", content: "Something went wrong. Please try again." }]);
-    } finally {
-      setLoading(false);
-    }
+    await sendMessage(content);
   };
-
-  const submitLead = async () => {
-    if (!leadForm.name || !leadForm.email) return;
-    setLeadLoading(true);
-    try {
-      await fetch("/api/lead", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...leadForm, page: pathname }),
-      });
-      setLeadSent(true);
-      setMessages((prev) => [...prev, {
-        role: "assistant",
-        content: `Thanks, ${leadForm.name}! One of our experts will reach out to you at **${leadForm.email}** shortly. In the meantime, feel free to explore our [services](/services) or [use cases](/use-cases).`,
-      }]);
-      setShowLead(false);
-    } catch {
-      setLeadSent(false);
-    } finally {
-      setLeadLoading(false);
-    }
-  };
-
-  const hasConversation = messages.filter((m) => m.role === "user").length > 0;
 
   return (
     <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end gap-3">
@@ -200,7 +141,7 @@ export default function ChatWidget() {
               </div>
               <div className="flex items-center gap-2">
                 {hasConversation && (
-                  <button onClick={clearChat} className="text-gray-500 hover:text-white transition-colors p-1" title="Clear conversation">
+                  <button onClick={handleClearChat} className="text-gray-500 hover:text-white transition-colors p-1" title="Clear conversation">
                     <RotateCcw size={15} />
                   </button>
                 )}
@@ -241,7 +182,7 @@ export default function ChatWidget() {
               {!hasConversation && !loading && (
                 <div className="flex flex-col gap-2 mt-2">
                   {SUGGESTIONS.map((s) => (
-                    <button key={s} onClick={() => send(s)}
+                    <button key={s} onClick={() => handleSend(s)}
                       className="flex items-center justify-between text-left text-[12px] px-3 py-2.5 rounded-xl transition-all hover:opacity-90"
                       style={{ background: "rgba(26,111,168,0.1)", border: "1px solid rgba(26,111,168,0.25)", color: "rgba(255,255,255,0.75)" }}>
                       <span>{s}</span>
@@ -314,11 +255,11 @@ export default function ChatWidget() {
                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
                 <input ref={inputRef} value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
+                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
                   placeholder="Type your question..."
                   className="flex-1 bg-transparent text-[13px] text-white placeholder-gray-600 outline-none"
                   style={{ fontSize: 16 }} />
-                <button onClick={() => send()} disabled={!input.trim() || loading}
+                <button onClick={() => handleSend()} disabled={!input.trim() || loading}
                   className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-all disabled:opacity-25"
                   style={{ background: "linear-gradient(135deg, #1A6FA8, #0C9472)" }}>
                   <Send size={13} color="white" />
@@ -364,3 +305,4 @@ export default function ChatWidget() {
     </div>
   );
 }
+
