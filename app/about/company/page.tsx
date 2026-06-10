@@ -195,30 +195,37 @@ export default async function CompanyPage() {
                 {partnersBoard.map((person: SanityTeamMember) => (
                   <div
                     key={person._id}
-                    className="bg-brand-light rounded-xl p-4 text-center border border-gray-200 hover:border-brand-primary hover:shadow-sm transition-all"
+                    className="bg-brand-light rounded-xl p-4 text-center border border-gray-200 hover:border-brand-primary hover:shadow-sm transition-all flex flex-col items-center"
                   >
                     {person.image ? (
-                      <Image
-                        src={urlFor(person.image).width(80).height(80).url()}
-                        alt={person.name}
-                        width={40}
-                        height={40}
-                        className="w-10 h-10 rounded-full object-cover mx-auto mb-2"
-                      />
+                      <div className="w-full aspect-square mb-3 overflow-hidden rounded-lg">
+                        <Image
+                          src={urlFor(person.image).width(400).height(400).url()}
+                          alt={person.name}
+                          width={400}
+                          height={400}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
                     ) : (
-                      <div className="w-10 h-10 bg-brand-primary/10 rounded-full flex items-center justify-center mx-auto mb-2 text-sm font-bold text-brand-primary">
+                      <div className="w-full aspect-square bg-brand-primary/10 rounded-lg flex items-center justify-center mb-3 text-4xl font-bold text-brand-primary">
                         {person.name.charAt(0)}
                       </div>
                     )}
-                    <p className="text-xs font-medium text-brand-dark leading-tight mb-2">
+                    <p className="text-sm font-bold text-brand-dark leading-tight mb-1">
                       {person.name}
                     </p>
+                    {person.title && (
+                      <p className="text-xs font-medium text-brand-primary mb-3">
+                        {person.title}
+                      </p>
+                    )}
                     {person.linkedIn && (
                       <a
                         href={person.linkedIn}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center text-[#0A66C2] hover:text-[#004182] transition-colors"
+                        className="inline-flex items-center justify-center text-[#0A66C2] hover:text-[#004182] transition-colors mt-auto"
                         aria-label={`${person.name} LinkedIn`}
                       >
                         <LinkedInIcon />
@@ -250,50 +257,55 @@ export default async function CompanyPage() {
               {leadershipTeam.map((person: SanityTeamMember) => (
                 <div
                   key={person._id}
-                  className="bg-white rounded-2xl p-8 border border-gray-200 hover:border-brand-primary hover:shadow-lg transition-all"
+                  className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-brand-primary hover:shadow-lg transition-all flex flex-col"
                 >
-                  <div className="flex items-start justify-between mb-4">
+                  <div className="w-full aspect-[4/3] relative">
                     {person.image ? (
                       <Image
-                        src={urlFor(person.image).width(112).height(112).url()}
+                        src={urlFor(person.image).width(800).height(600).url()}
                         alt={person.name}
-                        width={56}
-                        height={56}
-                        className="w-14 h-14 rounded-full object-cover"
+                        width={800}
+                        height={600}
+                        className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-14 h-14 bg-brand-primary/10 rounded-full flex items-center justify-center text-xl font-bold text-brand-primary">
+                      <div className="w-full h-full bg-brand-primary/10 flex items-center justify-center text-6xl font-bold text-brand-primary">
                         {person.name.charAt(0)}
                       </div>
                     )}
                     {person.region && (
-                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-brand-magenta/10 text-brand-magenta border border-brand-magenta/20">
-                        {person.region}
-                      </span>
+                      <div className="absolute top-4 right-4">
+                        <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-brand-magenta text-white shadow-md">
+                          {person.region}
+                        </span>
+                      </div>
                     )}
                   </div>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-base font-bold text-brand-dark mb-1">{person.name}</h3>
-                      <p className="text-sm font-medium text-brand-primary">{person.title}</p>
+                  
+                  <div className="p-6 flex flex-col flex-grow">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="text-xl font-bold text-brand-dark mb-1">{person.name}</h3>
+                        <p className="text-sm font-semibold text-brand-primary">{person.title}</p>
+                      </div>
+                      {person.linkedIn && (
+                        <a
+                          href={person.linkedIn}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#0A66C2] hover:text-[#004182] transition-colors flex-shrink-0"
+                          aria-label={`${person.name} LinkedIn`}
+                        >
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
+                          </svg>
+                        </a>
+                      )}
                     </div>
-                    {person.linkedIn && (
-                      <a
-                        href={person.linkedIn}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[#0A66C2] hover:text-[#004182] transition-colors flex-shrink-0"
-                        aria-label={`${person.name} LinkedIn`}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
-                        </svg>
-                      </a>
+                    {person.bio && (
+                      <p className="text-sm text-text-body mt-2 leading-relaxed">{person.bio}</p>
                     )}
                   </div>
-                  {person.bio && (
-                    <p className="text-sm text-text-body mt-2">{person.bio}</p>
-                  )}
                 </div>
               ))}
             </div>
