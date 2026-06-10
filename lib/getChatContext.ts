@@ -1,15 +1,16 @@
 import { unstable_cache } from "next/cache";
 import { company, contact, industries, notableClients, services, products, pages } from "./siteData";
-import { getAllSuccessStories, getAllActiveJobPostings, getAllPartners } from "./sanity/queries";
+import { getAllSuccessStories, getAllActiveJobPostings, getAllPartners, getLeadershipTeam } from "./sanity/queries";
 
 export const CHAT_CACHE_TAG = "chat-context";
 
 async function buildChatContext(): Promise<string> {
   // Fetch Sanity data in parallel
-  const [stories, jobs, partners] = await Promise.all([
+  const [stories, jobs, partners, leadership] = await Promise.all([
     getAllSuccessStories().catch(() => []),
     getAllActiveJobPostings().catch(() => []),
     getAllPartners().catch(() => []),
+    getLeadershipTeam().catch(() => []),
   ]);
 
   const successStoriesSection = stories.length > 0
@@ -27,6 +28,10 @@ async function buildChatContext(): Promise<string> {
 
   const partnersSection = partners.length > 0
     ? `\nTECHNOLOGY PARTNERS: ${partners.map((p) => p.name).join(", ")}`
+    : "";
+
+  const leadershipSection = leadership.length > 0
+    ? `\nLEADERSHIP TEAM: ${leadership.map((l) => `${l.name} (${l.title})`).join(", ")}`
     : "";
 
   return `You are Ereteam's website assistant. Answer questions about Ereteam professionally and concisely. Always respond in the same language the user writes in — Turkish or English.
@@ -52,6 +57,7 @@ TR Address: ${contact.tr.address}
 ${successStoriesSection}
 ${jobsSection}
 ${partnersSection}
+${leadershipSection}
 
 SITE PAGES (always link to relevant pages using markdown format [Page Name](url)):
 ${pages.map((p) => `- ${p.label}: ${p.path}`).join("\n")}

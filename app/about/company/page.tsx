@@ -260,9 +260,9 @@ export default async function CompanyPage() {
                   className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-brand-primary hover:shadow-lg transition-all flex flex-col"
                 >
                   <div className="w-full aspect-[4/3] relative">
-                    {person.image ? (
+                    {person.image || person.imagePartners ? (
                       <Image
-                        src={urlFor(person.image).width(800).height(600).fit('crop').url()}
+                        src={urlFor(person.image || person.imagePartners).width(800).height(600).fit('crop').url()}
                         alt={person.name}
                         width={800}
                         height={600}
