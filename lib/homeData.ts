@@ -35,7 +35,7 @@ export const services = [
     gradient: "from-[#1a0a14] to-[#3d0028]",
     accent: "#f472b6",
     textLight: true,
-    image: "https://images.unsplash.com/photo-1542744094-2a52c02285e6?auto=format&fit=crop&q=80&w=1000",
+    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=1000",
   },
 ];
 
