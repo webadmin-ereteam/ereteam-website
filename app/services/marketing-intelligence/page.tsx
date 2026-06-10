@@ -142,27 +142,48 @@ export default function MarketingIntelligencePage() {
         className="pt-32 pb-20"
         style={{ background: "linear-gradient(135deg, #0a1628 0%, #1a2a5e 100%)" }}
       >
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-sm font-medium text-[#f472b6] uppercase tracking-widest mb-4">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-4">
+            <Link href="/services" className="text-sm text-gray-400 hover:text-white transition-colors">
+              ← Services
+            </Link>
+          </div>
+          <p className="text-sm font-medium text-[#f472b6] uppercase tracking-widest mb-3">
             Service Domain
           </p>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight">
-            Marketing <span style={{ background: "linear-gradient(90deg, #f472b6, #818cf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Intelligence</span>
+            Marketing Intelligence
           </h1>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-xl text-[#f472b6] font-semibold mb-6">
+            Orchestrate personalized customer engagement in real time.
+          </p>
+          <p className="text-lg text-gray-300 max-w-2xl mb-8 leading-relaxed">
             Powered by HCL Unica — the enterprise standard for omnichannel campaign management. 
             We help organizations orchestrate personalized customer engagement across every channel, in real time.
           </p>
+          <ul className="space-y-3 text-gray-300 text-sm">
+            {[
+              "Omnichannel campaign management at enterprise scale",
+              "Real-time inbound decisioning and Next-Best-Action (NBA)",
+              "End-to-end customer journey analytics and struggle detection",
+              "Marketing operations, budget control, and agency collaboration",
+            ].map((bullet) => (
+              <li key={bullet} className="flex items-start gap-3">
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#f472b6] flex-shrink-0" />
+                {bullet}
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
       {/* Stats Bar */}
-      <section className="bg-white border-b border-gray-100">
+      <section className="bg-white border-y border-gray-100">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
             {whyStats.map((s) => (
               <div key={s.stat}>
-                <div className="text-3xl font-extrabold text-[#f472b6] mb-1">{s.stat}</div>
+                <div className="text-4xl font-extrabold text-[#f472b6] mb-2">{s.stat}</div>
                 <div className="text-sm text-text-muted">{s.label}</div>
               </div>
             ))}
