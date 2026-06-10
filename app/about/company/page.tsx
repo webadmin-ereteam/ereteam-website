@@ -197,9 +197,19 @@ export default async function CompanyPage() {
                     key={person._id}
                     className="bg-brand-light rounded-xl p-4 text-center border border-gray-200 hover:border-brand-primary hover:shadow-sm transition-all"
                   >
-                    <div className="w-10 h-10 bg-brand-primary/10 rounded-full flex items-center justify-center mx-auto mb-2 text-sm font-bold text-brand-primary">
-                      {person.name.charAt(0)}
-                    </div>
+                    {person.image ? (
+                      <Image
+                        src={urlFor(person.image).width(80).height(80).url()}
+                        alt={person.name}
+                        width={40}
+                        height={40}
+                        className="w-10 h-10 rounded-full object-cover mx-auto mb-2"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 bg-brand-primary/10 rounded-full flex items-center justify-center mx-auto mb-2 text-sm font-bold text-brand-primary">
+                        {person.name.charAt(0)}
+                      </div>
+                    )}
                     <p className="text-xs font-medium text-brand-dark leading-tight mb-2">
                       {person.name}
                     </p>
