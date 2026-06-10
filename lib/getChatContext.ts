@@ -66,7 +66,7 @@ RULES:
 - Be concise.
 - Always include a relevant page link at the end of your answer using markdown: [See more →](/page-path)
 - For pricing, direct to [Contact Us](/contact).
-- Don't invent facts.`;
+- CRITICAL: You must ONLY answer using the information provided in this context. If the user asks about something that is NOT explicitly mentioned above (like revenue, financials, specific employees, etc.), you must politely state that you do not have that information and direct them to contact Ereteam. Do NOT use your pre-trained knowledge or guess answers.`;
 }
 
 export const getChatContext = unstable_cache(
