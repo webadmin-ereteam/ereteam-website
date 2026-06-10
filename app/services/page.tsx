@@ -23,9 +23,9 @@ const services = [
       "Self-Service Analytics",
     ],
     tags: ["IBM", "AWS", "Databricks", "Snowflake", "HCL Software"],
-    color: "bg-blue-50 border-blue-100",
-    iconBg: "bg-brand-primary/10",
-    iconColor: "text-brand-primary",
+    color: "bg-white border-gray-200 hover:border-[#38bdf8]/50",
+    iconBg: "bg-[#38bdf8]/10",
+    iconColor: "text-[#38bdf8]",
   },
   {
     icon: TrendingUp,
@@ -41,9 +41,9 @@ const services = [
       "Management Reporting",
     ],
     tags: ["IBM Planning Analytics", "TM1", "IBM Cognos", "SAP"],
-    color: "bg-green-50 border-green-100",
-    iconBg: "bg-green-100",
-    iconColor: "text-green-700",
+    color: "bg-white border-gray-200 hover:border-[#10b981]/50",
+    iconBg: "bg-[#10b981]/10",
+    iconColor: "text-[#10b981]",
   },
   {
     icon: BarChart3,
@@ -59,9 +59,9 @@ const services = [
       "Trade Promotion Analytics",
     ],
     tags: ["Tableau", "Alteryx", "DataRobot", "Databricks"],
-    color: "bg-purple-50 border-purple-100",
-    iconBg: "bg-brand-magenta/10",
-    iconColor: "text-brand-magenta",
+    color: "bg-white border-gray-200 hover:border-[#f472b6]/50",
+    iconBg: "bg-[#f472b6]/10",
+    iconColor: "text-[#f472b6]",
   },
 ];
 
@@ -69,21 +69,22 @@ export default function ServicesPage() {
   return (
     <>
       {/* Hero */}
+      {/* Hero */}
       <section
         className="pt-32 pb-20"
-        style={{
-          background: "linear-gradient(135deg, #1A1A2E 0%, #0D3A5C 100%)",
-        }}
+        style={{ background: "linear-gradient(135deg, #0a1628 0%, #1a2a5e 100%)" }}
       >
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-sm font-medium text-brand-primary uppercase tracking-widest mb-3">
+          <p className="text-sm font-medium text-[#38bdf8] uppercase tracking-widest mb-4">
             Our Services
           </p>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-6">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight">
             Expertise at Every Layer of{" "}
-            <span className="text-brand-primary">Your Data Stack</span>
+            <span style={{ background: "linear-gradient(90deg, #1A6FA8, #38bdf8, #0C9472)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              Your Data Stack
+            </span>
           </h1>
-          <p className="text-lg text-gray-300 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
             From raw data infrastructure to C-suite decision intelligence, Ereteam
             delivers end-to-end analytics capabilities built on 25 years of enterprise
             expertise.
@@ -92,7 +93,7 @@ export default function ServicesPage() {
       </section>
 
       {/* Service Cards */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {services.map((service) => {
@@ -101,41 +102,41 @@ export default function ServicesPage() {
                 <Link
                   key={service.title}
                   href={service.href}
-                  className={`group block rounded-2xl p-8 border-2 ${service.color} hover:shadow-xl hover:border-brand-primary transition-all duration-300`}
+                  className={`group block rounded-2xl p-8 border ${service.color} hover:shadow-xl transition-all duration-300`}
                 >
                   <div
                     className={`w-14 h-14 ${service.iconBg} rounded-2xl flex items-center justify-center mb-6`}
                   >
                     <Icon size={28} className={service.iconColor} />
                   </div>
-                  <h2 className="text-xl font-bold text-brand-dark mb-4 group-hover:text-brand-primary transition-colors">
+                  <h2 className={`text-xl font-bold text-brand-dark mb-4 transition-colors ${service.iconColor.replace('text', 'group-hover:text')}`}>
                     {service.title}
                   </h2>
                   <p className="text-sm text-text-body leading-relaxed mb-6">
                     {service.description}
                   </p>
-                  <ul className="space-y-2 mb-6">
+                  <ul className="space-y-3 mb-8">
                     {service.capabilities.map((cap) => (
                       <li
                         key={cap}
-                        className="flex items-center gap-2 text-sm text-text-muted"
+                        className="flex items-center gap-3 text-sm text-text-muted"
                       >
-                        <span className="w-1.5 h-1.5 rounded-full bg-brand-primary flex-shrink-0" />
+                        <span className={`w-1.5 h-1.5 rounded-full ${service.iconColor.replace('text-', 'bg-')} flex-shrink-0 opacity-80`} />
                         {cap}
                       </li>
                     ))}
                   </ul>
-                  <div className="flex flex-wrap gap-2 mb-6">
+                  <div className="flex flex-wrap gap-2 mb-8">
                     {service.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="text-xs px-2 py-1 bg-white rounded-md border border-gray-200 text-text-muted"
+                        className="text-xs px-3 py-1.5 bg-gray-50 rounded-md border border-gray-200 text-gray-500"
                       >
                         {tag}
                       </span>
                     ))}
                   </div>
-                  <div className="flex items-center gap-1.5 text-sm font-semibold text-brand-primary">
+                  <div className={`flex items-center gap-1.5 text-sm font-semibold ${service.iconColor}`}>
                     Explore service{" "}
                     <ArrowRight
                       size={16}
@@ -150,10 +151,10 @@ export default function ServicesPage() {
       </section>
 
       {/* Why Ereteam */}
-      <section className="py-20 bg-brand-light">
+      <section className="py-24 bg-brand-light">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
-            <p className="text-sm font-medium text-brand-magenta uppercase tracking-widest mb-2">
+          <div className="text-center mb-16">
+            <p className="text-sm font-medium text-brand-primary uppercase tracking-widest mb-3">
               Why Ereteam
             </p>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-brand-dark mb-4">
@@ -181,9 +182,9 @@ export default function ServicesPage() {
             ].map((item) => (
               <div
                 key={item.title}
-                className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm"
+                className="bg-white rounded-2xl p-8 border border-gray-200 hover:border-brand-primary/50 transition-colors shadow-sm"
               >
-                <h3 className="text-sm font-bold text-brand-dark mb-2">
+                <h3 className="text-lg font-bold text-brand-dark mb-3">
                   {item.title}
                 </h3>
                 <p className="text-sm text-text-muted leading-relaxed">

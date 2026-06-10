@@ -49,19 +49,27 @@ export default async function PartnersPage() {
   return (
     <>
       {/* Hero */}
-      <section
-        className="pt-32 pb-20"
-        style={{ background: "linear-gradient(135deg, #1A1A2E 0%, #0D3A5C 100%)" }}
-      >
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-sm font-medium text-brand-primary uppercase tracking-widest mb-3">
+      <section className="relative pt-40 pb-32 overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img 
+            src="/images/ai/partners_bg.png" 
+            alt="Partners Background" 
+            className="w-full h-full object-cover opacity-60"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0B0F19]/40 via-[#0B0F19]/80 to-[#0B0F19]"></div>
+        </div>
+        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <p className="text-sm font-medium text-[#38bdf8] uppercase tracking-widest mb-4">
             Technology Partners
           </p>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-6">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight">
             Building on the World&apos;s{" "}
-            <span className="text-brand-primary">Best Technology</span>
+            <span style={{ background: "linear-gradient(90deg, #1A6FA8, #38bdf8, #0C9472)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              Best Technology
+            </span>
           </h1>
-          <p className="text-lg text-gray-300 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
             Ereteam is a certified partner of the industry&apos;s leading technology vendors.
           </p>
         </div>
@@ -112,21 +120,22 @@ export default async function PartnersPage() {
       </section>
 
       {/* CTA */}
-      <section
-        className="py-16"
-        style={{ background: "linear-gradient(135deg, #1A1A2E 0%, #0D3A5C 100%)" }}
-      >
-        <div className="max-w-3xl mx-auto px-4 text-center">
-          <h2 className="text-3xl font-extrabold text-white mb-4">
+      <section className="relative py-24 overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 bg-[#07111F]"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-[#1A6FA8]/10 to-transparent"></div>
+        </div>
+        <div className="relative z-10 max-w-3xl mx-auto px-4 text-center">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-4">
             Interested in partnering with Ereteam?
           </h2>
-          <p className="text-gray-300 mb-8">
+          <p className="text-lg text-gray-400 mb-8">
             We work with technology vendors and consulting firms to deliver better
             outcomes for our shared clients.
           </p>
           <Link
             href="/contact"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-brand-primary text-white font-semibold rounded-lg hover:bg-opacity-90 transition-all"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-[#1A6FA8] to-[#38bdf8] text-white font-bold rounded-lg hover:shadow-[0_0_20px_rgba(56,189,248,0.4)] hover:-translate-y-1 transition-all"
           >
             Get in Touch →
           </Link>

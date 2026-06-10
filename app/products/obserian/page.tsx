@@ -100,9 +100,10 @@ export default function OberianPage() {
   return (
     <>
       {/* Hero */}
+      {/* Hero */}
       <section
         className="pt-32 pb-20"
-        style={{ background: "linear-gradient(135deg, #1A1A2E 0%, #2d1a4a 100%)" }}
+        style={{ background: "linear-gradient(135deg, #0a1628 0%, #1a2a5e 100%)" }}
       >
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-4">
@@ -129,7 +130,7 @@ export default function OberianPage() {
               <div className="flex flex-wrap gap-4">
                 <Link
                   href="/contact"
-                  className="inline-flex items-center px-6 py-3 bg-[#7454A2] text-white font-semibold rounded-lg hover:bg-opacity-90 transition-all text-sm"
+                  className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-[#5a3a8a] to-[#7454A2] text-white font-semibold rounded-lg hover:shadow-[0_0_15px_rgba(116,84,162,0.4)] hover:-translate-y-0.5 transition-all text-sm"
                 >
                   Request a Demo
                 </Link>
@@ -338,21 +339,22 @@ export default function OberianPage() {
       </section>
 
       {/* CTA */}
-      <section
-        className="py-16"
-        style={{ background: "linear-gradient(135deg, #1A1A2E 0%, #2d1a4a 100%)" }}
-      >
-        <div className="max-w-3xl mx-auto px-4 text-center">
-          <h2 className="text-3xl font-extrabold text-white mb-4">
+      <section className="relative py-24 overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 bg-[#07111F]"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-[#7454A2]/10 to-transparent"></div>
+        </div>
+        <div className="relative z-10 max-w-3xl mx-auto px-4 text-center">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-4">
             Ready to govern your data with confidence?
           </h2>
-          <p className="text-gray-300 mb-8">
+          <p className="text-lg text-gray-400 mb-8">
             Request a personalized demo — we&apos;ll show you exactly how Obserian fits your governance landscape.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/contact"
-              className="inline-flex items-center justify-center px-8 py-4 bg-[#7454A2] text-white font-semibold rounded-lg hover:bg-opacity-90 transition-all"
+              className="inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-[#5a3a8a] to-[#7454A2] text-white font-bold rounded-lg hover:shadow-[0_0_20px_rgba(116,84,162,0.4)] hover:-translate-y-1 transition-all"
             >
               Request a Demo
             </Link>
@@ -360,7 +362,7 @@ export default function OberianPage() {
               href="https://obserian.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 border border-white/20 text-white font-semibold rounded-lg hover:bg-white/20 transition-all"
+              className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/5 border border-white/10 text-white font-semibold rounded-lg hover:bg-white/10 transition-all"
             >
               Visit obserian.com <ExternalLink size={14} />
             </a>

@@ -39,21 +39,22 @@ export default function AboutPage() {
   return (
     <>
       {/* Hero */}
+      {/* Hero */}
       <section
         className="pt-32 pb-20"
-        style={{
-          background: "linear-gradient(135deg, #1A1A2E 0%, #0D3A5C 100%)",
-        }}
+        style={{ background: "linear-gradient(135deg, #0a1628 0%, #1a2a5e 100%)" }}
       >
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-sm font-medium text-brand-primary uppercase tracking-widest mb-3">
+          <p className="text-sm font-medium text-[#38bdf8] uppercase tracking-widest mb-4">
             About Ereteam
           </p>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-6">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight">
             25 Years of Making{" "}
-            <span className="text-brand-primary">Data Come Alive</span>
+            <span style={{ background: "linear-gradient(90deg, #1A6FA8, #38bdf8, #0C9472)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              Data Come Alive
+            </span>
           </h1>
-          <p className="text-lg text-gray-300 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
             We are a dedicated enterprise data and analytics consultancy — not a generalist
             IT firm. Everything we do is focused on helping organizations extract more
             value from their data.
@@ -62,7 +63,7 @@ export default function AboutPage() {
       </section>
 
       {/* Section navigation */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-brand-light">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {sections.map((section) => {
@@ -71,15 +72,15 @@ export default function AboutPage() {
                 <Link
                   key={section.title}
                   href={section.href}
-                  className="group block bg-brand-light rounded-2xl p-8 border border-gray-200 hover:border-brand-primary hover:shadow-lg transition-all"
+                  className="group block bg-white rounded-2xl p-8 border border-gray-200 hover:border-brand-primary/50 hover:shadow-xl transition-all"
                 >
-                  <div className="w-12 h-12 bg-brand-primary/10 rounded-xl flex items-center justify-center mb-5">
+                  <div className="w-12 h-12 bg-brand-primary/10 rounded-xl flex items-center justify-center mb-6">
                     <Icon size={24} className="text-brand-primary" />
                   </div>
-                  <h2 className="text-xl font-bold text-brand-dark mb-3 group-hover:text-brand-primary transition-colors">
+                  <h2 className="text-xl font-bold text-brand-dark mb-4 group-hover:text-brand-primary transition-colors">
                     {section.title}
                   </h2>
-                  <p className="text-sm text-text-body leading-relaxed mb-5">
+                  <p className="text-sm text-text-muted leading-relaxed mb-6">
                     {section.description}
                   </p>
                   <div className="flex items-center gap-1.5 text-sm font-semibold text-brand-primary">

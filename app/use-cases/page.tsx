@@ -9,18 +9,20 @@ export default async function UseCasesPage() {
   return (
     <>
       <section
-        className="pt-32 pb-16"
-        style={{ background: "linear-gradient(135deg, #1A1A2E 0%, #0D3A5C 100%)" }}
+        className="pt-32 pb-20"
+        style={{ background: "linear-gradient(135deg, #0a1628 0%, #1a2a5e 100%)" }}
       >
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-sm font-medium text-brand-primary uppercase tracking-widest mb-3">
+          <p className="text-sm font-medium text-[#38bdf8] uppercase tracking-widest mb-4">
             Success Stories
           </p>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-6">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight">
             Proven Impact Across{" "}
-            <span className="text-brand-primary">Every Industry</span>
+            <span style={{ background: "linear-gradient(90deg, #1A6FA8, #38bdf8, #0C9472)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              Every Industry
+            </span>
           </h1>
-          <p className="text-lg text-gray-300 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
             Over 25 years, we&apos;ve delivered measurable outcomes for 100+ enterprise
             organizations across banking, pharma, telecom, retail, and beyond.
           </p>

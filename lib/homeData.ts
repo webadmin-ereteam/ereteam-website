@@ -11,6 +11,7 @@ export const services = [
     gradient: "from-[#0D3A5C] to-[#0a2540]",
     accent: "#38bdf8",
     textLight: true,
+    image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=1000",
   },
   {
     icon: TrendingUp,
@@ -22,6 +23,7 @@ export const services = [
     gradient: "from-[#1A1A2E] to-[#2e1065]",
     accent: "#a78bfa",
     textLight: true,
+    image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=1000",
   },
   {
     icon: BarChart3,
@@ -33,6 +35,7 @@ export const services = [
     gradient: "from-[#1a0a14] to-[#3d0028]",
     accent: "#f472b6",
     textLight: true,
+    image: "https://images.unsplash.com/photo-1542744094-2a52c02285e6?auto=format&fit=crop&q=80&w=1000",
   },
 ];
 
@@ -46,6 +49,7 @@ export const products = [
       "AI-powered data quality and governance platform. Automated validation, lineage tracking, and compliance reporting at enterprise scale.",
     logo: "/logos/products/obserian.svg",
     color: "#7454A2",
+    image: "/images/ai/product_obserian.png",
   },
   {
     name: "Pharmeta",
@@ -56,6 +60,7 @@ export const products = [
       "AI-powered product & customer data management for pharma & FMCG. Clean, match, and certify golden records at scale.",
     logo: "/logos/products/pharmeta_logo.png",
     color: "#5B8ED6",
+    image: "/images/ai/product_pharmeta.png",
   },
   {
     name: "Maturytics",
@@ -66,6 +71,7 @@ export const products = [
       "SaaS platform for data & analytics maturity assessments. From signal to strategy in one platform.",
     logo: "/logos/products/maturytics.svg",
     color: "#F15A29",
+    image: "/images/ai/product_maturytics.png",
   },
 ];
 
@@ -76,6 +82,7 @@ export const selectedWork = [
     result: "25 markets on single platform. 40% reduction in time-to-insight.",
     href: "/use-cases",
     tags: ["Tableau", "Databricks", "Alteryx"],
+    image: "/images/ai/work_pharma.png",
   },
   {
     industry: "Banking & Finance",
@@ -83,6 +90,7 @@ export const selectedWork = [
     result: "Real-time Basel III monitoring. 60% less manual report preparation.",
     href: "/use-cases",
     tags: ["IBM Cognos", "Planning Analytics", "Python"],
+    image: "/images/ai/work_finance1.png",
   },
   {
     industry: "Banking & Finance",
@@ -90,6 +98,7 @@ export const selectedWork = [
     result: "Budget cycle reduced from 6 weeks to 10 days.",
     href: "/use-cases",
     tags: ["IBM TM1", "Planning Analytics"],
+    image: "/images/ai/work_finance2.png",
   },
 ];
 

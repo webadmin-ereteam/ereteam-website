@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { ExternalLink, ArrowRight, Shield, Zap, Globe } from "lucide-react";
+import { ExternalLink, ArrowRight } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Products",
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 const products = [
   {
-    icon: Shield,
+    logo: "/logos/products/obserian.svg",
     name: "Obserian",
     tagline: "Enterprise Data Governance Platform",
     href: "/products/obserian",
@@ -25,12 +25,12 @@ const products = [
       "Real-time quality dashboards",
     ],
     deploymentOptions: ["Cloud (AWS, Azure, GCP)", "On-Premise", "Hybrid"],
-    color: "from-blue-600 to-brand-primary",
-    bgColor: "bg-blue-50",
-    borderColor: "border-blue-100 hover:border-brand-primary",
+    color: "from-blue-600 to-cyan-500",
+    bgColor: "bg-white",
+    borderColor: "border-gray-200 hover:border-blue-500",
   },
   {
-    icon: Zap,
+    logo: "/logos/products/pharmeta_logo.png",
     name: "Pharmeta",
     tagline: "AI-Powered Data Platform",
     href: "/products/pharmeta",
@@ -45,12 +45,12 @@ const products = [
       "Secure by design, enterprise-ready",
     ],
     deploymentOptions: ["Cloud (SaaS)", "Enterprise License"],
-    color: "from-brand-magenta to-purple-700",
-    bgColor: "bg-pink-50",
-    borderColor: "border-pink-100 hover:border-brand-magenta",
+    color: "from-[#f472b6] to-purple-700",
+    bgColor: "bg-white",
+    borderColor: "border-gray-200 hover:border-[#f472b6]",
   },
   {
-    icon: Globe,
+    logo: "/logos/products/maturytics.svg",
     name: "Maturytics",
     tagline: "Data Maturity Assessment Platform",
     href: "/products/maturytics",
@@ -65,9 +65,9 @@ const products = [
       "Executive presentation output",
     ],
     deploymentOptions: ["SaaS (Cloud)", "Enterprise License"],
-    color: "from-teal-600 to-cyan-700",
-    bgColor: "bg-teal-50",
-    borderColor: "border-teal-100 hover:border-teal-600",
+    color: "from-teal-600 to-cyan-400",
+    bgColor: "bg-white",
+    borderColor: "border-gray-200 hover:border-teal-500",
   },
 ];
 
@@ -75,21 +75,22 @@ export default function ProductsPage() {
   return (
     <>
       {/* Hero */}
+      {/* Hero */}
       <section
         className="pt-32 pb-20"
-        style={{
-          background: "linear-gradient(135deg, #1A1A2E 0%, #0D3A5C 100%)",
-        }}
+        style={{ background: "linear-gradient(135deg, #0a1628 0%, #1a2a5e 100%)" }}
       >
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-sm font-medium text-brand-primary uppercase tracking-widest mb-3">
+          <p className="text-sm font-medium text-[#38bdf8] uppercase tracking-widest mb-4">
             Our Products
           </p>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-6">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight">
             Built for{" "}
-            <span className="text-brand-primary">Enterprise Scale</span>
+            <span style={{ background: "linear-gradient(90deg, #f472b6, #818cf8, #38bdf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              Enterprise Scale
+            </span>
           </h1>
-          <p className="text-lg text-gray-300 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
             Three purpose-built platforms that extend the reach of our consulting
             expertise — solving the hardest data challenges in governance, commercial
             analytics, and organizational maturity.
@@ -98,50 +99,52 @@ export default function ProductsPage() {
       </section>
 
       {/* Product Cards */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-brand-light">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {products.map((product) => {
-              const Icon = product.icon;
               return (
                 <div
                   key={product.name}
-                  className={`rounded-2xl p-8 border-2 ${product.bgColor} ${product.borderColor} transition-all duration-300 hover:shadow-xl flex flex-col`}
+                  className={`rounded-2xl p-8 border ${product.bgColor} ${product.borderColor} transition-all duration-300 hover:shadow-xl flex flex-col group`}
                 >
-                  <div
-                    className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${product.color} flex items-center justify-center mb-6`}
-                  >
-                    <Icon size={28} className="text-white" />
+                  <div className="h-14 mb-6 flex items-center justify-start">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img 
+                      src={product.logo} 
+                      alt={`${product.name} logo`} 
+                      className="max-h-full max-w-[160px] object-contain"
+                    />
                   </div>
-                  <div className="text-xs font-medium text-text-muted uppercase tracking-wider mb-1">
+                  <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                     {product.tagline}
                   </div>
-                  <h2 className="text-2xl font-extrabold text-brand-dark mb-4">
+                  <h2 className="text-2xl font-extrabold text-brand-dark mb-4 transition-colors group-hover:text-brand-primary">
                     {product.name}
                   </h2>
-                  <p className="text-sm text-text-body leading-relaxed mb-6">
+                  <p className="text-sm text-text-body leading-relaxed mb-8">
                     {product.description}
                   </p>
-                  <ul className="space-y-2 mb-6 flex-1">
+                  <ul className="space-y-3 mb-8 flex-1">
                     {product.capabilities.map((cap) => (
                       <li
                         key={cap}
-                        className="flex items-center gap-2 text-sm text-text-muted"
+                        className="flex items-center gap-3 text-sm text-text-muted"
                       >
-                        <span className="w-1.5 h-1.5 rounded-full bg-brand-primary flex-shrink-0" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0" />
                         {cap}
                       </li>
                     ))}
                   </ul>
-                  <div className="mb-6">
-                    <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
+                  <div className="mb-8">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
                       Deployment
                     </p>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-2">
                       {product.deploymentOptions.map((opt) => (
                         <span
                           key={opt}
-                          className="text-xs px-2 py-1 bg-white rounded-md border border-gray-200 text-text-muted"
+                          className="text-xs px-3 py-1.5 bg-gray-50 rounded-md border border-gray-200 text-gray-600"
                         >
                           {opt}
                         </span>
@@ -151,7 +154,7 @@ export default function ProductsPage() {
                   <div className="flex gap-4">
                     <Link
                       href={product.href}
-                      className="flex items-center gap-1.5 text-sm font-semibold text-brand-primary hover:text-brand-dark transition-colors"
+                      className="flex items-center gap-1.5 text-sm font-semibold text-brand-primary"
                     >
                       Learn more <ArrowRight size={14} />
                     </Link>
@@ -159,7 +162,7 @@ export default function ProductsPage() {
                       href={product.externalHref}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-sm font-medium text-text-muted hover:text-brand-dark transition-colors"
+                      className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-brand-dark transition-colors"
                     >
                       Visit site <ExternalLink size={12} />
                     </a>
@@ -172,20 +175,21 @@ export default function ProductsPage() {
       </section>
 
       {/* CTA */}
-      <section
-        className="py-16"
-        style={{ background: "linear-gradient(135deg, #1A1A2E 0%, #0D3A5C 100%)" }}
-      >
-        <div className="max-w-3xl mx-auto px-4 text-center">
-          <h2 className="text-3xl font-extrabold text-white mb-4">
+      <section className="relative py-24 overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 bg-[#07111F]"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-[#1A6FA8]/10 to-transparent"></div>
+        </div>
+        <div className="relative z-10 max-w-3xl mx-auto px-4 text-center">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-4">
             Want to see a product in action?
           </h2>
-          <p className="text-gray-300 mb-8">
+          <p className="text-lg text-gray-400 mb-8">
             Request a demo or speak to our product team.
           </p>
           <Link
             href="/contact"
-            className="inline-flex items-center px-8 py-4 bg-brand-primary text-white font-semibold rounded-lg hover:bg-opacity-90 transition-all"
+            className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-[#1A6FA8] to-[#38bdf8] text-white font-bold rounded-lg hover:shadow-[0_0_20px_rgba(56,189,248,0.4)] hover:-translate-y-1 transition-all"
           >
             Request a Demo
           </Link>

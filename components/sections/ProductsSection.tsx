@@ -17,35 +17,18 @@ const stagger = {
 
 export default function ProductsSection() {
   return (
-    <section
-      className="py-24 relative overflow-hidden"
-      style={{ background: "linear-gradient(160deg, #1A1A2E 0%, #0D3A5C 60%, #1A1A2E 100%)" }}
-    >
-      {/* Background decoration */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] opacity-5 rounded-full"
-          style={{ background: "radial-gradient(circle, #1A6FA8 0%, transparent 70%)", transform: "translate(30%, -30%)" }} />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] opacity-5 rounded-full"
-          style={{ background: "radial-gradient(circle, #E91E8C 0%, transparent 70%)", transform: "translate(-30%, 30%)" }} />
-      </div>
-
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="py-24 bg-[#0B0F19]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
           variants={stagger}
-          className="text-center mb-14"
+          className="mb-12"
         >
-          <motion.p variants={fadeUp} className="text-sm font-medium text-brand-magenta uppercase tracking-widest mb-2">
-            Our Products
-          </motion.p>
-          <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl font-extrabold text-white mb-4">
-            Built for Enterprise Scale
+          <motion.h2 variants={fadeUp} className="text-3xl sm:text-5xl font-light text-white tracking-wide">
+            Built for <span className="font-semibold">Enterprise Scale</span>
           </motion.h2>
-          <motion.p variants={fadeUp} className="text-lg text-gray-400 max-w-2xl mx-auto">
-            Purpose-built platforms that extend the reach of our consulting expertise.
-          </motion.p>
         </motion.div>
 
         <motion.div
@@ -56,57 +39,61 @@ export default function ProductsSection() {
           className="grid grid-cols-1 md:grid-cols-3 gap-6"
         >
           {products.map((product) => (
-            <motion.div key={product.name} variants={fadeUp} className="group">
-              <div
-                className="h-full rounded-2xl p-6 sm:p-8 border transition-all duration-300 relative overflow-hidden"
-                style={{
-                  background: "rgba(255,255,255,0.04)",
-                  borderColor: "rgba(255,255,255,0.10)",
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.borderColor = `${product.color}60`;
-                  (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.08)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.10)";
-                  (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.04)";
-                }}
-              >
-                <div
-                  className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-0 group-hover:opacity-10 transition-opacity duration-500"
-                  style={{ background: product.color, transform: "translate(30%, -30%)" }}
-                />
-                <div className="relative z-10">
-                  <div className="mb-6 pb-5 border-b border-white/10">
+            <motion.div key={product.name} variants={fadeUp} className="group h-full flex">
+              <div className="h-full w-full rounded-2xl overflow-hidden bg-[#111827] border border-gray-800 hover:border-gray-600 transition-colors duration-300 flex flex-col relative">
+                
+                {/* Image container with aspect ratio */}
+                <div className="relative h-48 w-full overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img 
+                    src={product.image} 
+                    alt={product.name} 
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-80 mix-blend-overlay"
+                  />
+                  {/* Color overlay to give brand identity */}
+                  <div className="absolute inset-0" style={{ backgroundColor: product.color, opacity: 0.2 }}></div>
+                  
+                  {/* Top gradient for logo */}
+                  <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-[#111827] to-transparent"></div>
+                  
+                  {/* Logo overlay on top of image */}
+                  <div className="absolute top-6 left-8">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={product.logo}
                       alt={product.name}
-                      className="h-9 w-auto max-w-[150px] object-contain"
+                      className="h-10 w-auto max-w-[150px] object-contain drop-shadow-lg"
                     />
                   </div>
-                  <div className="mb-1 text-xs font-medium text-gray-400 italic">
+                </div>
+                
+                {/* Content container */}
+                <div className="p-8 flex flex-col flex-grow relative z-10">
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: product.color }}>
                     {product.tagline}
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-3">{product.name}</h3>
-                  <p className="text-sm text-gray-400 leading-relaxed mb-6">
+                  <h3 className="text-2xl font-bold text-white mb-4">
+                    {product.name}
+                  </h3>
+                  <p className="text-gray-400 text-sm leading-relaxed mb-6">
                     {product.description}
                   </p>
-                  <div className="flex flex-col gap-2">
+                  
+                  <div className="mt-auto pt-4 flex flex-col gap-3">
                     <Link
                       href={product.internalHref}
-                      className="inline-flex items-center gap-1.5 text-sm font-semibold transition-colors"
+                      className="inline-flex items-center gap-2 text-sm font-semibold transition-colors w-fit"
                       style={{ color: product.color }}
                     >
-                      Learn more <ArrowRight size={14} />
+                      Learn more <ArrowRight size={16} />
                     </Link>
                     <a
                       href={product.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-300 transition-colors"
+                      className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-white transition-colors w-fit"
                     >
-                      Visit website <ExternalLink size={12} />
+                      Visit website <ExternalLink size={14} />
                     </a>
                   </div>
                 </div>

@@ -17,29 +17,32 @@ const stagger = {
 
 export default function WorkSection() {
   return (
-    <section className="py-24 bg-[#F7F8FA]">
+    <section className="py-24 bg-[#0B0F19]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
           variants={stagger}
-          className="flex flex-col sm:flex-row sm:items-end justify-between mb-14"
+          className="flex flex-col sm:flex-row sm:items-end justify-between mb-12"
         >
           <div>
-            <motion.p variants={fadeUp} className="text-sm font-medium text-brand-magenta uppercase tracking-widest mb-2">
-              Selected Work
-            </motion.p>
-            <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl font-extrabold text-brand-dark">
-              Proven Impact Across Industries
+            <motion.h2 variants={fadeUp} className="text-3xl sm:text-5xl font-light text-white tracking-wide">
+              Explore our <span className="font-semibold">stories & insights</span>
             </motion.h2>
           </div>
-          <motion.div variants={fadeUp} className="mt-4 sm:mt-0">
+          <motion.div variants={fadeUp} className="mt-4 sm:mt-0 flex gap-4">
             <Link
               href="/use-cases"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-brand-primary hover:text-brand-dark transition-colors"
+              className="inline-flex items-center justify-center w-10 h-10 rounded-full border border-gray-600 text-white hover:bg-white/10 transition-colors"
             >
-              View all use cases <ArrowRight size={16} />
+               <ArrowRight size={20} className="rotate-180" />
+            </Link>
+            <Link
+              href="/use-cases"
+              className="inline-flex items-center justify-center w-10 h-10 rounded-full border border-blue-500 text-blue-500 hover:bg-blue-500/10 transition-colors"
+            >
+              <ArrowRight size={20} />
             </Link>
           </motion.div>
         </motion.div>
@@ -55,24 +58,32 @@ export default function WorkSection() {
             <motion.div key={work.project} variants={fadeUp}>
               <Link
                 href={work.href}
-                className="group block h-full bg-white rounded-2xl p-8 border border-gray-200 hover:border-brand-primary hover:shadow-xl transition-all duration-300 relative overflow-hidden"
+                className="group block h-[500px] w-full rounded-none overflow-hidden relative"
               >
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
-                <span className="inline-block text-xs font-semibold text-brand-primary bg-brand-primary/10 px-3 py-1 rounded-full mb-5">
-                  {work.industry}
-                </span>
-                <h3 className="text-xl font-extrabold text-brand-dark mb-4 group-hover:text-brand-primary transition-colors">
-                  {work.project}
-                </h3>
-                <p className="text-sm text-text-body mb-5 leading-relaxed font-medium border-l-2 border-brand-magenta pl-3">
-                  {work.result}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {work.tags.map((tag) => (
-                    <span key={tag} className="text-xs px-2.5 py-1 bg-brand-light rounded-md border border-gray-200 text-text-muted">
-                      {tag}
-                    </span>
-                  ))}
+                {/* Background Image */}
+                <div className="absolute inset-0 w-full h-full">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={work.image}
+                    alt={work.project}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                </div>
+                
+                {/* Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F19] via-[#0B0F19]/80 to-transparent transition-opacity duration-300" />
+                
+                {/* Content */}
+                <div className="absolute bottom-0 left-0 right-0 p-8">
+                  <span className="block text-xs font-semibold text-gray-400 tracking-wider uppercase mb-3">
+                    {work.industry}
+                  </span>
+                  <h3 className="text-2xl font-bold text-white mb-2 leading-snug">
+                    {work.project}
+                  </h3>
+                  <p className="text-gray-300 text-sm mt-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-4 group-hover:translate-y-0">
+                    {work.result}
+                  </p>
                 </div>
               </Link>
             </motion.div>

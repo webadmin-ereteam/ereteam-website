@@ -31,24 +31,25 @@ export default async function CertificationsPage() {
   return (
     <>
       {/* Hero */}
+      {/* Hero */}
       <section
         className="pt-32 pb-20"
         style={{ background: "linear-gradient(135deg, #1A1A2E 0%, #0D3A5C 100%)" }}
       >
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="mb-4">
             <Link href="/about" className="text-sm text-gray-400 hover:text-white transition-colors">
               ← About
             </Link>
           </div>
-          <p className="text-sm font-medium text-brand-primary uppercase tracking-widest mb-3">
+          <p className="text-sm font-medium text-brand-primary uppercase tracking-widest mb-4">
             Certifications
           </p>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-6">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight">
             Certified Expertise,{" "}
-            <span className="text-brand-primary">Every Engagement</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-primary to-blue-400">Every Engagement</span>
           </h1>
-          <p className="text-lg text-gray-300 max-w-2xl">
+          <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
             Our certifications across 6 major technology vendors are evidence of our
             commitment to technical excellence. When you work with Ereteam, you get
             senior certified practitioners — not junior consultants building their skills
@@ -102,21 +103,22 @@ export default async function CertificationsPage() {
       </section>
 
       {/* CTA */}
-      <section
-        className="py-16"
-        style={{ background: "linear-gradient(135deg, #1A1A2E 0%, #0D3A5C 100%)" }}
-      >
-        <div className="max-w-3xl mx-auto px-4 text-center">
-          <h2 className="text-3xl font-extrabold text-white mb-4">
+      <section className="relative py-24 overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 bg-[#07111F]"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-brand-primary/10 to-transparent"></div>
+        </div>
+        <div className="relative z-10 max-w-3xl mx-auto px-4 text-center">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-4">
             Work with certified experts
           </h2>
-          <p className="text-gray-300 mb-8">
+          <p className="text-lg text-gray-400 mb-8">
             Every Ereteam engagement is staffed with certified practitioners on your
             platform of choice.
           </p>
           <Link
             href="/contact"
-            className="inline-flex items-center px-8 py-4 bg-brand-primary text-white font-semibold rounded-lg hover:bg-opacity-90 transition-all"
+            className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-[#0284c7] to-brand-primary text-white font-bold rounded-lg hover:shadow-[0_0_20px_rgba(56,189,248,0.4)] hover:-translate-y-1 transition-all"
           >
             Get in Touch
           </Link>

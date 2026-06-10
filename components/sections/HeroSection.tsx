@@ -204,15 +204,22 @@ export default function HeroSection() {
       className="relative min-h-screen flex items-center overflow-hidden"
       style={{ background: "#07111f" }}
     >
-      {/* Animated background blobs */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute animate-blob-1 rounded-full"
-          style={{ top: "5%", left: "-5%", width: 700, height: 700, background: "radial-gradient(circle, rgba(26,111,168,0.25) 0%, transparent 65%)" }} />
-        <div className="absolute animate-blob-2 rounded-full"
-          style={{ top: "30%", right: "-10%", width: 600, height: 600, background: "radial-gradient(circle, rgba(12,148,114,0.18) 0%, transparent 65%)" }} />
-        <div className="absolute animate-blob-3 rounded-full"
-          style={{ bottom: "0%", left: "35%", width: 500, height: 500, background: "radial-gradient(circle, rgba(233,30,140,0.12) 0%, transparent 65%)" }} />
-        <svg className="absolute inset-0 w-full h-full opacity-[0.06]" xmlns="http://www.w3.org/2000/svg">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+        <img 
+          src="/images/ai/hero_bg.png" 
+          alt="Ereteam Hero Background" 
+          className="w-full h-full object-cover opacity-20"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0B0F19]/40 via-[#0B0F19]/80 to-[#0B0F19]"></div>
+        
+        {/* Animated background blobs for additional texture over the video */}
+        <div className="absolute animate-blob-1 rounded-full mix-blend-color-dodge"
+          style={{ top: "5%", left: "-5%", width: 700, height: 700, background: "radial-gradient(circle, rgba(26,111,168,0.3) 0%, transparent 65%)" }} />
+        <div className="absolute animate-blob-2 rounded-full mix-blend-color-dodge"
+          style={{ top: "30%", right: "-10%", width: 600, height: 600, background: "radial-gradient(circle, rgba(12,148,114,0.2) 0%, transparent 65%)" }} />
+        <div className="absolute animate-blob-3 rounded-full mix-blend-color-dodge"
+          style={{ bottom: "0%", left: "35%", width: 500, height: 500, background: "radial-gradient(circle, rgba(233,30,140,0.15) 0%, transparent 65%)" }} />
+        <svg className="absolute inset-0 w-full h-full opacity-[0.04]" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="dots" width="36" height="36" patternUnits="userSpaceOnUse">
               <circle cx="18" cy="18" r="1" fill="white" />
