@@ -36,9 +36,17 @@ export const teamMemberSchema = defineType({
     }),
     defineField({
       name: "image",
-      title: "Photo",
+      title: "Photo (Leadership / Default)",
       type: "image",
       options: { hotspot: true },
+      description: "Default photo used for Leadership Team (4:3 ratio).",
+    }),
+    defineField({
+      name: "imagePartners",
+      title: "Photo (Partners Board)",
+      type: "image",
+      options: { hotspot: true },
+      description: "Optional. Use this if you need a different crop or photo for the Partners Board (1:1 square ratio). If left empty, the default photo is used.",
     }),
     defineField({
       name: "linkedIn",

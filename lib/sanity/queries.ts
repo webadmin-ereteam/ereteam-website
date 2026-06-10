@@ -91,6 +91,7 @@ export interface SanityTeamMember {
   region?: string;
   bio?: string;
   image?: { asset: { _ref: string } };
+  imagePartners?: { asset: { _ref: string } };
   linkedIn?: string;
   groups?: string[];
   order?: number;
@@ -107,7 +108,7 @@ export async function getAllTeamMembers(): Promise<SanityTeamMember[]> {
 export async function getLeadershipTeam(): Promise<SanityTeamMember[]> {
   return client.fetch(
     `*[_type == "teamMember" && "leadership" in groups] | order(order asc, name asc) {
-      _id, name, title, region, bio, image, linkedIn, groups, order
+      _id, name, title, region, bio, image, imagePartners, linkedIn, groups, order
     }`
   );
 }
@@ -115,7 +116,7 @@ export async function getLeadershipTeam(): Promise<SanityTeamMember[]> {
 export async function getPartnersBoard(): Promise<SanityTeamMember[]> {
   return client.fetch(
     `*[_type == "teamMember" && "partners_board" in groups] | order(order asc, name asc) {
-      _id, name, title, region, bio, image, linkedIn, groups, order
+      _id, name, title, region, bio, image, imagePartners, linkedIn, groups, order
     }`
   );
 }

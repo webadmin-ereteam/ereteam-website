@@ -197,10 +197,10 @@ export default async function CompanyPage() {
                     key={person._id}
                     className="bg-brand-light rounded-xl p-4 text-center border border-gray-200 hover:border-brand-primary hover:shadow-sm transition-all flex flex-col items-center"
                   >
-                    {person.image ? (
+                    {person.imagePartners || person.image ? (
                       <div className="w-full aspect-square mb-3 overflow-hidden rounded-lg">
                         <Image
-                          src={urlFor(person.image).width(400).height(400).url()}
+                          src={urlFor(person.imagePartners || person.image).width(400).height(400).fit('crop').url()}
                           alt={person.name}
                           width={400}
                           height={400}
@@ -262,7 +262,7 @@ export default async function CompanyPage() {
                   <div className="w-full aspect-[4/3] relative">
                     {person.image ? (
                       <Image
-                        src={urlFor(person.image).width(800).height(600).url()}
+                        src={urlFor(person.image).width(800).height(600).fit('crop').url()}
                         alt={person.name}
                         width={800}
                         height={600}
