@@ -58,6 +58,11 @@ export default function RootLayout({
         <main>{children}</main>
         <Footer />
         <ChatWidget />
+        <Script
+          id="hs-script-loader"
+          src="//js-eu1.hs-scripts.com/147286586.js"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );
