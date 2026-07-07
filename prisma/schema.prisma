@@ -1,0 +1,243 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Prospect {
+  id           String   @id @default(cuid())
+  companyName  String
+  contactName  String
+  contactEmail String
+  contactPhone String?
+  createdAt    DateTime @default(now())
+  journeys     Journey[]
+}
+
+model SalesRep {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  title     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  journeys Journey[]
+}
+
+// A product / area of expertise a case can be tagged with (e.g. "Financial
+// Performance & Intelligence", "Obserian"). Managed from admin settings like
+// sales reps; shown to the customer alongside their sales rep.
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  journeys Journey[]
+}
+
+model Journey {
+  id                  String    @id @default(cuid())
+  prospectId          String
+  prospect            Prospect  @relation(fields: [prospectId], references: [id])
+  // Set once at creation as "Firma - Ürün - Tarih" — kept identical to the Drive
+  // folder name created for this journey at that same moment. Neither renames
+  // itself later if the company/product changes, so they always stay in sync.
+  name                String
+  accessToken         String    @unique
+  status              String    @default("active") // active | won | lost | paused
+  outcomeReason       String? // admin-only note on why won/lost, for later insight
+  outcomeSetAt        DateTime?
+  proposalRequested   Boolean   @default(false)
+  proposalRequestedAt DateTime?
+  // Independent of `status` — a journey can be archived while still won/lost/etc,
+  // since archiving (tidying up a case) and outcome (why it ended) are separate concerns.
+  archived            Boolean   @default(false)
+  // Manual override to disable the no-login customer link even while the
+  // journey is otherwise active. The link is also treated as inactive
+  // automatically whenever `status` isn't "active", or whenever `archived` is true.
+  linkDisabled        Boolean   @default(false)
+  driveFolderId       String?
+  salesRepId          String?
+  salesRep            SalesRep? @relation(fields: [salesRepId], references: [id])
+  productId           String?
+  product             Product?  @relation(fields: [productId], references: [id])
+  createdAt           DateTime  @default(now())
+
+  stages          JourneyStage[]
+  surveyInstances SurveyInstance[]
+  documents       Document[]
+}
+
+// A named, reusable stage flow (e.g. "Standart Süreç", "Enterprise Süreç").
+// Picked once when a journey is created — its StageDefinition rows are copied
+// into that journey's own JourneyStage rows and never referenced again.
+model StageTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  stages StageDefinition[]
+}
+
+// One stage within a StageTemplate — used to seed each new journey's own
+// stage copies (JourneyStage). Editing a template does not affect journeys
+// that already copied from it.
+model StageDefinition {
+  id                  String  @id @default(cuid())
+  stageTemplateId     String
+  stageTemplate       StageTemplate @relation(fields: [stageTemplateId], references: [id], onDelete: Cascade)
+  key                 String
+  name                String
+  description         String?
+  customerDescription String?
+  customerVisible     Boolean @default(true)
+  surveysEnabled      Boolean @default(true)
+  estimatedDays       Int? // average expected duration for this stage, shown to the customer
+  order               Int
+  isActive            Boolean @default(true)
+
+  journeyStages JourneyStage[]
+
+  @@unique([stageTemplateId, key])
+}
+
+// A named, reusable question list — the only place questions are authored.
+// Not tied to a stage (the name conveys that, e.g. "Teknik Demo Soruları").
+// Loaded as an optional starting point whenever a survey is built for a
+// case, then freely edited before sending.
+model SurveyTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  items SurveyTemplateItem[]
+}
+
+model SurveyTemplateItem {
+  id               String  @id @default(cuid())
+  surveyTemplateId String
+  surveyTemplate   SurveyTemplate @relation(fields: [surveyTemplateId], references: [id], onDelete: Cascade)
+  text             String
+  type             String // short_text | long_text | single_choice | multi_choice | scale | file_upload
+  options          Json?
+  required         Boolean @default(true)
+  order            Int     @default(0)
+  // Skip logic: only shown if the question at `conditionOnOrder` (within the
+  // same list) was answered with one of `conditionValues`. Null = always shown.
+  conditionOnOrder Int?
+  conditionValues  Json?
+}
+
+// A stage instance scoped to one journey (case). Copied from a
+// StageDefinition template when the journey is created, then freely
+// editable per case (rename, hide, reorder, or add one-off custom stages)
+// without touching the global template or other journeys.
+model JourneyStage {
+  id                      String    @id @default(cuid())
+  journeyId               String
+  journey                 Journey   @relation(fields: [journeyId], references: [id])
+  sourceStageDefinitionId String?
+  sourceStageDefinition   StageDefinition? @relation(fields: [sourceStageDefinitionId], references: [id])
+  key                     String
+  name                    String
+  description             String?
+  customerDescription     String?
+  customerVisible         Boolean   @default(true)
+  surveysEnabled          Boolean   @default(true)
+  estimatedDays           Int? // average expected duration for this stage, shown to the customer
+  order                   Int
+  isActive                Boolean   @default(true) // hide from this case without deleting survey/document history
+  status                  String    @default("pending") // pending | active | completed | skipped
+  enteredAt               DateTime?
+  completedAt             DateTime?
+  notes                   String?
+
+  surveyInstances SurveyInstance[]
+  documents       Document[]
+
+  @@unique([journeyId, key])
+}
+
+model SurveyInstance {
+  id          String    @id @default(cuid())
+  journeyId   String
+  journey     Journey   @relation(fields: [journeyId], references: [id])
+  stageId     String
+  stage       JourneyStage @relation(fields: [stageId], references: [id])
+  title       String
+  status      String    @default("draft") // draft | sent | completed
+  sentAt      DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  selections SurveyQuestionSelection[]
+}
+
+model SurveyQuestionSelection {
+  id               String  @id @default(cuid())
+  surveyInstanceId String
+  surveyInstance   SurveyInstance @relation(fields: [surveyInstanceId], references: [id])
+  text             String
+  type             String
+  options          Json?
+  required         Boolean @default(true)
+  order            Int     @default(0)
+  // Skip logic: only shown if the question at `conditionOnOrder` (within the
+  // same survey) was answered with one of `conditionValues`. Null = always shown.
+  conditionOnOrder Int?
+  conditionValues  Json?
+
+  response SurveyResponse?
+}
+
+model SurveyResponse {
+  id                        String   @id @default(cuid())
+  surveyQuestionSelectionId String   @unique
+  surveyQuestionSelection   SurveyQuestionSelection @relation(fields: [surveyQuestionSelectionId], references: [id])
+  answerText                String?
+  answerJson                Json?
+  respondedAt               DateTime @default(now())
+
+  document Document?
+}
+
+model Document {
+  id               String   @id @default(cuid())
+  journeyId        String
+  journey          Journey  @relation(fields: [journeyId], references: [id])
+  stageId          String?
+  stage            JourneyStage? @relation(fields: [stageId], references: [id])
+  type             String   // survey | proposal | meeting_note | project_plan | contract | other | survey_export | customer_upload
+  title            String
+  driveFileId      String
+  driveWebViewLink String
+  customerVisible  Boolean  @default(true)
+  source           String   @default("admin_upload") // admin_upload | customer_survey_upload
+  surveyResponseId String?  @unique
+  surveyResponse   SurveyResponse? @relation(fields: [surveyResponseId], references: [id])
+  uploadedBy       String?
+  uploadedAt       DateTime @default(now())
+  notes            String?
+}
+
+// Singleton row (at most one) holding the shared admin Basic-Auth login, so it
+// can be changed from within the admin panel instead of only via env vars.
+// Falls back to ADMIN_BASIC_USER/ADMIN_BASIC_PASS whenever no row exists yet —
+// see lib/presales/auth.ts.
+model AdminCredential {
+  id        String   @id @default(cuid())
+  username  String
+  password  String
+  updatedAt DateTime @updatedAt
+}
