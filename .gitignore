@@ -41,3 +41,4 @@ next-env.d.ts
 # presales portal
 /storage
 google-service-account*.json
+lib/presales/*.swp
