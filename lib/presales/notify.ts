@@ -8,8 +8,8 @@ const APP_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 let transport: ReturnType<typeof nodemailer.createTransport> | null = null;
 
 function getTransport() {
-  const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
+  const user = process.env.GMAIL_USER?.trim();
+  const pass = process.env.GMAIL_APP_PASSWORD?.trim();
   if (!user || !pass) return null;
 
   if (!transport) {
@@ -40,7 +40,7 @@ export async function notifySalesRep(params: {
 
   try {
     await mailer.sendMail({
-      from: process.env.GMAIL_USER,
+      from: process.env.GMAIL_USER?.trim(),
       to: params.salesRepEmail,
       subject: params.subject,
       html: `

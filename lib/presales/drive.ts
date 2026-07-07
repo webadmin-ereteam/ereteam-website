@@ -23,7 +23,10 @@ function getDriveClient() {
 }
 
 async function createJourneyFolder(drive: ReturnType<typeof getDriveClient>, folderName: string) {
-  const rootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
+  // .trim() guards against a stray trailing newline/whitespace from how the
+  // value was pasted into the hosting provider's env var UI — Drive treats
+  // "<id>\n" as a different, nonexistent id and fails with a 404.
+  const rootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID?.trim();
   if (!rootFolderId) {
     throw new Error("GOOGLE_DRIVE_ROOT_FOLDER_ID is not set. Add it to .env.local.");
   }
