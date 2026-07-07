@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isValidAdminBasicAuth } from "@/lib/presales/auth";
+import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/presales/session";
 
 export async function middleware(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
+  const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
 
-  if (!(await isValidAdminBasicAuth(authHeader))) {
-    return new NextResponse("Authentication required", {
-      status: 401,
-      headers: { "WWW-Authenticate": 'Basic realm="Presales Admin"' },
-    });
+  if (await verifySessionToken(token)) {
+    return NextResponse.next();
   }
 
-  return NextResponse.next();
+  if (req.nextUrl.pathname.startsWith("/api/")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const loginUrl = new URL("/presales/login", req.url);
+  loginUrl.searchParams.set("next", req.nextUrl.pathname);
+  return NextResponse.redirect(loginUrl);
 }
 
 export const config = {

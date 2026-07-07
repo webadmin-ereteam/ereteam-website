@@ -20,8 +20,8 @@ That data is scattered across email/Drive/memory. This tool gives:
 - **The prospect**: a single no-login link (`/presales/j/[token]`) showing their
   timeline, estimated remaining time, pending surveys to fill, and documents shared
   with them.
-- **The sales/presales team**: an admin panel (`/presales/admin`, Basic-Auth
-  protected) to create journeys, customize each case's stages, build/send surveys
+- **The sales/presales team**: an admin panel (`/presales/admin`, behind a login
+  page) to create journeys, customize each case's stages, build/send surveys
   (from reusable templates or from scratch, with skip logic and "Diğer" free-text
   options), upload deliverables, assign a sales rep and a product/expertise area,
   archive dead cases, and get email pings when a customer takes action.
@@ -41,7 +41,7 @@ admin UI without a deploy.
 | **Postgres on Neon** (hosted, not local) | Prospects need a real link that works from any machine — this can't be stuck on one laptop. Same SQL dialect as the eventual AWS target. |
 | **Prisma ORM 7** (driver adapters, `prisma-client` generator) | Typed queries/migrations; the schema reshapes often (stages, questions) so migrations matter. |
 | **Google Drive** for file storage | Reuses existing Workspace infra so staff can browse uploads directly. **Configured** — credentials live in `.env.local` (`GOOGLE_SERVICE_ACCOUNT_KEY`, base64-encoded service account JSON; `GOOGLE_DRIVE_ROOT_FOLDER_ID`, a Shared Drive id). The first upload for a journey auto-creates its folder under that root, named identically to `Journey.name` ("Firma - Ürün - Tarih"); every later upload for that journey reuses the same folder. Inside it, documents are further sorted into type-named subfolders — see "Document types & Drive folder structure" below. |
-| **HTTP Basic Auth** via `middleware.ts` | One shared username/password for the small internal team — least code for v1. Upgradeable to per-staff auth later without a schema change. Editable in-app at `/presales/admin/account` (see below). |
+| **Signed session cookie** via `middleware.ts` | One shared username/password for the small internal team, entered on a real login page (`/presales/login`) instead of the browser's native Basic-Auth prompt — see "Admin login" below. Upgradeable to per-staff auth later without a schema change. |
 | **Groq (`llama-3.1-8b-instant`)** | Already integrated for the marketing site's chat widget (`lib/services/llmService.ts`); reused as-is for the admin chatbot. |
 | **Gmail SMTP** (`nodemailer`) for sales-rep notifications | Resend (already used for the marketing site's lead form) needs a verified sending domain before it'll deliver to real inboxes — see "Email delivery" below. Gmail SMTP as a real Workspace mailbox + app password works today with no domain verification step. |
 | **SheetJS (`xlsx`, installed from SheetJS's own CDN, not the stale npm package)** | Client-side Excel generation/parsing for bulk question import and the sample-template download; server-side reuse for the survey-answer export/archive. |
@@ -111,7 +111,7 @@ documents with real foreign keys), which fits Postgres, not schemaless documents
 - `Document` — a deliverable (see the type list below), optionally scoped to a
   stage, optionally customer-visible.
 - `AdminCredential` — a singleton (at most one row) holding the shared admin
-  Basic-Auth login; see "Admin login" below.
+  login; see "Admin login" below.
 
 Ordering (`order` field on `StageDefinition`/`JourneyStage`/questions) is
 maintained purely by drag-and-drop in the UI — there's no manual "order number"
@@ -159,7 +159,9 @@ uploads everything or nothing — never leaves an orphaned partial upload in Dri
 prisma/schema.prisma, prisma/migrations/**, prisma/seed.ts, prisma.config.ts
 
 lib/presales/db.ts               Prisma client singleton
-lib/presales/auth.ts             Basic-auth check used by middleware.ts
+lib/presales/auth.ts             getEffectiveAdminCredentials() — used by the login page + account settings page
+lib/presales/session.ts          signs/verifies the admin session cookie (Web Crypto, no DB access — middleware-safe)
+lib/presales/sessionActions.ts   loginAdmin / logoutAdmin Server Actions
 lib/presales/tokens.ts           no-login access token generation
 lib/presales/drive.ts            Google Drive upload wrapper (creates/reuses the journey folder + type subfolders)
 lib/presales/documentTypes.ts    Document type list/labels + their Drive subfolder names
@@ -174,13 +176,14 @@ lib/presales/surveyExcel.ts      builds an .xlsx buffer of a survey's questions/
 lib/presales/fileUpload.ts       shared MAX_UPLOAD_BYTES constant (upload size guard, see below)
 lib/generated/prisma/**          generated Prisma client (gitignored, regenerate with `npx prisma generate`)
 
-middleware.ts                    Basic-Auth gate for /presales/admin/** and /api/presales/admin/**
+middleware.ts                    session-cookie gate for /presales/admin/** and /api/presales/admin/**
 
+app/presales/login/page.tsx      admin login form (posts to loginAdmin)
 app/presales/_components/**      shared UI atoms, QuestionListEditor, DragReorderList, SubmitButton, FileSizeInput
 app/presales/j/[token]/**        customer-facing journey page + survey answer pages/form + actions.ts
 app/presales/admin/**            admin dashboard, prospects/new, stages, survey-templates,
                                   sales-reps, products, journeys/[id]/** (stages/surveys/documents/settings),
-                                  AdminNav.tsx, AdminChatWidget.tsx, layout.tsx
+                                  AdminNav.tsx (incl. logout button), AdminChatWidget.tsx, layout.tsx
 
 app/api/presales/admin/chat/route.ts                              admin chatbot endpoint
 app/api/presales/admin/journeys/[id]/surveys/[surveyId]/export/route.ts   admin-side survey Excel download
@@ -320,18 +323,35 @@ so delivery to any real sales rep works immediately — confirmed live. If
 (logged to the server console, never surfaced to the customer, by design — a
 notification failure must never block their submission).
 
-## Admin login (editable in-app)
+## Admin login
 
-`/presales/admin/account` shows the current shared username/password in plain
-text and lets you change them — saving writes to a singleton `AdminCredential`
-DB row, which takes effect immediately (no redeploy). If no row exists yet, the
-gate falls back to `ADMIN_BASIC_USER`/`ADMIN_BASIC_PASS`. `middleware.ts` runs
-in the Edge Runtime, where the regular Prisma client (node-postgres driver)
-isn't usable, so `lib/presales/auth.ts` reads this one table via
-`@neondatabase/serverless`'s fetch-based client instead — the only place in the
-codebase that bypasses the normal Prisma singleton. Changing the password
-invalidates every open browser session's cached credentials immediately; the
-next request from any of them gets a fresh 401 and browsers re-prompt.
+A real login page at `/presales/login` (not the browser's native Basic-Auth
+prompt — that was the original v1 gate and the UX was rough: no branding, no
+logout, credentials cached indefinitely by the browser). How it works:
+
+- **Login** (`loginAdmin` in `lib/presales/sessionActions.ts`): checks the
+  submitted username/password against `getEffectiveAdminCredentials()`
+  (`lib/presales/auth.ts` — reads the singleton `AdminCredential` DB row, or
+  falls back to `ADMIN_BASIC_USER`/`ADMIN_BASIC_PASS` if that row doesn't exist
+  yet). On success it signs a session token (`lib/presales/session.ts`) and
+  sets it as an HttpOnly cookie (`presales_admin_session`, 7-day expiry), then
+  redirects to wherever the visitor was headed (`?next=`). On failure it
+  redirects back to the login page with `?error=1` and shows an inline message.
+- **Gate** (`middleware.ts`): only ever checks that cookie's signature and
+  expiry (`verifySessionToken`) — no DB call at all. This is why it can run
+  in the Edge Runtime with zero special-casing: the token is signed with
+  HMAC-SHA256 via Web Crypto (`crypto.subtle`, available in both Edge and
+  Node), keyed by `ADMIN_SESSION_SECRET`. Missing/invalid/expired cookie →
+  redirect to `/presales/login?next=<original path>` for page requests, or a
+  plain 401 JSON for `/api/presales/admin/**` requests.
+- **Logout** (`logoutAdmin`): clears the cookie, redirects to the login page.
+  A "Çıkış Yap" button lives at the bottom of `AdminNav.tsx`.
+- **Changing the login** (`/presales/admin/account`): still shows the current
+  username/password in plain text and lets you change them — saving writes to
+  the same `AdminCredential` row, effective immediately (no redeploy). This
+  does **not** invalidate already-issued session cookies (they're signed
+  independently of the password) — change `ADMIN_SESSION_SECRET` instead if
+  you need to force every open session to log out at once.
 
 ## Deployment notes (two production-only bugs hit going live)
 
@@ -359,7 +379,7 @@ they're worth writing down:
 
 ## Known limitation: concurrent editing
 
-The shared Basic-Auth login (see below) has no per-user identity, and no form or
+The shared login (see "Admin login" above) has no per-user identity, and no form or
 action anywhere checks "has this record changed since I loaded it" (no optimistic
 locking / version field). That's fine for a small team working on different cases,
 but two people editing the *same* record within the same few seconds can clash:
@@ -390,6 +410,7 @@ one shared login) plus an `updatedAt`-based conflict check on writes.
 DATABASE_URL                 # Neon Postgres connection string
 ADMIN_BASIC_USER             # shared admin login — fallback only; overridden once /presales/admin/account is used
 ADMIN_BASIC_PASS
+ADMIN_SESSION_SECRET         # signs the login session cookie — keep secret; changing it logs everyone out
 GROQ_API_KEY                 # already used by the marketing chat widget too
 GMAIL_USER                   # sales-rep email notifications — a real Workspace mailbox (optional — logs a warning and skips if unset)
 GMAIL_APP_PASSWORD           # app password for that mailbox, not its account password
@@ -403,7 +424,7 @@ GOOGLE_DRIVE_ROOT_FOLDER_ID  # a Shared Drive id (not a regular "My Drive" folde
 
 - Customer-facing email notifications (survey assigned, document uploaded) —
   deliberately not built yet; only the sales-rep side sends email today.
-- Per-staff login (currently one shared Basic-Auth login for the whole team).
+- Per-staff login (currently one shared login for the whole team).
 - HubSpot / Fireflies / Google Forms integrations.
 - Any automated AI analysis beyond the admin chatbot's read-only Q&A.
 
