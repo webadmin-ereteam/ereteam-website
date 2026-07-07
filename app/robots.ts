@@ -5,6 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
+      disallow: ["/presales/j/", "/presales/admin/"],
     },
     sitemap: "https://ereteam.com/sitemap.xml",
   };

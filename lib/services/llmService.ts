@@ -7,8 +7,11 @@ export async function generateChatResponse(
   systemPrompt: string,
   messages: ChatMessage[],
   apiKey: string,
-  pageContext: string = ""
+  pageContext: string = "",
+  options: { model?: string; temperature?: number; maxTokens?: number } = {}
 ): Promise<string> {
+  const { model = "llama-3.1-8b-instant", temperature = 0.7, maxTokens = 600 } = options;
+
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -16,13 +19,13 @@ export async function generateChatResponse(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "llama-3.1-8b-instant",
+      model,
       messages: [
         { role: "system", content: systemPrompt + pageContext },
         ...messages,
       ],
-      max_tokens: 600,
-      temperature: 0.7,
+      max_tokens: maxTokens,
+      temperature,
     }),
   });
 

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { ChevronDown, Menu, X } from "lucide-react";
 
 const servicesDropdown = [
@@ -56,6 +57,7 @@ const resourcesDropdown = [
 type DropdownKey = "services" | "products" | "about" | "resources" | null;
 
 export default function Navbar() {
+  const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<DropdownKey>(null);
@@ -99,6 +101,8 @@ export default function Navbar() {
     : mobileOpen
     ? "bg-white"
     : "bg-transparent";
+
+  if (pathname.startsWith("/presales")) return null;
 
   return (
     <header

@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { Globe } from "lucide-react";
 
 const services = [
@@ -36,6 +39,9 @@ const resources = [
 ];
 
 export default function Footer() {
+  const pathname = usePathname();
+  if (pathname.startsWith("/presales")) return null;
+
   return (
     <footer className="bg-brand-dark text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
