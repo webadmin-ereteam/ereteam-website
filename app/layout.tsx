@@ -5,6 +5,7 @@ import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import ChatWidget from "@/components/ChatWidget";
+import CookieBannerGate from "@/components/CookieBannerGate";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -54,6 +55,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans antialiased bg-white text-text-body">
+        <CookieBannerGate />
         <Navbar />
         <main>{children}</main>
         <Footer />
