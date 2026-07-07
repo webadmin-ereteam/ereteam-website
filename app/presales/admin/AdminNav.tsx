@@ -11,7 +11,9 @@ import {
   Package,
   KeyRound,
   Sparkles,
+  LogOut,
 } from "lucide-react";
+import { logoutAdmin } from "@/lib/presales/sessionActions";
 
 const JOURNEY_NAV_ITEMS = [
   { href: "/presales/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -100,6 +102,15 @@ export default function AdminNav() {
           </div>
         </div>
       </nav>
+      <form action={logoutAdmin} className="relative px-3 pb-6 pt-3">
+        <button
+          type="submit"
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/55 transition-all hover:bg-white/[0.04] hover:text-white"
+        >
+          <LogOut size={16.5} className="text-white/40" />
+          Çıkış Yap
+        </button>
+      </form>
     </aside>
   );
 }
