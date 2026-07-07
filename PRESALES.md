@@ -5,7 +5,9 @@ touch any marketing page, Sanity schema, or existing route — it only adds new 
 under the paths listed in "File map" below. If this gets abandoned, delete those
 paths (and the env vars listed below) and the rest of the site is unaffected.
 
-Lives on branch `feature/presales-portal`, not yet merged to `main`.
+Built on branch `feature/presales-portal`, merged to `main` and **live in
+production** (`ereteam.com`, deployed on Vercel). See "Deployment notes" below
+for the two production-only gotchas that came up going live.
 
 ## Why this exists (business goal)
 
@@ -108,6 +110,8 @@ documents with real foreign keys), which fits Postgres, not schemaless documents
   (`"<label>: <free text>"`), not the raw marker-suffixed option.
 - `Document` — a deliverable (see the type list below), optionally scoped to a
   stage, optionally customer-visible.
+- `AdminCredential` — a singleton (at most one row) holding the shared admin
+  Basic-Auth login; see "Admin login" below.
 
 Ordering (`order` field on `StageDefinition`/`JourneyStage`/questions) is
 maintained purely by drag-and-drop in the UI — there's no manual "order number"
@@ -164,6 +168,7 @@ lib/presales/adminActions.ts     all admin Server Actions (create/update/reorder
 lib/presales/adminChatContext.ts builds a text dump of the DB for the admin chatbot
 lib/presales/stageProgress.ts    derives the single "current" stage from ordered stage list
 lib/presales/journeyLink.ts      derives whether the customer link is effectively active
+lib/presales/journeyStatus.ts    Turkish display labels for Journey.status (DB values stay English)
 lib/presales/surveyOptions.ts    encode/decode the "Diğer" (other) marker on option strings
 lib/presales/surveyExcel.ts      builds an .xlsx buffer of a survey's questions/answers
 lib/presales/fileUpload.ts       shared MAX_UPLOAD_BYTES constant (upload size guard, see below)
@@ -242,6 +247,35 @@ only when it has no unanswered sent survey — clicking it marks that stage
 completed and activates the next one. If you complete a stage by mistake, "Geri
 al" appears on the most recently completed stage to undo exactly that step.
 
+**Dashboard: filters, bulk actions, per-case shortcuts** (`app/presales/admin/page.tsx`
++ `JourneyListWithSelection.tsx`): five combinable filters — Ara (search),
+Durum, Satışçı, Ürün, Arşiv, and Müşteri Linki. Each journey card's heading is
+the full `Journey.name` (not just the company name), shows the outcome badge
+plus a separate "Arşivlendi" badge when archived, a "Müşteri Linki: Aktif/Pasif"
+line, and two small buttons at the bottom-right — copy the customer link, or
+open it in a new tab (both stop the card's own click-through navigation).
+Checkboxes let you multi-select journeys and, from the bulk-action bar that
+appears, change Durum, reassign Satışçı, toggle Müşteri Linki, or
+archive/unarchive — all in one call across the whole selection
+(`bulkSetJourneyStatus`/`bulkAssignSalesRep`/`bulkSetJourneyLinkDisabled`/
+`bulkSetJourneyArchived` in `lib/presales/adminActions.ts`).
+
+**Durum labels & Kapanış Tarihi**: `Journey.status` values stay English in the
+DB (`active`/`won`/`lost`/`paused`) but always display via the Turkish labels
+in `lib/presales/journeyStatus.ts` (Aktif/Kazanıldı/Kaybedildi/Duraklatıldı) —
+every status badge, dropdown, and filter across the admin panel goes through
+that one map. Ayarlar → "Durum" also has a "Kapanış Tarihi" date field
+(`Journey.outcomeSetAt`): leave it blank and set the status to
+Kazanıldı/Kaybedildi and it auto-fills with today; type a specific date and
+it's saved exactly as entered; revert the status to Aktif/Duraklatıldı and it
+clears automatically (a close date only means something once a case is
+actually closed).
+
+**Save confirmation**: `SubmitButton.tsx` (shared by essentially every admin
+form) flashes a "✓ Kaydedildi" checkmark for ~1.8s right after a Server Action
+actually finishes — not just on click. This is one shared component, so it
+applies automatically everywhere it's already used; no per-form wiring needed.
+
 **Archiving a case**: `Journey.archived` is a boolean fully independent of
 `Journey.status` — a won or lost case can also be archived (archiving is about
 tidying up, not about outcome). Ayarlar has two separate controls: "Durum"
@@ -298,6 +332,30 @@ isn't usable, so `lib/presales/auth.ts` reads this one table via
 codebase that bypasses the normal Prisma singleton. Changing the password
 invalidates every open browser session's cached credentials immediately; the
 next request from any of them gets a fresh 401 and browsers re-prompt.
+
+## Deployment notes (two production-only bugs hit going live)
+
+Both confirmed via live Vercel deployment/log inspection — neither reproduced
+in local dev or a local production build (`next start`), which is exactly why
+they're worth writing down:
+
+- **Prisma client wasn't being generated on Vercel.** `lib/generated/prisma`
+  is gitignored (it's generated output), and `npm run build` was just
+  `next build` — nothing regenerated the client during Vercel's build, so it
+  failed with `Module not found: Can't resolve '@/lib/generated/prisma/client'`.
+  Fixed with a `postinstall: prisma generate` script in `package.json`, which
+  runs automatically right after `npm install` on every install (Vercel's and
+  a fresh local clone's alike) — always before `next build` runs.
+- **Env vars pasted into Vercel's dashboard can carry a trailing newline.**
+  `GOOGLE_DRIVE_ROOT_FOLDER_ID` had one in production, so every Drive call used
+  `"<id>\n"` as the parent folder id — Drive doesn't fuzzy-match, so every
+  upload failed with a 404 "File not found". Fixed by `.trim()`-ing every
+  env var that's used as an exact-match value: `GOOGLE_DRIVE_ROOT_FOLDER_ID`
+  (`lib/presales/drive.ts`), `ADMIN_BASIC_USER`/`ADMIN_BASIC_PASS`
+  (`lib/presales/auth.ts`), and `GMAIL_USER`/`GMAIL_APP_PASSWORD`
+  (`lib/presales/notify.ts`) — this fixes it in code regardless of whatever
+  whitespace ends up stored in the hosting provider's env var UI, no need to
+  also re-edit the value there.
 
 ## Known limitation: concurrent editing
 
