@@ -5,8 +5,8 @@ import { neon } from "@neondatabase/serverless";
 // Neon client works in both Edge and Node, so it's the one place we read
 // AdminCredential from outside a normal Server Action/Component.
 export async function getEffectiveAdminCredentials(): Promise<{ username: string; password: string } | null> {
-  const envUser = process.env.ADMIN_BASIC_USER;
-  const envPass = process.env.ADMIN_BASIC_PASS;
+  const envUser = process.env.ADMIN_BASIC_USER?.trim();
+  const envPass = process.env.ADMIN_BASIC_PASS?.trim();
   const envFallback = envUser && envPass ? { username: envUser, password: envPass } : null;
 
   if (!process.env.DATABASE_URL) return envFallback;
