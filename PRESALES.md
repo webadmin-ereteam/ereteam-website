@@ -1,9 +1,12 @@
 # Presales Customer Journey Portal
 
-Internal tool, built **additively** on top of the Ereteam marketing site. It does not
-touch any marketing page, Sanity schema, or existing route — it only adds new files
-under the paths listed in "File map" below. If this gets abandoned, delete those
-paths (and the env vars listed below) and the rest of the site is unaffected.
+Internal tool, built **additively** on top of the Ereteam marketing site — it
+adds new files under the paths listed in "File map" below, plus a handful of
+one-line touches to shared marketing files (hiding the marketing nav/footer/chat
+widget on `/presales/**`, a robots.txt disallow, and one CookieYes-banner fix —
+all called out explicitly in the file map). If this gets abandoned, delete
+those paths and touches (and the env vars listed below) and the rest of the
+site is unaffected.
 
 Built on branch `feature/presales-portal`, merged to `main` and **live in
 production** (`ereteam.com`, deployed on Vercel). See "Deployment notes" below
@@ -188,6 +191,17 @@ app/presales/admin/**            admin dashboard, prospects/new, stages, survey-
 app/api/presales/admin/chat/route.ts                              admin chatbot endpoint
 app/api/presales/admin/journeys/[id]/surveys/[surveyId]/export/route.ts   admin-side survey Excel download
 app/api/presales/public/surveys/[token]/[surveyId]/export/route.ts       customer-side survey Excel download
+
+--- one-line touches to existing marketing-site files (not new files) ---
+app/robots.ts                     added Disallow: /presales/j/ and /presales/admin/
+components/layout/Navbar.tsx      renders null on any /presales/** path
+components/layout/Footer.tsx      renders null on any /presales/** path
+components/ChatWidget.tsx         renders null on any /presales/** path
+components/CookieBannerGate.tsx   NEW — hides the CookieYes consent banner on /presales/** (it's a
+                                   raw <Script>, so it can't self-check the route like the three above)
+app/layout.tsx                    renders <CookieBannerGate /> alongside Navbar/Footer/ChatWidget
+lib/services/llmService.ts        generateChatResponse() takes an optional {model,temperature,maxTokens}
+                                   argument now, reused as-is by the admin chatbot; unchanged for existing callers
 ```
 
 ## Key flows
@@ -431,6 +445,10 @@ GOOGLE_DRIVE_ROOT_FOLDER_ID  # a Shared Drive id (not a regular "My Drive" folde
 ## If this gets abandoned
 
 Delete `PRESALES.md`, the paths under "File map" above, and the env vars listed
-above. Nothing else in the repo references them — the marketing site (`app/`,
-`lib/sanity/**`, `lib/siteData.ts`, `lib/getChatContext.ts`, etc.) has zero
-dependency on any of this.
+above. Also revert the one-line marketing-file touches listed at the bottom of
+"File map" (the `pathname.startsWith("/presales")` early-returns in
+Navbar/Footer/ChatWidget, the `<CookieBannerGate />` line and its import in
+`app/layout.tsx`, and the robots.txt disallow rules) — otherwise those files
+keep a dangling reference to deleted code. Everything else in the marketing
+site (`app/`, `lib/sanity/**`, `lib/siteData.ts`, `lib/getChatContext.ts`,
+etc.) has zero dependency on any of this.
