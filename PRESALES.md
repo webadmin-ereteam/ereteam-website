@@ -84,15 +84,27 @@ documents with real foreign keys), which fits Postgres, not schemaless documents
   one template is flagged `isDefault` (pre-selected on the create form). A template
   can be duplicated (handy for starting a variant from an existing flow) but not
   deleted while it's the default or the last one remaining.
-- `StageDefinition` — one stage within a `StageTemplate` (name, description,
-  customer-facing description, estimated duration, position). Editing a template
-  never changes journeys that already copied from it. Also carries
-  `customerWaitingMessage` — shown to the customer only while this is the
-  current stage *and* the ball is in our court (no sent-but-unanswered survey)
-  — distinct from `customerDescription` (a general blurb about the stage,
-  always shown). E.g. "Ekibimiz sizin için özel bir demo hazırlıyor, toplantı
-  planlaması için yakında iletişime geçeceğiz." Falls back to a generic
-  message on the customer page if left blank.
+- `StageDefinition` — one stage within a `StageTemplate` (name, customer-facing
+  fields, estimated duration, position). Editing a template never changes
+  journeys that already copied from it. The schema still has an internal-only
+  `description` column, but neither stage editor (template or per-case)
+  exposes it in the UI anymore — it added nothing the customer-facing fields
+  didn't already cover, so it was dropped from both the bulk-edit cards and
+  the "Yeni Aşama Ekle" form. The bulk-save action no longer writes that
+  column at all (rather than writing it as blank), so whatever value old rows
+  already have is left untouched. Two customer-facing fields remain, both
+  shown while the stage is current — there is **no "only while the ball is in
+  our court" gating anymore**, that restriction was removed:
+  - `customerDescription` ("Timeline altında gösterilen açıklama") — a short
+    line rendered directly under the stage's step marker in the timeline.
+  - `customerWaitingMessage` ("Müşteri ekranında gösterilen ana mesaj") — the
+    stage's main message, rendered as its own card above whatever else is
+    showing (a pending survey form, or the "nothing to do right now" card).
+    It used to only render inside that empty-state card, so it silently
+    disappeared the moment a survey was sent for the stage — now it always
+    shows for the current stage regardless of pending surveys. Renders
+    nothing if left blank (the empty-state card still shows its own fixed
+    copy in that case).
 - `JourneyStage` — a **per-case copy** of a stage, freely editable (rename, hide,
   add one-off stages, reorder) without touching the template or other cases.
   Tracks `status` (pending/active/completed/skipped) independently per stage.
@@ -254,13 +266,27 @@ lives. Editing later reopens that same page (`renameSurveyTemplate` for the
 name field, `updateSurveyTemplate` for the question list) — the list page
 itself never shows a question editor inline anymore.
 
+**Creating a per-case survey** (`surveys/new`, `createSurveyInstance`): pick a
+stage (only stages with `surveysEnabled` show up) and optionally load a
+`SurveyTemplate` as a starting point, then customize freely before saving as
+`status: "draft"`. Saving redirects to the case's **Anketler** tab, not back
+to Genel Bakış — that list shows every survey for the case with the "Gönder"
+button right on it, so the draft just built is immediately there to send
+instead of requiring a click back into it.
+
 **Survey authoring** (`QuestionListEditor.tsx`, shared by "Anket Şablonları",
 template editing, and the per-case survey builder):
 - Questions can be freely added/removed and **reordered by drag-and-drop**
   (reuses `DragReorderList`, the same component used for stages).
-- Tek Seçim/Çoklu Seçim options can each be flagged **"Diğer (serbest yazı)"** —
-  when a respondent picks that option, a free-text field appears and the final
-  answer is stored as `"<seçenek>: <yazdıkları>"`.
+- Tek Seçim/Çoklu Seçim questions can have **one "Diğer" option**, added via
+  its own "+ Diğer seçeneği ekle" button (hidden once the question already
+  has one) rather than a per-option checkbox — pre-filled with the text
+  "Diğer" so it's never saved blank. That matters because `parseQuestionSlots`
+  silently drops any option whose text is blank, `isOther` flag included; the
+  original per-option-checkbox design let someone check "Diğer" on a
+  freshly-added, still-empty option and have it vanish on save with no
+  indication why. When a respondent picks the "Diğer" option, a free-text
+  field appears and the final answer is stored as `"<seçenek>: <yazdıkları>"`.
 - Any question (after the first) can be made **conditional**: "Koşullu göster"
   → pick an earlier Tek Seçim/Çoklu Seçim question and which of its answers
   should reveal this one. On the customer form (`SurveyAnswerForm.tsx`, a client

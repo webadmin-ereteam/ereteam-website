@@ -334,6 +334,18 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div className="space-y-7 lg:col-span-2">
+            {/* The stage's main customer-facing message — shown for the current
+                stage regardless of whether there's a pending survey, since it's
+                meant to be the primary thing we want the customer to read at
+                this point in the process, not just a "nothing to do" filler. */}
+            {currentStage?.customerWaitingMessage && (
+              <div className={`overflow-hidden ${glassCardClass}`}>
+                <div className="h-1.5 w-full bg-gradient-to-r from-brand-primary to-brand-magenta" />
+                <p className="p-6 text-sm leading-relaxed text-text-body sm:p-8">
+                  {currentStage.customerWaitingMessage}
+                </p>
+              </div>
+            )}
             {pendingSurveys.length > 0 ? (
               pendingSurveys.map((survey) => (
                 <form
@@ -385,8 +397,7 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
                   </span>
                   <p className="text-[15px] font-medium text-brand-dark">Şu anda sizden beklenen bir aksiyon yok</p>
                   <p className="max-w-sm text-sm leading-relaxed text-text-muted">
-                    {currentStage?.customerWaitingMessage ||
-                      "Yeni bir adım olduğunda burada göreceksiniz — bu sayfayı yer imlerinize ekleyebilirsiniz."}
+                    Yeni bir adım olduğunda burada göreceksiniz — bu sayfayı yer imlerinize ekleyebilirsiniz.
                   </p>
                 </div>
               </div>

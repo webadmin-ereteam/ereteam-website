@@ -15,7 +15,6 @@ type StageDefinition = {
   id: string;
   key: string;
   name: string;
-  description: string | null;
   customerDescription: string | null;
   customerWaitingMessage: string | null;
   customerVisible: boolean;
@@ -79,22 +78,12 @@ export function StageDefinitionsList({
               {!stage.isActive && <Badge color="gray">pasif</Badge>}
             </div>
 
-            <div>
-              <FieldLabel>Dahili Açıklama (sadece admin görür)</FieldLabel>
-              <textarea
-                name={`stage_${index}_description`}
-                defaultValue={stage.description ?? ""}
-                rows={2}
-                className={`${inputClass} w-full`}
-              />
-            </div>
-
             <div className="space-y-3 rounded-xl bg-brand-primary/[0.03] p-4 ring-1 ring-inset ring-brand-primary/10">
               <p className="text-[10.5px] font-semibold uppercase tracking-wide text-brand-primary/80">
                 Müşteri Sayfasında Görünenler
               </p>
               <div>
-                <FieldLabel>Bu aşamadayken gösterilen açıklama</FieldLabel>
+                <FieldLabel>Timeline altında gösterilen açıklama</FieldLabel>
                 <textarea
                   name={`stage_${index}_customerDescription`}
                   defaultValue={stage.customerDescription ?? ""}
@@ -103,11 +92,11 @@ export function StageDefinitionsList({
                 />
               </div>
               <div>
-                <FieldLabel>Aksiyon bizdeyken gösterilen mesaj</FieldLabel>
+                <FieldLabel>Müşteri ekranında gösterilen ana mesaj</FieldLabel>
                 <textarea
                   name={`stage_${index}_customerWaitingMessage`}
                   defaultValue={stage.customerWaitingMessage ?? ""}
-                  placeholder='ör. "Ekibimiz sizin için özel bir demo hazırlıyor, toplantı planlaması için yakında iletişime geçeceğiz."'
+                  placeholder='ör. "Bu aşamada sizden ihtiyacımız olan bilgileri aşağıdaki formdan iletebilirsiniz."'
                   rows={2}
                   className={`${inputClass} w-full bg-white`}
                 />

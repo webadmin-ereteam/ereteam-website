@@ -86,7 +86,7 @@ export function JourneyStagesList({ journeyId, stages }: { journeyId: string; st
                   Müşteri Sayfasında Görünenler
                 </p>
                 <div>
-                  <FieldLabel>Bu aşamadayken gösterilen açıklama</FieldLabel>
+                  <FieldLabel>Timeline altında gösterilen açıklama</FieldLabel>
                   <textarea
                     name={`stage_${index}_customerDescription`}
                     defaultValue={stage.customerDescription ?? ""}
@@ -95,10 +95,11 @@ export function JourneyStagesList({ journeyId, stages }: { journeyId: string; st
                   />
                 </div>
                 <div>
-                  <FieldLabel>Aksiyon bizdeyken gösterilen mesaj</FieldLabel>
+                  <FieldLabel>Müşteri ekranında gösterilen ana mesaj</FieldLabel>
                   <textarea
                     name={`stage_${index}_customerWaitingMessage`}
                     defaultValue={stage.customerWaitingMessage ?? ""}
+                    placeholder='ör. "Bu aşamada sizden ihtiyacımız olan bilgileri aşağıdaki formdan iletebilirsiniz."'
                     rows={2}
                     className={`${inputClass} w-full bg-white`}
                   />

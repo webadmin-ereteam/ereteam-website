@@ -209,7 +209,7 @@ export default async function JourneyOverviewTab({ params }: { params: { id: str
           )}
           {currentStage.customerWaitingMessage && (
             <p className="mt-2 border-t border-gray-100 pt-2 text-xs text-text-muted">
-              <span className="font-medium text-brand-dark">Aksiyon bizdeyken müşteri şunu görüyor: </span>
+              <span className="font-medium text-brand-dark">Müşteri ekranında şunu görüyor: </span>
               {currentStage.customerWaitingMessage}
             </p>
           )}

@@ -27,7 +27,7 @@ export default async function StageTemplateEditorPage({ params }: { params: { id
       <PageHeader
         title={template!.name}
         description={
-          'Bu şablondaki aşamalar, bu şablon seçilerek başlatılan her yeni journey\'e kopyalanır. "Dahili açıklama" sadece burada görünür; "müşteriye görünen açıklama" müşteri sayfasında sadece o aşamaya gelindiğinde gösterilir; "aksiyon bizdeyken gösterilecek mesaj" ise sadece müşteriden beklenen bir şey yokken (top bizdeyken) görünür. Sırayı değiştirmek için kartları sürükleyip bırak — bu anında kaydedilir. Diğer alanlardaki değişiklikler için tüm kartları düzenledikten sonra en alttaki "Tüm Değişiklikleri Kaydet" butonuna bir kez basman yeterli. Aktifleştir/Pasifleştir ve silme de anında uygulanır.'
+          'Bu şablondaki aşamalar, bu şablon seçilerek başlatılan her yeni journey\'e kopyalanır. "Timeline altında gösterilen açıklama" müşteri sayfasında sadece o aşamaya gelindiğinde, timeline\'ın altında gösterilir; "müşteri ekranında gösterilen ana mesaj" ise o aşamadayken her zaman görünür. Sırayı değiştirmek için kartları sürükleyip bırak — bu anında kaydedilir. Diğer alanlardaki değişiklikler için tüm kartları düzenledikten sonra en alttaki "Tüm Değişiklikleri Kaydet" butonuna bir kez basman yeterli. Aktifleştir/Pasifleştir ve silme de anında uygulanır.'
         }
       />
 
@@ -62,16 +62,15 @@ export default async function StageTemplateEditorPage({ params }: { params: { id
               <input name="estimatedDays" type="number" min={0} className={`${inputClass} w-full`} />
             </div>
           </div>
-          <textarea name="description" placeholder="Dahili açıklama" rows={2} className={`${inputClass} w-full`} />
           <textarea
             name="customerDescription"
-            placeholder="Müşteriye görünen açıklama"
+            placeholder="Timeline altında gösterilen açıklama"
             rows={2}
             className={`${inputClass} w-full`}
           />
           <textarea
             name="customerWaitingMessage"
-            placeholder="Aksiyon bizdeyken müşteriye gösterilecek mesaj"
+            placeholder="Müşteri ekranında gösterilen ana mesaj"
             rows={2}
             className={`${inputClass} w-full`}
           />

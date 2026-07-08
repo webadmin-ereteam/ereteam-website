@@ -29,7 +29,13 @@ export type QuestionDraft = {
   conditionValues?: string[];
 };
 
-type EditorOption = { text: string; isOther: boolean };
+// `id` exists purely so each option row has a React key stable across
+// re-renders regardless of position — using the array index as the key (the
+// previous approach) meant React could reuse a text input / checkbox DOM
+// node across two genuinely different options whenever the array shape
+// changed underneath the same index, silently carrying over stale internal
+// state (e.g. a checkbox's checked flag) between them.
+type EditorOption = { id: string; text: string; isOther: boolean };
 
 type EditorQuestion = {
   id: string;
@@ -56,7 +62,7 @@ function toEditorQuestions(drafts: QuestionDraft[]): EditorQuestion[] {
     id: ids[i],
     text: q.text ?? "",
     type: q.type ?? "short_text",
-    options: decodeOptions(q.options ?? []),
+    options: decodeOptions(q.options ?? []).map((o) => ({ id: nextUid(), ...o })),
     required: q.required ?? true,
     conditionOnId:
       q.conditionOnOrder !== null && q.conditionOnOrder !== undefined ? ids[q.conditionOnOrder] ?? null : null,
@@ -166,7 +172,23 @@ export function QuestionListEditor({ initialQuestions }: { initialQuestions?: Qu
 
   function addOption(id: string) {
     setQuestions((qs) =>
-      qs.map((q) => (q.id === id ? { ...q, options: [...q.options, { text: "", isOther: false }] } : q))
+      qs.map((q) => (q.id === id ? { ...q, options: [...q.options, { id: nextUid(), text: "", isOther: false }] } : q))
+    );
+  }
+
+  // A dedicated action instead of a checkbox on every option — a checkbox
+  // next to each option implied any of them could independently be "the
+  // free-text one," which isn't how it actually works (there's only ever
+  // one per question). This also pre-fills the label as "Diğer" so the
+  // option is never saved blank — an empty option's *text* is what
+  // `parseQuestionSlots` uses to decide whether to keep the row at all, so
+  // checking a would-be "isOther" flag on an otherwise-empty option used to
+  // get silently dropped on save regardless of the flag.
+  function addOtherOption(id: string) {
+    setQuestions((qs) =>
+      qs.map((q) =>
+        q.id === id ? { ...q, options: [...q.options, { id: nextUid(), text: "Diğer", isOther: true }] } : q
+      )
     );
   }
 
@@ -286,7 +308,7 @@ export function QuestionListEditor({ initialQuestions }: { initialQuestions?: Qu
               {CHOICE_TYPES.has(q.type) && (
                 <div className="ml-1 space-y-1.5 border-l-2 border-gray-200 pl-3">
                   {q.options.map((opt, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
+                    <div key={opt.id} className="flex items-center gap-2">
                       <input
                         name={`question_${i}_option`}
                         value={opt.text}
@@ -299,14 +321,11 @@ export function QuestionListEditor({ initialQuestions }: { initialQuestions?: Qu
                         name={`question_${i}_option_isOther`}
                         value={opt.isOther ? "1" : "0"}
                       />
-                      <label className="flex items-center gap-1 whitespace-nowrap text-[11px] text-text-muted">
-                        <input
-                          type="checkbox"
-                          checked={opt.isOther}
-                          onChange={(e) => updateOption(q.id, idx, { isOther: e.target.checked })}
-                        />
-                        Diğer (serbest yazı)
-                      </label>
+                      {opt.isOther && (
+                        <span className="whitespace-nowrap rounded-full bg-brand-primary/10 px-2 py-0.5 text-[10.5px] font-medium text-brand-primary">
+                          Diğer (serbest yazı)
+                        </span>
+                      )}
                       <button
                         type="button"
                         onClick={() => removeOption(q.id, idx)}
@@ -316,13 +335,24 @@ export function QuestionListEditor({ initialQuestions }: { initialQuestions?: Qu
                       </button>
                     </div>
                   ))}
-                  <button
-                    type="button"
-                    onClick={() => addOption(q.id)}
-                    className="flex items-center gap-1 text-xs font-medium text-brand-primary hover:underline"
-                  >
-                    <Plus size={13} /> Seçenek ekle
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => addOption(q.id)}
+                      className="flex items-center gap-1 text-xs font-medium text-brand-primary hover:underline"
+                    >
+                      <Plus size={13} /> Seçenek ekle
+                    </button>
+                    {!q.options.some((o) => o.isOther) && (
+                      <button
+                        type="button"
+                        onClick={() => addOtherOption(q.id)}
+                        className="flex items-center gap-1 text-xs font-medium text-text-muted hover:underline"
+                      >
+                        <Plus size={13} /> Diğer seçeneği ekle
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -366,7 +396,7 @@ export function QuestionListEditor({ initialQuestions }: { initialQuestions?: Qu
                           {conditionTarget.options
                             .filter((o) => o.text.trim())
                             .map((opt) => (
-                              <label key={opt.text} className="flex items-center gap-1.5 text-xs text-text-body">
+                              <label key={opt.id} className="flex items-center gap-1.5 text-xs text-text-body">
                                 <input
                                   type="checkbox"
                                   name={`question_${i}_conditionValue`}

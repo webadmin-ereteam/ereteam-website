@@ -349,7 +349,6 @@ export async function upsertStageDefinition(stageTemplateId: string, formData: F
   const id = String(formData.get("id") ?? "").trim() || undefined;
   const key = String(formData.get("key") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
-  const description = String(formData.get("description") ?? "").trim() || null;
   const customerDescription = String(formData.get("customerDescription") ?? "").trim() || null;
   const customerWaitingMessage = String(formData.get("customerWaitingMessage") ?? "").trim() || null;
   const customerVisible = formData.get("customerVisible") === "on";
@@ -364,7 +363,6 @@ export async function upsertStageDefinition(stageTemplateId: string, formData: F
   const data = {
     key,
     name,
-    description,
     customerDescription,
     customerWaitingMessage,
     customerVisible,
@@ -436,7 +434,6 @@ export async function saveAllStageDefinitions(stageTemplateId: string, formData:
         data: {
           key,
           name,
-          description: String(formData.get(`stage_${i}_description`) ?? "").trim() || null,
           customerDescription: String(formData.get(`stage_${i}_customerDescription`) ?? "").trim() || null,
           customerWaitingMessage: String(formData.get(`stage_${i}_customerWaitingMessage`) ?? "").trim() || null,
           customerVisible: formData.get(`stage_${i}_customerVisible`) === "on",
@@ -728,8 +725,8 @@ export async function createSurveyInstance(formData: FormData) {
     data: { journeyId, stageId, title, selections: { create: questions } },
   });
 
-  revalidatePath(`/presales/admin/journeys/${journeyId}`);
-  redirect(`/presales/admin/journeys/${journeyId}`);
+  revalidatePath(`/presales/admin/journeys/${journeyId}/surveys`);
+  redirect(`/presales/admin/journeys/${journeyId}/surveys`);
 }
 
 export async function sendSurveyInstance(surveyInstanceId: string, journeyId: string) {
