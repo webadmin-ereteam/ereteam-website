@@ -415,7 +415,7 @@ tried first (still used for the marketing site's lead form, `app/api/lead/route.
 but its sandbox mode only delivers to the account owner's own address until a
 sending domain is verified at resend.com/domains — confirmed by testing the API
 directly. Gmail SMTP has no equivalent restriction: it sends as a real Workspace
-mailbox (`kariturk@ereteam.com`, via an app password, not the account password),
+mailbox (`sales@ereteam.com`, via an app password, not the account password),
 so delivery to any real sales rep works immediately — confirmed live. If
 `GMAIL_USER`/`GMAIL_APP_PASSWORD` are ever unset, notifications silently no-op
 (logged to the server console, never surfaced to the customer, by design — a
