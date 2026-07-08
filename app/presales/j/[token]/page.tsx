@@ -19,7 +19,7 @@ import {
 import { prisma } from "@/lib/presales/db";
 import { findCurrentStage } from "@/lib/presales/stageProgress";
 import { isJourneyLinkActive } from "@/lib/presales/journeyLink";
-import { submitSurveyResponses } from "./actions";
+import { saveSurveyDraft, submitSurveyResponses } from "./actions";
 import { SurveyAnswerForm } from "./SurveyAnswerForm";
 import { SubmitButton } from "../../_components/SubmitButton";
 
@@ -68,7 +68,10 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
       stages: { orderBy: { order: "asc" } },
       surveyInstances: {
         where: { status: { in: ["sent", "completed"] } },
-        include: { stage: true, selections: { orderBy: { order: "asc" } } },
+        include: {
+          stage: true,
+          selections: { include: { response: { include: { document: true } } }, orderBy: { order: "asc" } },
+        },
         orderBy: { createdAt: "asc" },
       },
       documents: { where: { customerVisible: true }, orderBy: { uploadedAt: "desc" } },
@@ -275,12 +278,26 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
                     </div>
                     <h3 className="text-xl font-semibold text-brand-dark">{survey.title}</h3>
                     <SurveyAnswerForm selections={survey.selections} />
-                    <SubmitButton
-                      className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-primary to-brand-magenta px-6 py-2.5 font-medium text-white shadow-sm shadow-brand-primary/20 transition-opacity hover:opacity-90"
-                      pendingLabel="Gönderiliyor..."
-                    >
-                      Gönder <ArrowRight size={15} />
-                    </SubmitButton>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <SubmitButton
+                        className="rounded-xl border border-gray-300 bg-white px-5 py-2.5 font-medium text-text-body transition-colors hover:border-brand-primary hover:text-brand-primary"
+                        pendingLabel="Kaydediliyor..."
+                        formNoValidate
+                        formAction={saveSurveyDraft.bind(null, params.token, survey.id)}
+                      >
+                        Taslağı Kaydet
+                      </SubmitButton>
+                      <SubmitButton
+                        className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-primary to-brand-magenta px-6 py-2.5 font-medium text-white shadow-sm shadow-brand-primary/20 transition-opacity hover:opacity-90"
+                        pendingLabel="Gönderiliyor..."
+                      >
+                        Gönder <ArrowRight size={15} />
+                      </SubmitButton>
+                    </div>
+                    <p className="text-xs text-text-muted">
+                      İlerlemenizi kaybetmemek için istediğiniz zaman taslak olarak kaydedebilir, daha sonra bu
+                      linkten devam edebilirsiniz.
+                    </p>
                   </div>
                 </form>
               ))

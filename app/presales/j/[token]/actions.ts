@@ -8,12 +8,17 @@ import { buildSurveyExportBuffer, surveyExportFileName } from "@/lib/presales/su
 import { decodeOptions } from "@/lib/presales/surveyOptions";
 import { isJourneyLinkActive } from "@/lib/presales/journeyLink";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/presales/fileUpload";
+import { Prisma } from "@/lib/generated/prisma/client";
 
-export async function submitSurveyResponses(
-  token: string,
-  surveyInstanceId: string,
-  formData: FormData
-) {
+type SurveyWithSelections = Prisma.SurveyInstanceGetPayload<{
+  include: {
+    selections: true;
+    journey: { include: { prospect: true; salesRep: true } };
+    stage: true;
+  };
+}>;
+
+async function loadPendingSurvey(token: string, surveyInstanceId: string): Promise<SurveyWithSelections> {
   const survey = await prisma.surveyInstance.findFirst({
     where: { id: surveyInstanceId, status: "sent", journey: { accessToken: token } },
     include: {
@@ -27,9 +32,15 @@ export async function submitSurveyResponses(
     throw new Error("Anket bulunamadı veya artık aktif değil.");
   }
 
-  // Validate every file's size upfront so a submission either uploads nothing
-  // or uploads everything — never fails partway through with some files
-  // already sitting in Drive and others rejected.
+  return survey;
+}
+
+// Every file answer is validated (size) and uploaded to Drive *before* the DB
+// transaction, same for a draft save as for a final submit — external I/O has
+// no place inside a Prisma transaction. A question left untouched this time
+// (no new file chosen) simply isn't in the returned map, so `persistAnswers`
+// leaves whatever was saved earlier for it alone.
+async function uploadNewFileAnswers(survey: SurveyWithSelections, formData: FormData) {
   for (const selection of survey.selections) {
     if (selection.type !== "file_upload") continue;
     const file = formData.get(`answer_${selection.id}`) as File | null;
@@ -40,7 +51,6 @@ export async function submitSurveyResponses(
     }
   }
 
-  // File uploads go to Google Drive first (external I/O, kept outside the DB transaction).
   let folderId = survey.journey.driveFolderId;
   const uploadedFiles = new Map<string, { driveFileId: string; webViewLink: string }>();
 
@@ -60,70 +70,112 @@ export async function submitSurveyResponses(
     uploadedFiles.set(selection.id, uploaded);
   }
 
+  return { uploadedFiles, folderId };
+}
+
+// Shared by both the draft save and the final submit — writes/updates one
+// `SurveyResponse` row per question via upsert (not create) since a draft
+// save may already have written a row the final submit now needs to revise.
+async function persistAnswers(
+  tx: Prisma.TransactionClient,
+  survey: SurveyWithSelections,
+  formData: FormData,
+  uploadedFiles: Map<string, { driveFileId: string; webViewLink: string }>
+) {
+  for (const selection of survey.selections) {
+    if (selection.type === "file_upload") {
+      const uploaded = uploadedFiles.get(selection.id);
+      if (!uploaded) continue;
+
+      const response = await tx.surveyResponse.upsert({
+        where: { surveyQuestionSelectionId: selection.id },
+        create: { surveyQuestionSelectionId: selection.id, answerText: uploaded.driveFileId },
+        update: { answerText: uploaded.driveFileId },
+      });
+
+      await tx.document.create({
+        data: {
+          journeyId: survey.journeyId,
+          stageId: survey.stageId,
+          type: "customer_upload",
+          title: selection.text || "Müşteri dosyası",
+          driveFileId: uploaded.driveFileId,
+          driveWebViewLink: uploaded.webViewLink,
+          customerVisible: false,
+          source: "customer_survey_upload",
+          uploadedBy: "customer",
+          surveyResponseId: response.id,
+        },
+      });
+      continue;
+    }
+
+    // A choice marked "Diğer" submits its plain label as the selected value;
+    // if the customer also filled the companion free-text field, fold it into
+    // a human-readable "label: detail" answer instead of storing them apart.
+    const otherLabels = new Set(
+      decodeOptions(selection.options)
+        .filter((o) => o.isOther)
+        .map((o) => o.text)
+    );
+    const otherText = String(formData.get(`answer_${selection.id}_other`) ?? "").trim();
+
+    if (selection.type === "multi_choice") {
+      const values = formData
+        .getAll(`answer_${selection.id}`)
+        .map(String)
+        .map((v) => (otherLabels.has(v) && otherText ? `${v}: ${otherText}` : v));
+      await tx.surveyResponse.upsert({
+        where: { surveyQuestionSelectionId: selection.id },
+        create: { surveyQuestionSelectionId: selection.id, answerJson: values },
+        update: { answerJson: values, answerText: null },
+      });
+      continue;
+    }
+
+    const value = formData.get(`answer_${selection.id}`);
+    const answerText =
+      typeof value === "string" ? (otherLabels.has(value) && otherText ? `${value}: ${otherText}` : value) : null;
+    await tx.surveyResponse.upsert({
+      where: { surveyQuestionSelectionId: selection.id },
+      create: { surveyQuestionSelectionId: selection.id, answerText },
+      update: { answerText, answerJson: Prisma.JsonNull },
+    });
+  }
+}
+
+// Saves whatever the customer has filled in so far without submitting —
+// required fields aren't enforced (the button uses `formNoValidate`), the
+// survey stays "sent", and none of the completion side-effects (stage
+// auto-advance, sales-rep notification, Excel archive) run. They can come
+// back to the same link later and keep editing before the real "Gönder".
+export async function saveSurveyDraft(token: string, surveyInstanceId: string, formData: FormData) {
+  const survey = await loadPendingSurvey(token, surveyInstanceId);
+  const { uploadedFiles, folderId } = await uploadNewFileAnswers(survey, formData);
+
+  if (folderId && folderId !== survey.journey.driveFolderId) {
+    await prisma.journey.update({ where: { id: survey.journeyId }, data: { driveFolderId: folderId } });
+  }
+
+  await prisma.$transaction((tx) => persistAnswers(tx, survey, formData, uploadedFiles));
+
+  revalidatePath(`/presales/j/${token}`);
+}
+
+export async function submitSurveyResponses(
+  token: string,
+  surveyInstanceId: string,
+  formData: FormData
+) {
+  const survey = await loadPendingSurvey(token, surveyInstanceId);
+  const { uploadedFiles, folderId } = await uploadNewFileAnswers(survey, formData);
+
   if (folderId && folderId !== survey.journey.driveFolderId) {
     await prisma.journey.update({ where: { id: survey.journeyId }, data: { driveFolderId: folderId } });
   }
 
   const advanced = await prisma.$transaction(async (tx) => {
-    for (const selection of survey.selections) {
-      if (selection.type === "file_upload") {
-        const uploaded = uploadedFiles.get(selection.id);
-        const response = await tx.surveyResponse.create({
-          data: {
-            surveyQuestionSelectionId: selection.id,
-            answerText: uploaded ? uploaded.driveFileId : null,
-          },
-        });
-        if (uploaded) {
-          await tx.document.create({
-            data: {
-              journeyId: survey.journeyId,
-              stageId: survey.stageId,
-              type: "customer_upload",
-              title: selection.text || "Müşteri dosyası",
-              driveFileId: uploaded.driveFileId,
-              driveWebViewLink: uploaded.webViewLink,
-              customerVisible: false,
-              source: "customer_survey_upload",
-              uploadedBy: "customer",
-              surveyResponseId: response.id,
-            },
-          });
-        }
-        continue;
-      }
-
-      // A choice marked "Diğer" submits its plain label as the selected value;
-      // if the customer also filled the companion free-text field, fold it into
-      // a human-readable "label: detail" answer instead of storing them apart.
-      const otherLabels = new Set(
-        decodeOptions(selection.options)
-          .filter((o) => o.isOther)
-          .map((o) => o.text)
-      );
-      const otherText = String(formData.get(`answer_${selection.id}_other`) ?? "").trim();
-
-      if (selection.type === "multi_choice") {
-        const values = formData
-          .getAll(`answer_${selection.id}`)
-          .map(String)
-          .map((v) => (otherLabels.has(v) && otherText ? `${v}: ${otherText}` : v));
-        await tx.surveyResponse.create({
-          data: { surveyQuestionSelectionId: selection.id, answerJson: values },
-        });
-        continue;
-      }
-
-      const value = formData.get(`answer_${selection.id}`);
-      const answerText =
-        typeof value === "string" ? (otherLabels.has(value) && otherText ? `${value}: ${otherText}` : value) : null;
-      await tx.surveyResponse.create({
-        data: {
-          surveyQuestionSelectionId: selection.id,
-          answerText,
-        },
-      });
-    }
+    await persistAnswers(tx, survey, formData, uploadedFiles);
 
     await tx.surveyInstance.update({
       where: { id: survey.id },

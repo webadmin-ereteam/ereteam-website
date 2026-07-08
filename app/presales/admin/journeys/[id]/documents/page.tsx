@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
-import { FileText, ClipboardCheck, ClipboardList, FileSignature, Video, Upload, File as FileIcon, FileSpreadsheet } from "lucide-react";
+import { FileText, ClipboardCheck, ClipboardList, FileSignature, Video, Upload, File as FileIcon, FileSpreadsheet, Link2 } from "lucide-react";
 import { prisma } from "@/lib/presales/db";
-import { uploadDocument } from "@/lib/presales/adminActions";
+import { uploadDocument, linkExistingDriveFile } from "@/lib/presales/adminActions";
 import { DOCUMENT_TYPES, DOCUMENT_TYPE_LABELS } from "@/lib/presales/documentTypes";
-import { Badge, Card, PageHeader, inputClass, labelClass, buttonPrimaryClass } from "../../../../_components/ui";
+import { Badge, Card, PageHeader, inputClass, labelClass, buttonPrimaryClass, buttonSecondaryClass } from "../../../../_components/ui";
 import { SubmitButton } from "../../../../_components/SubmitButton";
 import { FileSizeInput } from "../../../../_components/FileSizeInput";
 
@@ -51,53 +51,115 @@ export default async function JourneyDocumentsPage({ params }: { params: { id: s
         description="Yüklenen dosyalar Google Drive'daki journey klasörüne, seçilen türe göre kendi alt klasörüne gider (Anket, Teklif, Toplantı Kaydı/Notu, Proje Planı, Sözleşme, Diğer) ve ilgili aşamaya bağlanarak aynı case içinde tutulur."
       />
 
-      <Card className="mb-8">
-        <form action={uploadDocument} className="space-y-4">
-          <input type="hidden" name="journeyId" value={journey!.id} />
-          <div>
-            <label className={labelClass}>Başlık</label>
-            <input name="title" required className={`${inputClass} w-full max-w-md`} />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
+      <div className="mb-8 grid grid-cols-2 gap-6">
+        <Card>
+          <h2 className="mb-1 text-sm font-semibold text-brand-dark">Bilgisayardan Dosya Yükle</h2>
+          <p className="mb-4 text-xs text-text-muted">Küçük dosyalar için (maksimum {"4MB"}).</p>
+          <form action={uploadDocument} className="space-y-4">
+            <input type="hidden" name="journeyId" value={journey!.id} />
             <div>
-              <label className={labelClass}>Tür</label>
-              <select name="type" className={`${inputClass} w-full`}>
-                {DOCUMENT_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {DOCUMENT_TYPE_LABELS[t]}
-                  </option>
-                ))}
-              </select>
+              <label className={labelClass}>Başlık</label>
+              <input name="title" required className={`${inputClass} w-full`} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Tür</label>
+                <select name="type" className={`${inputClass} w-full`}>
+                  {DOCUMENT_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {DOCUMENT_TYPE_LABELS[t]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>İlgili Aşama</label>
+                <select name="stageId" className={`${inputClass} w-full`}>
+                  <option value="">Genel (aşamaya bağlı değil)</option>
+                  {stages.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div>
-              <label className={labelClass}>İlgili Aşama</label>
-              <select name="stageId" className={`${inputClass} w-full`}>
-                <option value="">Genel (aşamaya bağlı değil)</option>
-                {stages.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+              <label className={labelClass}>Dosya</label>
+              <FileSizeInput
+                name="file"
+                required
+                className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-brand-primary/10 file:px-3 file:py-1.5 file:text-brand-primary"
+              />
             </div>
-          </div>
-          <div>
-            <label className={labelClass}>Dosya</label>
-            <FileSizeInput
-              name="file"
-              required
-              className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-brand-primary/10 file:px-3 file:py-1.5 file:text-brand-primary"
-            />
-          </div>
-          <label className="flex items-center gap-2 text-sm text-text-muted">
-            <input type="checkbox" name="customerVisible" defaultChecked />
-            Müşteriye görünür olsun
-          </label>
-          <SubmitButton className={buttonPrimaryClass} pendingLabel="Drive'a yükleniyor...">
-            Yükle
-          </SubmitButton>
-        </form>
-      </Card>
+            <label className="flex items-center gap-2 text-sm text-text-muted">
+              <input type="checkbox" name="customerVisible" defaultChecked />
+              Müşteriye görünür olsun
+            </label>
+            <SubmitButton className={buttonPrimaryClass} pendingLabel="Drive'a yükleniyor...">
+              Yükle
+            </SubmitButton>
+          </form>
+        </Card>
+
+        <Card>
+          <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-brand-dark">
+            <Link2 size={14} /> Var Olan Drive Dosyasını Bağla
+          </h2>
+          <p className="mb-4 text-xs text-text-muted">
+            Toplantı kayıtları gibi zaten Drive&apos;da duran büyük dosyalar için — dosya indirilip tekrar
+            yüklenmez, doğrudan Drive içinde journey klasörüne kopyalanır. Servis hesabının kaynak dosyaya
+            erişimi olması gerekir (aynı Paylaşılan Drive&apos;da olması ya da servis hesabıyla paylaşılmış
+            olması yeterli).
+          </p>
+          <form action={linkExistingDriveFile} className="space-y-4">
+            <input type="hidden" name="journeyId" value={journey!.id} />
+            <div>
+              <label className={labelClass}>Başlık</label>
+              <input name="title" required className={`${inputClass} w-full`} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Tür</label>
+                <select name="type" defaultValue="meeting_note" className={`${inputClass} w-full`}>
+                  {DOCUMENT_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {DOCUMENT_TYPE_LABELS[t]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>İlgili Aşama</label>
+                <select name="stageId" className={`${inputClass} w-full`}>
+                  <option value="">Genel (aşamaya bağlı değil)</option>
+                  {stages.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className={labelClass}>Drive Dosya Linki veya ID&apos;si</label>
+              <input
+                name="driveSource"
+                required
+                placeholder="https://drive.google.com/file/d/.../view"
+                className={`${inputClass} w-full`}
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm text-text-muted">
+              <input type="checkbox" name="customerVisible" defaultChecked />
+              Müşteriye görünür olsun
+            </label>
+            <SubmitButton className={buttonSecondaryClass} pendingLabel="Drive'da kopyalanıyor...">
+              Bağla
+            </SubmitButton>
+          </form>
+        </Card>
+      </div>
 
       <h2 className="mb-3 text-base font-semibold text-brand-dark">Yüklenen Belgeler</h2>
       <div className="space-y-2">

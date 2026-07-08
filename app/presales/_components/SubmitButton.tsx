@@ -8,10 +8,14 @@ export function SubmitButton({
   children,
   pendingLabel = "Kaydediliyor...",
   className,
+  formAction,
+  formNoValidate,
 }: {
   children: React.ReactNode;
   pendingLabel?: string;
   className?: string;
+  formAction?: (formData: FormData) => void | Promise<void>;
+  formNoValidate?: boolean;
 }) {
   const { pending } = useFormStatus();
   const wasPending = useRef(false);
@@ -30,7 +34,13 @@ export function SubmitButton({
   }, [pending]);
 
   return (
-    <button type="submit" disabled={pending} className={`${className} disabled:cursor-wait disabled:opacity-60`}>
+    <button
+      type="submit"
+      disabled={pending}
+      formAction={formAction}
+      formNoValidate={formNoValidate}
+      className={`${className} disabled:cursor-wait disabled:opacity-60`}
+    >
       {pending ? (
         pendingLabel
       ) : justSaved ? (

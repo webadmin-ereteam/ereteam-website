@@ -20,6 +20,9 @@ export default async function JourneySettingsTab({ params }: { params: { id: str
   const salesReps = await prisma.salesRep.findMany({ where: { isActive: true }, orderBy: { name: "asc" } });
   const products = await prisma.product.findMany({ where: { isActive: true }, orderBy: { name: "asc" } });
   const linkActive = isJourneyLinkActive(journey!);
+  const assignedProduct = journey!.productId
+    ? products.find((p) => p.id === journey!.productId) ?? (await prisma.product.findUnique({ where: { id: journey!.productId! } }))
+    : null;
 
   return (
     <div className="grid grid-cols-2 gap-6">
@@ -46,23 +49,35 @@ export default async function JourneySettingsTab({ params }: { params: { id: str
 
       <Card>
         <p className="mb-2 text-sm font-medium text-brand-dark">Ürün / Uzmanlık</p>
-        <p className="mb-3 text-xs text-text-muted">
-          Bu case&apos;in hangi ürün/uzmanlık alanıyla ilgili olduğu; müşteri sayfasında satışçı bilgisinin
-          yanında gösterilir.
-        </p>
-        <form action={assignProduct.bind(null, journey!.id)} className="flex gap-2">
-          <select name="productId" defaultValue={journey!.productId ?? ""} className={`${inputClass} flex-1`}>
-            <option value="">— Atanmadı —</option>
-            {products.map((product) => (
-              <option key={product.id} value={product.id}>
-                {product.name}
-              </option>
-            ))}
-          </select>
-          <SubmitButton className={buttonSecondaryClass} pendingLabel="Atanıyor...">
-            Ata
-          </SubmitButton>
-        </form>
+        {assignedProduct ? (
+          <>
+            <p className="mb-3 text-xs text-text-muted">
+              Journey oluşturulurken seçildi ve artık değiştirilemez — yanlış seçildiyse yeni bir journey
+              oluşturulmalı.
+            </p>
+            <p className="text-sm font-medium text-brand-dark">{assignedProduct.name}</p>
+          </>
+        ) : (
+          <>
+            <p className="mb-3 text-xs text-text-muted">
+              Bu case&apos;in hangi ürün/uzmanlık alanıyla ilgili olduğu; müşteri sayfasında satışçı bilgisinin
+              yanında gösterilir. Bir kez atandıktan sonra değiştirilemez.
+            </p>
+            <form action={assignProduct.bind(null, journey!.id)} className="flex gap-2">
+              <select name="productId" defaultValue="" className={`${inputClass} flex-1`}>
+                <option value="">— Atanmadı —</option>
+                {products.map((product) => (
+                  <option key={product.id} value={product.id}>
+                    {product.name}
+                  </option>
+                ))}
+              </select>
+              <SubmitButton className={buttonSecondaryClass} pendingLabel="Atanıyor...">
+                Ata
+              </SubmitButton>
+            </form>
+          </>
+        )}
       </Card>
 
       <Card>

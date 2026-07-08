@@ -86,6 +86,64 @@ async function getOrCreateSubfolder(
   return created.data.id!;
 }
 
+async function resolveTargetFolder(
+  drive: ReturnType<typeof getDriveClient>,
+  params: { journeyName: string; documentType: string; existingFolderId: string | null }
+) {
+  const journeyFolderId =
+    params.existingFolderId ?? (await createJourneyFolder(drive, params.journeyName));
+
+  const subfolderName = DOCUMENT_TYPE_FOLDER[params.documentType] ?? DOCUMENT_TYPE_FOLDER.other;
+  const subfolderId = await getOrCreateSubfolder(drive, journeyFolderId, subfolderName);
+
+  return { journeyFolderId, subfolderId };
+}
+
+// Staff paste a Drive share link (or a bare file id) for a file that's
+// already sitting elsewhere in Drive (e.g. a ~40-50MB meeting recording) —
+// this pulls the id out of the common link shapes so they don't have to
+// extract it by hand.
+export function extractDriveFileId(input: string): string {
+  const trimmed = input.trim();
+  const pathMatch = trimmed.match(/\/d\/([a-zA-Z0-9_-]{10,})/);
+  if (pathMatch) return pathMatch[1];
+  const queryMatch = trimmed.match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
+  if (queryMatch) return queryMatch[1];
+  return trimmed;
+}
+
+// Copies a file that already exists elsewhere in Drive straight into the
+// journey's folder via the Drive API's own server-to-server copy — no bytes
+// ever pass through our app, so this has none of the upload-size limits of
+// `uploadFileToDrive` and is the right tool for large files (recordings,
+// etc.) that are already in a Drive the service account can read.
+export async function copyExistingDriveFile(params: {
+  sourceFileId: string;
+  fileName: string;
+  journeyName: string;
+  documentType: string;
+  existingFolderId: string | null;
+}): Promise<{ driveFileId: string; webViewLink: string; folderId: string }> {
+  const drive = getDriveClient();
+  const { journeyFolderId, subfolderId } = await resolveTargetFolder(drive, params);
+
+  const copied = await drive.files.copy({
+    fileId: params.sourceFileId,
+    requestBody: {
+      name: params.fileName,
+      parents: [subfolderId],
+    },
+    fields: "id, webViewLink",
+    supportsAllDrives: true,
+  });
+
+  return {
+    driveFileId: copied.data.id!,
+    webViewLink: copied.data.webViewLink!,
+    folderId: journeyFolderId,
+  };
+}
+
 export async function uploadFileToDrive(params: {
   file: File;
   fileName: string;
@@ -95,30 +153,37 @@ export async function uploadFileToDrive(params: {
 }): Promise<{ driveFileId: string; webViewLink: string; folderId: string }> {
   const drive = getDriveClient();
 
-  const journeyFolderId =
-    params.existingFolderId ?? (await createJourneyFolder(drive, params.journeyName));
-
-  const subfolderName = DOCUMENT_TYPE_FOLDER[params.documentType] ?? DOCUMENT_TYPE_FOLDER.other;
-  const subfolderId = await getOrCreateSubfolder(drive, journeyFolderId, subfolderName);
+  const { journeyFolderId, subfolderId } = await resolveTargetFolder(drive, params);
 
   const buffer = Buffer.from(await params.file.arrayBuffer());
 
-  const uploaded = await drive.files.create({
+  // Created in two steps rather than one combined `requestBody` + `media`
+  // call: googleapis' multipart upload encodes the metadata JSON part without
+  // a charset on its Content-Type, so non-ASCII bytes (Turkish ı/ş/ğ/ü/ö/ç)
+  // in `name` arrive mangled on Drive. A metadata-only create (plain JSON
+  // POST, correctly UTF-8) followed by a media-only update sidesteps that
+  // multipart path entirely.
+  const created = await drive.files.create({
     requestBody: {
       name: params.fileName,
       parents: [subfolderId],
-    },
-    media: {
-      mimeType: params.file.type || "application/octet-stream",
-      body: Readable.from(buffer),
     },
     fields: "id, webViewLink",
     supportsAllDrives: true,
   });
 
+  await drive.files.update({
+    fileId: created.data.id!,
+    media: {
+      mimeType: params.file.type || "application/octet-stream",
+      body: Readable.from(buffer),
+    },
+    supportsAllDrives: true,
+  });
+
   return {
-    driveFileId: uploaded.data.id!,
-    webViewLink: uploaded.data.webViewLink!,
+    driveFileId: created.data.id!,
+    webViewLink: created.data.webViewLink!,
     folderId: journeyFolderId,
   };
 }

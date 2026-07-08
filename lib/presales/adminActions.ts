@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/presales/db";
 import { generateAccessToken } from "@/lib/presales/tokens";
-import { uploadFileToDrive } from "@/lib/presales/drive";
+import { uploadFileToDrive, copyExistingDriveFile, extractDriveFileId } from "@/lib/presales/drive";
 import { findCurrentStage } from "@/lib/presales/stageProgress";
 import { encodeOtherOption } from "@/lib/presales/surveyOptions";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/presales/fileUpload";
@@ -534,18 +534,16 @@ export async function renameSurveyTemplate(id: string, formData: FormData) {
 }
 
 export async function updateSurveyTemplate(id: string, formData: FormData) {
-  const name = String(formData.get("name") ?? "").trim();
+  // Renaming is handled entirely by the separate `renameSurveyTemplate` form
+  // above this one on the page — this form only ever submits question fields,
+  // so `name` is deliberately not read or required here.
   const questions = parseQuestionSlots(formData);
-
-  if (!name) {
-    throw new Error("Şablon adı zorunludur.");
-  }
 
   await prisma.$transaction([
     prisma.surveyTemplateItem.deleteMany({ where: { surveyTemplateId: id } }),
     prisma.surveyTemplate.update({
       where: { id },
-      data: { name, items: { create: questions } },
+      data: { items: { create: questions } },
     }),
   ]);
 
@@ -631,6 +629,57 @@ export async function uploadDocument(formData: FormData) {
   });
 
   revalidatePath(`/presales/admin/journeys/${journeyId}/documents`);
+  revalidatePath(`/presales/j/${journey.accessToken}`);
+}
+
+// For files that already exist elsewhere in Drive (typically meeting
+// recordings, ~40-50MB each, already saved there as a matter of course) —
+// copies the file server-to-server instead of downloading and re-uploading
+// it through the browser, which would also hit the 4MB upload guard above.
+// Requires the service account to already have read access to the source
+// file (e.g. it lives in the same Shared Drive, or is shared with the
+// service account's email directly) — otherwise the copy fails with a 404.
+export async function linkExistingDriveFile(formData: FormData) {
+  const journeyId = String(formData.get("journeyId") ?? "").trim();
+  const stageId = String(formData.get("stageId") ?? "").trim() || null;
+  const type = String(formData.get("type") ?? "meeting_note").trim();
+  const title = String(formData.get("title") ?? "").trim();
+  const customerVisible = formData.get("customerVisible") === "on";
+  const driveSource = String(formData.get("driveSource") ?? "").trim();
+
+  if (!journeyId || !title || !driveSource) {
+    throw new Error("Journey, başlık ve Drive dosya linki/ID'si zorunludur.");
+  }
+
+  const journey = await prisma.journey.findUniqueOrThrow({ where: { id: journeyId } });
+
+  const { driveFileId, webViewLink, folderId } = await copyExistingDriveFile({
+    sourceFileId: extractDriveFileId(driveSource),
+    fileName: title,
+    journeyName: journey.name,
+    documentType: type,
+    existingFolderId: journey.driveFolderId,
+  });
+
+  if (!journey.driveFolderId) {
+    await prisma.journey.update({ where: { id: journeyId }, data: { driveFolderId: folderId } });
+  }
+
+  await prisma.document.create({
+    data: {
+      journeyId,
+      stageId,
+      type,
+      title,
+      driveFileId,
+      driveWebViewLink: webViewLink,
+      customerVisible,
+      uploadedBy: "admin",
+    },
+  });
+
+  revalidatePath(`/presales/admin/journeys/${journeyId}/documents`);
+  revalidatePath(`/presales/j/${journey.accessToken}`);
 }
 
 // --- Sales reps ---
@@ -696,6 +745,10 @@ export async function setProductActive(id: string, isActive: boolean) {
 }
 
 export async function assignProduct(journeyId: string, formData: FormData) {
+  const existing = await prisma.journey.findUnique({ where: { id: journeyId }, select: { productId: true } });
+  if (existing?.productId) {
+    throw new Error("Ürün, journey oluşturulduktan sonra değiştirilemez.");
+  }
   const productId = String(formData.get("productId") ?? "").trim() || null;
   await prisma.journey.update({ where: { id: journeyId }, data: { productId } });
   revalidatePath(`/presales/admin/journeys/${journeyId}`);

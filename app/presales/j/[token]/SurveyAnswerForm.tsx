@@ -13,6 +13,14 @@ type Selection = {
   order: number;
   conditionOnOrder: number | null;
   conditionValues: unknown;
+  // A prior draft save (or, for a completed survey, the final submission)
+  // may already have an answer for this question — used to prefill the form
+  // so "Taslağı Kaydet" is actually resumable, not just a no-op button.
+  response?: {
+    answerText: string | null;
+    answerJson: unknown;
+    document: { title: string; driveWebViewLink: string } | null;
+  } | null;
 };
 
 const inputClass =
@@ -20,11 +28,51 @@ const inputClass =
 const optionClass =
   "flex items-center gap-2.5 rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm transition-colors hover:border-brand-primary hover:bg-brand-primary/[0.03]";
 
+// "Diğer" answers are stored as "<seçenek>: <serbest yazı>" — split back apart
+// so the choice and the free-text field can each be prefilled on their own.
+function splitOtherAnswer(value: string, otherLabels: Set<string>): { chosen: string; otherText: string } {
+  const match = Array.from(otherLabels).find((label) => value.startsWith(`${label}: `));
+  if (match) {
+    return { chosen: match, otherText: value.slice(match.length + 2) };
+  }
+  return { chosen: value, otherText: "" };
+}
+
 export function SurveyAnswerForm({ selections }: { selections: Selection[] }) {
   // Tracks each question's currently chosen value(s) — used only to evaluate
   // this survey's own skip-logic conditions and "Diğer" reveal, client-side.
-  const [answers, setAnswers] = useState<Record<string, string[]>>({});
+  const [answers, setAnswers] = useState<Record<string, string[]>>(() => {
+    const initial: Record<string, string[]> = {};
+    for (const selection of selections) {
+      const response = selection.response;
+      if (!response) continue;
+      const otherLabels = new Set(decodeOptions(selection.options).filter((o) => o.isOther).map((o) => o.text));
+
+      if (selection.type === "multi_choice") {
+        const values = Array.isArray(response.answerJson) ? (response.answerJson as string[]) : [];
+        initial[selection.id] = values.map((v) => splitOtherAnswer(v, otherLabels).chosen);
+      } else if (selection.type === "single_choice" && response.answerText) {
+        initial[selection.id] = [splitOtherAnswer(response.answerText, otherLabels).chosen];
+      }
+    }
+    return initial;
+  });
   const [fileErrors, setFileErrors] = useState<Record<string, string>>({});
+
+  function otherTextDefault(selection: Selection): string {
+    const response = selection.response;
+    if (!response) return "";
+    const otherLabels = new Set(decodeOptions(selection.options).filter((o) => o.isOther).map((o) => o.text));
+    if (selection.type === "multi_choice") {
+      const values = Array.isArray(response.answerJson) ? (response.answerJson as string[]) : [];
+      for (const v of values) {
+        const split = splitOtherAnswer(v, otherLabels);
+        if (split.otherText) return split.otherText;
+      }
+      return "";
+    }
+    return response.answerText ? splitOtherAnswer(response.answerText, otherLabels).otherText : "";
+  }
 
   function handleFileChange(selectionId: string, e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -69,6 +117,7 @@ export function SurveyAnswerForm({ selections }: { selections: Selection[] }) {
         const chosen = answers[selection.id] ?? [];
         const otherLabels = new Set(options.filter((o) => o.isOther).map((o) => o.text));
         const showOtherInput = visible && chosen.some((v) => otherLabels.has(v));
+        const existingDocument = selection.response?.document ?? null;
 
         return (
           <div
@@ -86,6 +135,7 @@ export function SurveyAnswerForm({ selections }: { selections: Selection[] }) {
             {selection.type === "long_text" && (
               <textarea
                 name={fieldName}
+                defaultValue={selection.response?.answerText ?? ""}
                 required={visible && selection.required}
                 disabled={!visible}
                 rows={3}
@@ -93,7 +143,13 @@ export function SurveyAnswerForm({ selections }: { selections: Selection[] }) {
               />
             )}
             {selection.type === "short_text" && (
-              <input name={fieldName} required={visible && selection.required} disabled={!visible} className={inputClass} />
+              <input
+                name={fieldName}
+                defaultValue={selection.response?.answerText ?? ""}
+                required={visible && selection.required}
+                disabled={!visible}
+                className={inputClass}
+              />
             )}
             {selection.type === "scale" && (
               <input
@@ -101,6 +157,7 @@ export function SurveyAnswerForm({ selections }: { selections: Selection[] }) {
                 min={1}
                 max={10}
                 name={fieldName}
+                defaultValue={selection.response?.answerText ?? ""}
                 required={visible && selection.required}
                 disabled={!visible}
                 className={`${inputClass} w-24`}
@@ -125,6 +182,7 @@ export function SurveyAnswerForm({ selections }: { selections: Selection[] }) {
                 {showOtherInput && (
                   <input
                     name={`${fieldName}_other`}
+                    defaultValue={otherTextDefault(selection)}
                     placeholder="Belirtiniz"
                     className={`${inputClass} mt-1`}
                   />
@@ -149,6 +207,7 @@ export function SurveyAnswerForm({ selections }: { selections: Selection[] }) {
                 {showOtherInput && (
                   <input
                     name={`${fieldName}_other`}
+                    defaultValue={otherTextDefault(selection)}
                     placeholder="Belirtiniz"
                     className={`${inputClass} mt-1`}
                   />
@@ -157,10 +216,24 @@ export function SurveyAnswerForm({ selections }: { selections: Selection[] }) {
             )}
             {selection.type === "file_upload" && (
               <div>
+                {existingDocument && (
+                  <p className="mb-1.5 text-xs text-text-muted">
+                    Zaten yüklendi:{" "}
+                    <a
+                      href={existingDocument.driveWebViewLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-brand-primary hover:underline"
+                    >
+                      {existingDocument.title}
+                    </a>{" "}
+                    — değiştirmek için yeni bir dosya seçebilirsiniz.
+                  </p>
+                )}
                 <input
                   type="file"
                   name={fieldName}
-                  required={visible && selection.required}
+                  required={visible && selection.required && !existingDocument}
                   disabled={!visible}
                   onChange={(e) => handleFileChange(selection.id, e)}
                   className={`${inputClass} file:mr-3 file:rounded-lg file:border-0 file:bg-brand-primary/10 file:px-3 file:py-1.5 file:text-brand-primary`}
