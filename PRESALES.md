@@ -267,15 +267,27 @@ al" appears on the most recently completed stage to undo exactly that step.
 **Dashboard: filters, bulk actions, per-case shortcuts** (`app/presales/admin/page.tsx`
 + `JourneyListWithSelection.tsx`): five combinable filters — Ara (search),
 Durum, Satışçı, Ürün, Arşiv, and Müşteri Linki. Each journey card's heading is
-the full `Journey.name` (not just the company name), shows the outcome badge
-plus a separate "Arşivlendi" badge when archived, a "Müşteri Linki: Aktif/Pasif"
-line, and two small buttons at the bottom-right — copy the customer link, or
-open it in a new tab (both stop the card's own click-through navigation).
-Checkboxes let you multi-select journeys and, from the bulk-action bar that
-appears, change Durum, reassign Satışçı, toggle Müşteri Linki, or
-archive/unarchive — all in one call across the whole selection
-(`bulkSetJourneyStatus`/`bulkAssignSalesRep`/`bulkSetJourneyLinkDisabled`/
-`bulkSetJourneyArchived` in `lib/presales/adminActions.ts`).
+the full `Journey.name` (not just the company name), with the assigned
+**satışçı right underneath it** (the prospect's own contact name/email moved
+down into the bottom meta row instead — sales rep is the more actionable field
+to see at a glance, and it's the one that gets reassigned often). Also shows
+the outcome badge plus a separate "Arşivlendi" badge when archived, a
+"Müşteri Linki: Aktif/Pasif" line, and two small buttons at the bottom-right —
+copy the customer link, or open it in a new tab (both stop the card's own
+click-through navigation). Checkboxes let you multi-select journeys and, from
+the bulk-action bar that appears, change Durum, reassign Satışçı, toggle
+Müşteri Linki, or archive/unarchive — all in one call across the whole
+selection (`bulkSetJourneyStatus`/`bulkAssignSalesRep`/
+`bulkSetJourneyLinkDisabled`/`bulkSetJourneyArchived` in
+`lib/presales/adminActions.ts`). Reassigning a sales rep (single or bulk) also
+revalidates the customer's own page (`/presales/j/[token]`), so the "Satış
+Temsilciniz" card there updates immediately, not just the admin views.
+
+**Journey detail header** (`app/presales/admin/journeys/[id]/layout.tsx`): same
+pattern as the dashboard card — heading is `Journey.name`, with the assigned
+satışçı directly underneath and the prospect's contact info as a smaller line
+below that. The "Müşteri Linki" box (top-right) has a small open-in-new-tab
+button next to the link code, for jumping straight to the customer's view.
 
 **Durum labels & Kapanış Tarihi**: `Journey.status` values stay English in the
 DB (`active`/`won`/`lost`/`paused`) but always display via the Turkish labels

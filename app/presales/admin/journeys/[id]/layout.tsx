@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { ExternalLink } from "lucide-react";
 import { prisma } from "@/lib/presales/db";
 import { Badge } from "../../../_components/ui";
 import { isJourneyLinkActive } from "@/lib/presales/journeyLink";
@@ -25,7 +26,7 @@ export default async function JourneyLayout({
 }) {
   const journey = await prisma.journey.findUnique({
     where: { id: params.id },
-    include: { prospect: true },
+    include: { prospect: true, salesRep: true },
   });
 
   if (!journey) notFound();
@@ -39,16 +40,16 @@ export default async function JourneyLayout({
           </span>
           <div>
             <div className="flex items-center gap-2.5">
-              <h1 className="text-xl font-semibold tracking-tight text-brand-dark">{journey!.prospect.companyName}</h1>
+              <h1 className="text-xl font-semibold tracking-tight text-brand-dark">{journey!.name}</h1>
               <Badge color={OUTCOME_BADGE[journey!.status] ?? "gray"}>
                 {JOURNEY_STATUS_LABELS[journey!.status] ?? journey!.status}
               </Badge>
               {journey!.archived && <Badge color="gray">Arşivlendi</Badge>}
             </div>
-            <p className="mt-0.5 text-sm text-text-muted">
+            <p className="mt-0.5 text-sm text-text-muted">{journey!.salesRep?.name ?? "Satışçı atanmadı"}</p>
+            <p className="mt-1 text-xs text-text-muted/70">
               {journey!.prospect.contactName} · {journey!.prospect.contactEmail}
             </p>
-            <p className="mt-1 text-xs text-text-muted/70">Drive klasörü: {journey!.name}</p>
           </div>
         </div>
         <div className="rounded-xl bg-gray-50 px-4 py-2.5 text-right ring-1 ring-inset ring-gray-100">
@@ -58,7 +59,18 @@ export default async function JourneyLayout({
               {isJourneyLinkActive(journey!) ? "Aktif" : "Pasif"}
             </Badge>
           </div>
-          <code className="text-xs text-brand-primary">/presales/j/{journey!.accessToken}</code>
+          <div className="flex items-center justify-end gap-1.5">
+            <code className="text-xs text-brand-primary">/presales/j/{journey!.accessToken}</code>
+            <a
+              href={`/presales/j/${journey!.accessToken}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Müşteri sayfasını aç"
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-white hover:text-brand-primary"
+            >
+              <ExternalLink size={13} />
+            </a>
+          </div>
         </div>
       </div>
 
