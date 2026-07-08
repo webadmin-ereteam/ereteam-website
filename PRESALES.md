@@ -184,9 +184,12 @@ middleware.ts                    session-cookie gate for /presales/admin/** and 
 app/presales/login/page.tsx      admin login form (posts to loginAdmin)
 app/presales/_components/**      shared UI atoms, QuestionListEditor, DragReorderList, SubmitButton, FileSizeInput
 app/presales/j/[token]/**        customer-facing journey page + survey answer pages/form + actions.ts
-app/presales/admin/**            admin dashboard, prospects/new, stages, survey-templates,
-                                  sales-reps, products, journeys/[id]/** (stages/surveys/documents/settings),
-                                  AdminNav.tsx (incl. logout button), AdminChatWidget.tsx, layout.tsx
+app/presales/admin/**            admin dashboard, prospects/new, stages, survey-templates (+ [id] editor),
+                                  sales-reps, products, journeys/[id]/** — page.tsx is "Genel Bakış" (the
+                                  default landing tab, see below), stages/ is the old per-case stage editor
+                                  (moved out of the base route to make room for Genel Bakış), plus
+                                  surveys/documents/settings, AdminNav.tsx (incl. logout button),
+                                  AdminChatWidget.tsx, layout.tsx
 
 app/api/presales/admin/chat/route.ts                              admin chatbot endpoint
 app/api/presales/admin/journeys/[id]/surveys/[surveyId]/export/route.ts   admin-side survey Excel download
@@ -212,6 +215,14 @@ three required — the stage template selector defaults to whichever one is
 flagged as default) → that template's active `StageDefinition` rows are copied
 into `JourneyStage` rows for this journey → customer link (`/presales/j/[token]`)
 is generated immediately.
+
+**Creating a survey template** ("Anket Şablonları"): same two-step shape as
+stage templates — the list page's "Yeni Şablon Oluştur" only asks for a name
+(`createSurveyTemplate`, no questions required), then redirects straight to a
+dedicated editor at `survey-templates/[id]` where the actual question editor
+lives. Editing later reopens that same page (`renameSurveyTemplate` for the
+name field, `updateSurveyTemplate` for the question list) — the list page
+itself never shows a question editor inline anymore.
 
 **Survey authoring** (`QuestionListEditor.tsx`, shared by "Anket Şablonları",
 template editing, and the per-case survey builder):
@@ -252,6 +263,11 @@ follows automatically since it's derived, not stored.
 `DragReorderList` UI as before, just scoped to one template now). "Çoğalt" clones
 a template (all its stages) under a new name — the fastest way to start a variant
 flow. "Varsayılan yap" switches which template pre-selects on "Yeni Prospect".
+"Sil" (`deleteStageTemplate`) removes a template outright — only shown for
+non-default templates, and the action itself also refuses to delete the
+default one or the last remaining template (so there's always at least one to
+pick from on "Yeni Prospect"). With only the seeded "Varsayılan" template
+existing, "Sil" never shows at all — that's expected, not a missing feature.
 
 **Reordering stages**: both a stage template's editor page and a case's
 "Aşamalar" tab render cards via `DragReorderList` — drag a card up/down, drop it,
@@ -265,29 +281,64 @@ completed and activates the next one. If you complete a stage by mistake, "Geri
 al" appears on the most recently completed stage to undo exactly that step.
 
 **Dashboard: filters, bulk actions, per-case shortcuts** (`app/presales/admin/page.tsx`
-+ `JourneyListWithSelection.tsx`): five combinable filters — Ara (search),
-Durum, Satışçı, Ürün, Arşiv, and Müşteri Linki. Each journey card's heading is
-the full `Journey.name` (not just the company name), with the assigned
-**satışçı right underneath it** (the prospect's own contact name/email moved
-down into the bottom meta row instead — sales rep is the more actionable field
-to see at a glance, and it's the one that gets reassigned often). Also shows
-the outcome badge plus a separate "Arşivlendi" badge when archived, a
-"Müşteri Linki: Aktif/Pasif" line, and two small buttons at the bottom-right —
-copy the customer link, or open it in a new tab (both stop the card's own
-click-through navigation). Checkboxes let you multi-select journeys and, from
-the bulk-action bar that appears, change Durum, reassign Satışçı, toggle
-Müşteri Linki, or archive/unarchive — all in one call across the whole
-selection (`bulkSetJourneyStatus`/`bulkAssignSalesRep`/
-`bulkSetJourneyLinkDisabled`/`bulkSetJourneyArchived` in
-`lib/presales/adminActions.ts`). Reassigning a sales rep (single or bulk) also
-revalidates the customer's own page (`/presales/j/[token]`), so the "Satış
-Temsilciniz" card there updates immediately, not just the admin views.
++ `JourneyListWithSelection.tsx`): combinable filters — Ara (search), Durum,
+Satışçı, Ürün, Arşiv, Müşteri Linki, Aksiyon (Aksiyon Bizde / Müşteride —
+same "whose turn" logic as the Genel Bakış tab below, computed per journey
+from its survey statuses), and Kapanış Tarihi (from/to, filters on
+`Journey.outcomeSetAt`). **Arşiv defaults to "Arşivlenmemiş"** the moment no
+filter param is present at all — archived cases never show up by accident,
+you have to explicitly pick "Arşivlenmiş" or "Tümü (arşiv dahil)" to see them.
+Each journey card's heading is the full `Journey.name` (not just the company
+name), with the assigned **satışçı right underneath it** (the prospect's own
+contact name/email moved down into the bottom meta row instead — sales rep is
+the more actionable field to see at a glance, and it's the one that gets
+reassigned often). Also shows the outcome badge plus a separate "Arşivlendi"
+badge when archived, a "Müşteri Linki: Aktif/Pasif" line, and two small
+buttons at the bottom-right — copy the customer link, or open it in a new tab
+(both stop the card's own click-through navigation). Checkboxes let you
+multi-select journeys and, from the bulk-action bar that appears, change
+Durum, reassign Satışçı, toggle Müşteri Linki, or archive/unarchive — all in
+one call across the whole selection (`bulkSetJourneyStatus`/
+`bulkAssignSalesRep`/`bulkSetJourneyLinkDisabled`/`bulkSetJourneyArchived` in
+`lib/presales/adminActions.ts`); each bulk action flashes a "✓ N journey's..."
+confirmation line in the bulk bar once it actually finishes, not just a
+generic "Uygulanıyor..." spinner. Reassigning a sales rep (single or bulk)
+also revalidates the customer's own page (`/presales/j/[token]`), so the
+"Satış Temsilciniz" card there updates immediately, not just the admin views.
 
 **Journey detail header** (`app/presales/admin/journeys/[id]/layout.tsx`): same
 pattern as the dashboard card — heading is `Journey.name`, with the assigned
 satışçı directly underneath and the prospect's contact info as a smaller line
-below that. The "Müşteri Linki" box (top-right) has a small open-in-new-tab
-button next to the link code, for jumping straight to the customer's view.
+below that. The "Müşteri Linki" box (top-right) has copy + open-in-new-tab
+buttons next to the link code (`CustomerLinkActions.tsx`, a small client
+component — everything else on this layout is a Server Component, so copying
+to the clipboard is the one thing that needs to be pulled out client-side).
+
+**Journey tabs — "Genel Bakış" is the default landing tab, not "Aşamalar"**
+(`JourneyTabs.tsx`): opening a journey used to drop you straight into the
+stage-configuration editor — useful for *setting up* a case, useless for
+answering "what do I actually need to do right now." `page.tsx` is now a
+read-only **Genel Bakış** tab that answers exactly that:
+- A banner — **Aksiyon Bizde** (pink) if any sent survey has been completed by
+  the customer but its stage isn't marked done yet, or the current stage takes
+  no survey and needs a manual complete, or no survey has been sent for the
+  current stage yet; **Müşteride Bekliyor** (amber) if a survey is sent and
+  still unanswered; a neutral badge if the case is closed/archived or every
+  stage is done.
+- The current stage's name/description, with the actual action button inline
+  — "Tamamla ve sıradakine geç" once nothing's blocking it, or "Anket Oluştur"
+  (linking straight into `surveys/new?stageId=`) if the stage takes a survey
+  and none has been sent yet.
+- A list of completed-but-unreviewed surveys, each linking straight to its
+  results page, and a list of surveys still sitting with the customer.
+
+The old stage editor (add/reorder/hide stages, `JourneyStagesList.tsx`) moved
+to its own **Aşamalar** tab at `journeys/[id]/stages/` — same component, same
+behavior, just no longer the first thing you see. All the stage-mutating
+actions (`completeCurrentStage`, `reopenLastCompletedStage`,
+`createJourneyStage`, `updateJourneyStage`, `setJourneyStageActive`,
+`reorderJourneyStages`) now revalidate both `journeys/[id]` (Genel Bakış) and
+`journeys/[id]/stages`, since either tab can trigger them.
 
 **Durum labels & Kapanış Tarihi**: `Journey.status` values stay English in the
 DB (`active`/`won`/`lost`/`paused`) but always display via the Turkish labels

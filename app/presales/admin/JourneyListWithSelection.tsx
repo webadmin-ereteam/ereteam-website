@@ -60,6 +60,7 @@ export function JourneyListWithSelection({
   const [bulkStatus, setBulkStatus] = useState("active");
   const [bulkSalesRepId, setBulkSalesRepId] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -86,10 +87,12 @@ export function JourneyListWithSelection({
     setSelected(allSelected ? new Set() : new Set(journeys.map((j) => j.id)));
   }
 
-  function runBulkAction(action: () => Promise<void>) {
+  function runBulkAction(action: () => Promise<void>, confirmationLabel: string) {
     startTransition(async () => {
       await action();
       router.refresh();
+      setConfirmation(confirmationLabel);
+      setTimeout(() => setConfirmation((current) => (current === confirmationLabel ? null : current)), 2500);
     });
   }
 
@@ -117,7 +120,12 @@ export function JourneyListWithSelection({
               <button
                 type="button"
                 disabled={isPending}
-                onClick={() => runBulkAction(() => bulkSetJourneyStatus(selectedIds, bulkStatus))}
+                onClick={() =>
+                  runBulkAction(
+                    () => bulkSetJourneyStatus(selectedIds, bulkStatus),
+                    `${selectedIds.length} journey'in durumu "${JOURNEY_STATUS_LABELS[bulkStatus] ?? bulkStatus}" olarak güncellendi`
+                  )
+                }
                 className={buttonSecondaryClass}
               >
                 Uygula
@@ -143,7 +151,13 @@ export function JourneyListWithSelection({
               <button
                 type="button"
                 disabled={isPending}
-                onClick={() => runBulkAction(() => bulkAssignSalesRep(selectedIds, bulkSalesRepId || null))}
+                onClick={() => {
+                  const repName = salesReps.find((r) => r.id === bulkSalesRepId)?.name ?? "— Atanmadı —";
+                  runBulkAction(
+                    () => bulkAssignSalesRep(selectedIds, bulkSalesRepId || null),
+                    `${selectedIds.length} journey'e satışçı olarak "${repName}" atandı`
+                  );
+                }}
                 className={buttonSecondaryClass}
               >
                 Uygula
@@ -157,7 +171,12 @@ export function JourneyListWithSelection({
               <button
                 type="button"
                 disabled={isPending}
-                onClick={() => runBulkAction(() => bulkSetJourneyLinkDisabled(selectedIds, false))}
+                onClick={() =>
+                  runBulkAction(
+                    () => bulkSetJourneyLinkDisabled(selectedIds, false),
+                    `${selectedIds.length} journey'in müşteri linki aktifleştirildi`
+                  )
+                }
                 className={buttonSecondaryClass}
               >
                 Aktifleştir
@@ -165,7 +184,12 @@ export function JourneyListWithSelection({
               <button
                 type="button"
                 disabled={isPending}
-                onClick={() => runBulkAction(() => bulkSetJourneyLinkDisabled(selectedIds, true))}
+                onClick={() =>
+                  runBulkAction(
+                    () => bulkSetJourneyLinkDisabled(selectedIds, true),
+                    `${selectedIds.length} journey'in müşteri linki pasifleştirildi`
+                  )
+                }
                 className={buttonSecondaryClass}
               >
                 Pasifleştir
@@ -179,7 +203,9 @@ export function JourneyListWithSelection({
               <button
                 type="button"
                 disabled={isPending}
-                onClick={() => runBulkAction(() => bulkSetJourneyArchived(selectedIds, true))}
+                onClick={() =>
+                  runBulkAction(() => bulkSetJourneyArchived(selectedIds, true), `${selectedIds.length} journey arşivlendi`)
+                }
                 className={buttonSecondaryClass}
               >
                 Arşivle
@@ -187,7 +213,12 @@ export function JourneyListWithSelection({
               <button
                 type="button"
                 disabled={isPending}
-                onClick={() => runBulkAction(() => bulkSetJourneyArchived(selectedIds, false))}
+                onClick={() =>
+                  runBulkAction(
+                    () => bulkSetJourneyArchived(selectedIds, false),
+                    `${selectedIds.length} journey arşivden çıkarıldı`
+                  )
+                }
                 className={buttonSecondaryClass}
               >
                 Arşivden çıkar
@@ -202,6 +233,13 @@ export function JourneyListWithSelection({
           >
             Seçimi temizle
           </button>
+
+          {isPending && <p className="w-full text-xs text-text-muted">Uygulanıyor...</p>}
+          {!isPending && confirmation && (
+            <p className="flex w-full items-center gap-1.5 text-xs font-medium text-emerald-600">
+              <Check size={13} /> {confirmation}
+            </p>
+          )}
         </Card>
       )}
 
@@ -302,7 +340,6 @@ export function JourneyListWithSelection({
           </Card>
         </Link>
       ))}
-      {isPending && <p className="text-center text-xs text-text-muted">Uygulanıyor...</p>}
     </div>
   );
 }

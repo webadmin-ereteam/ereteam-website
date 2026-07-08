@@ -21,6 +21,9 @@ export default async function AdminDashboardPage({
     q?: string;
     archived?: string;
     linkActive?: string;
+    action?: string;
+    closeDateFrom?: string;
+    closeDateTo?: string;
   };
 }) {
   const [journeys, salesReps, products] = await Promise.all([
@@ -51,15 +54,24 @@ export default async function AdminDashboardPage({
   const pendingSurveyCount = journeys.reduce((sum, j) => sum + pendingOnCustomer(j), 0);
   const ballInOurCourtCount = journeys.reduce((sum, j) => sum + ballInOurCourt(j), 0);
 
+  // Archived cases stay out of the dashboard unless explicitly asked for —
+  // "no" (hide archived) is the default the moment no filter param is present,
+  // not just an option someone has to remember to pick.
+  const archivedFilter = searchParams.archived || "no";
+
   const query = (searchParams.q ?? "").trim().toLowerCase();
   const filteredJourneys = journeys.filter((j) => {
     if (searchParams.status && j.status !== searchParams.status) return false;
     if (searchParams.salesRepId && j.salesRepId !== searchParams.salesRepId) return false;
     if (searchParams.productId && j.productId !== searchParams.productId) return false;
-    if (searchParams.archived === "yes" && !j.archived) return false;
-    if (searchParams.archived === "no" && j.archived) return false;
+    if (archivedFilter === "yes" && !j.archived) return false;
+    if (archivedFilter === "no" && j.archived) return false;
     if (searchParams.linkActive === "yes" && !isJourneyLinkActive(j)) return false;
     if (searchParams.linkActive === "no" && isJourneyLinkActive(j)) return false;
+    if (searchParams.action === "ours" && ballInOurCourt(j) === 0) return false;
+    if (searchParams.action === "customer" && pendingOnCustomer(j) === 0) return false;
+    if (searchParams.closeDateFrom && (!j.outcomeSetAt || j.outcomeSetAt < new Date(searchParams.closeDateFrom))) return false;
+    if (searchParams.closeDateTo && (!j.outcomeSetAt || j.outcomeSetAt > new Date(`${searchParams.closeDateTo}T23:59:59`))) return false;
     if (query) {
       const haystack = `${j.prospect.companyName} ${j.prospect.contactName} ${j.prospect.contactEmail}`.toLowerCase();
       if (!haystack.includes(query)) return false;
@@ -72,8 +84,11 @@ export default async function AdminDashboardPage({
     searchParams.salesRepId ||
     searchParams.productId ||
     searchParams.q ||
-    searchParams.archived ||
-    searchParams.linkActive
+    (searchParams.archived && searchParams.archived !== "no") ||
+    searchParams.linkActive ||
+    searchParams.action ||
+    searchParams.closeDateFrom ||
+    searchParams.closeDateTo
   );
 
   return (
@@ -182,10 +197,10 @@ export default async function AdminDashboardPage({
           </div>
           <div>
             <label className="mb-1 block text-xs text-text-muted">Arşiv</label>
-            <select name="archived" defaultValue={searchParams.archived ?? ""} className={`${inputClass} w-36`}>
-              <option value="">Tümü</option>
+            <select name="archived" defaultValue={archivedFilter} className={`${inputClass} w-40`}>
               <option value="no">Arşivlenmemiş</option>
               <option value="yes">Arşivlenmiş</option>
+              <option value="all">Tümü (arşiv dahil)</option>
             </select>
           </div>
           <div>
@@ -195,6 +210,32 @@ export default async function AdminDashboardPage({
               <option value="yes">Aktif</option>
               <option value="no">Pasif</option>
             </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-text-muted">Aksiyon</label>
+            <select name="action" defaultValue={searchParams.action ?? ""} className={`${inputClass} w-40`}>
+              <option value="">Tümü</option>
+              <option value="ours">Aksiyon Bizde</option>
+              <option value="customer">Müşteride</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-text-muted">Kapanış Tarihi (başlangıç)</label>
+            <input
+              type="date"
+              name="closeDateFrom"
+              defaultValue={searchParams.closeDateFrom ?? ""}
+              className={`${inputClass} w-40`}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-text-muted">Kapanış Tarihi (bitiş)</label>
+            <input
+              type="date"
+              name="closeDateTo"
+              defaultValue={searchParams.closeDateTo ?? ""}
+              className={`${inputClass} w-40`}
+            />
           </div>
           <button className={buttonPrimaryClass}>Filtrele</button>
           {hasActiveFilters && (
