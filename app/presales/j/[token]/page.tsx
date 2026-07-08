@@ -157,34 +157,42 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
                 "radial-gradient(circle at 96% 8%, rgba(233,30,140,0.3) 0, transparent 42%), radial-gradient(circle at 6% 100%, rgba(255,255,255,0.08) 0, transparent 35%)",
             }}
           />
-          <div className="relative px-7 py-10 text-white sm:px-10 sm:py-14">
+          <div className="relative px-6 py-8 text-white sm:px-10 sm:py-14">
             <div className="flex flex-wrap items-center justify-between gap-5">
               <div>
-                <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 ring-1 ring-inset ring-white/25 backdrop-blur-sm">
-                  <Sparkles size={11} className="text-white/80" />
+                <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-white/10 py-1 pl-1.5 pr-3 ring-1 ring-inset ring-white/25 backdrop-blur-sm">
+                  {journey!.prospect.logoUrl ? (
+                    <img
+                      src={journey!.prospect.logoUrl}
+                      alt={journey!.prospect.companyName}
+                      className="h-5 w-5 rounded-full bg-white object-contain"
+                    />
+                  ) : (
+                    <Sparkles size={11} className="text-white/80" />
+                  )}
                   <span className="text-[10.5px] font-medium uppercase tracking-wider text-white/80">
                     {journey!.prospect.companyName}
                   </span>
                 </div>
-                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                <h1 className="text-2xl font-semibold tracking-tight sm:text-4xl">
                   Merhaba {journey!.prospect.contactName}
                 </h1>
                 {hasRemainingEstimates && (
                   <p className="mt-2 text-sm text-white/70">Tahmini kalan süre: ~{remainingEstimatedDays} gün</p>
                 )}
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 sm:gap-4">
                 <div
-                  className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-full shadow-[0_0_16px_rgba(255,255,255,0.18)]"
+                  className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full shadow-[0_0_16px_rgba(255,255,255,0.18)] sm:h-20 sm:w-20"
                   style={{ background: `conic-gradient(white ${progressPct * 3.6}deg, rgba(255,255,255,0.18) 0deg)` }}
                 >
-                  <div className="flex h-[66px] w-[66px] items-center justify-center rounded-full bg-brand-primary">
-                    <span className="text-base font-semibold tabular-nums">%{progressPct}</span>
+                  <div className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-brand-primary sm:h-[66px] sm:w-[66px]">
+                    <span className="text-sm font-semibold tabular-nums sm:text-base">%{progressPct}</span>
                   </div>
                 </div>
                 <div>
-                  <p className="text-[11px] uppercase tracking-wide text-white/60">Süreç İlerlemesi</p>
-                  <p className="text-base font-semibold">
+                  <p className="text-[10.5px] uppercase tracking-wide text-white/60 sm:text-[11px]">Süreç İlerlemesi</p>
+                  <p className="text-sm font-semibold sm:text-base">
                     {completedCount} / {totalCount} aşama tamamlandı
                   </p>
                 </div>
@@ -193,15 +201,80 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
           </div>
         </div>
 
-        {/* Timeline — the visual centerpiece, floating as a frosted glass card */}
-        <div className={`mb-9 p-7 sm:p-9 ${glassCardClass}`}>
-          <div className="mb-8 flex flex-wrap items-center justify-between gap-2">
+        {/* Timeline — the visual centerpiece, floating as a frosted glass card.
+            Below `sm` this is a vertical stepper (a horizontally-scrolling row
+            of 5-6 stops doesn't read as "the important part" on a phone — it
+            reads as a sideways-scrolling strip most people never swipe), and
+            from `sm` up it becomes the horizontal row with connecting lines. */}
+        <div className={`mb-9 p-6 sm:p-9 ${glassCardClass}`}>
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-2 sm:mb-8">
             <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-text-muted">Süreciniz</h2>
             {hasEstimates && (
               <span className="text-xs text-text-muted">Toplam tahmini süre: ~{totalEstimatedDays} gün</span>
             )}
           </div>
-          <div className="flex w-full items-start overflow-x-auto pb-1">
+
+          {/* Mobile: vertical stepper */}
+          <ol className="space-y-0 sm:hidden">
+            {visibleStages.map((stage, index) => {
+              const isCompleted = stage.status === "completed";
+              const isCurrent = index === currentStageIndex;
+              const isPastOrCurrent = currentStageIndex === -1 ? true : index <= currentStageIndex;
+              const label = stage.customerDescription;
+              const isLast = index === visibleStages.length - 1;
+
+              return (
+                <li key={stage.id} className="flex gap-3">
+                  <div className="flex flex-col items-center">
+                    <div
+                      className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
+                        isCompleted
+                          ? "bg-brand-primary text-white"
+                          : isCurrent
+                          ? "border-2 border-brand-primary bg-white/90 text-brand-primary ring-[4px] ring-brand-primary/[0.06]"
+                          : "border-2 border-gray-200/80 bg-gray-50/80 text-gray-400"
+                      }`}
+                    >
+                      {isCurrent && (
+                        <span className="absolute inset-0 -z-10 animate-pulse rounded-full bg-brand-primary/10" />
+                      )}
+                      {isCompleted ? <Check size={15} strokeWidth={2.5} /> : index + 1}
+                    </div>
+                    {!isLast && (
+                      <div
+                        className={`w-[2px] flex-1 ${isPastOrCurrent ? "bg-brand-primary/40" : "bg-gray-200/70"}`}
+                      />
+                    )}
+                  </div>
+                  <div className={`min-w-0 pb-6 ${isLast ? "pb-0" : ""}`}>
+                    <p
+                      className={`pt-1 text-[14px] font-semibold leading-snug ${
+                        isCurrent ? "text-brand-primary" : isCompleted ? "text-brand-dark" : "text-text-muted"
+                      }`}
+                    >
+                      {stage.name}
+                      {stage.estimatedDays != null && (
+                        <span className="ml-1.5 text-[11px] font-normal text-text-muted">
+                          ~{stage.estimatedDays} gün
+                        </span>
+                      )}
+                    </p>
+                    {isCurrent && (
+                      <span className="mt-1.5 inline-block rounded-full bg-brand-primary/10 px-2.5 py-1 text-[11px] font-semibold text-brand-primary ring-1 ring-inset ring-brand-primary/15">
+                        Şu anda bu aşamadasınız
+                      </span>
+                    )}
+                    {isCurrent && label && (
+                      <p className="mt-1.5 text-[12.5px] leading-snug text-text-muted">{label}</p>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+
+          {/* sm and up: horizontal stepper */}
+          <div className="hidden w-full items-start overflow-x-auto pb-1 sm:flex">
             {visibleStages.map((stage, index) => {
               // Stages always proceed strictly in order now — there is no "started early"
               // state anymore, so a stage is either done, the current one, or upcoming.
@@ -249,14 +322,8 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
                         Şu anda bu aşamadasınız
                       </span>
                     )}
-                    {label && (
-                      <p
-                        className={`mt-2.5 text-[12px] leading-snug ${
-                          isCurrent || isCompleted ? "text-text-muted" : "text-gray-400"
-                        }`}
-                      >
-                        {label}
-                      </p>
+                    {isCurrent && label && (
+                      <p className="mt-2.5 text-[12px] leading-snug text-text-muted">{label}</p>
                     )}
                   </div>
                 </Fragment>
@@ -312,7 +379,7 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
             ) : (
               <div className={`overflow-hidden ${glassCardClass}`}>
                 <div className="h-1.5 w-full bg-gradient-to-r from-emerald-400 to-brand-primary" />
-                <div className="flex flex-col items-center gap-3 p-10 text-center">
+                <div className="flex flex-col items-center gap-3 p-6 text-center sm:p-10">
                   <span className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-50 text-emerald-500 ring-1 ring-inset ring-emerald-100">
                     <Check size={20} />
                   </span>

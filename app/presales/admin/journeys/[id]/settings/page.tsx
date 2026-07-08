@@ -7,14 +7,16 @@ import {
   setJourneyOutcome,
   setJourneyLinkDisabled,
   setJourneyArchived,
+  uploadCompanyLogo,
 } from "@/lib/presales/adminActions";
 import { isJourneyLinkActive } from "@/lib/presales/journeyLink";
 import { JOURNEY_STATUSES, JOURNEY_STATUS_LABELS } from "@/lib/presales/journeyStatus";
 import { Badge, Card, inputClass, buttonPrimaryClass, buttonSecondaryClass } from "../../../../_components/ui";
 import { SubmitButton } from "../../../../_components/SubmitButton";
+import { FileSizeInput } from "../../../../_components/FileSizeInput";
 
 export default async function JourneySettingsTab({ params }: { params: { id: string } }) {
-  const journey = await prisma.journey.findUnique({ where: { id: params.id } });
+  const journey = await prisma.journey.findUnique({ where: { id: params.id }, include: { prospect: true } });
   if (!journey) notFound();
 
   const salesReps = await prisma.salesRep.findMany({ where: { isActive: true }, orderBy: { name: "asc" } });
@@ -78,6 +80,32 @@ export default async function JourneySettingsTab({ params }: { params: { id: str
             </form>
           </>
         )}
+      </Card>
+
+      <Card>
+        <p className="mb-2 text-sm font-medium text-brand-dark">Firma Logosu</p>
+        <p className="mb-3 text-xs text-text-muted">
+          Müşteri sayfasının üst kısmında şirket adının yanında gösterilir. Drive&apos;da ayrı bir
+          &quot;_Logolar&quot; klasöründe tutulur, journey belgelerinize karışmaz.
+        </p>
+        {journey!.prospect.logoUrl && (
+          <img
+            src={journey!.prospect.logoUrl}
+            alt={journey!.prospect.companyName}
+            className="mb-3 h-12 w-12 rounded-lg border border-gray-200 object-contain p-1"
+          />
+        )}
+        <form action={uploadCompanyLogo.bind(null, journey!.id)} className="flex gap-2">
+          <FileSizeInput
+            name="logo"
+            required
+            accept="image/*"
+            className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-brand-primary/10 file:px-3 file:py-1.5 file:text-brand-primary"
+          />
+          <SubmitButton className={buttonSecondaryClass} pendingLabel="Yükleniyor...">
+            {journey!.prospect.logoUrl ? "Değiştir" : "Yükle"}
+          </SubmitButton>
+        </form>
       </Card>
 
       <Card>

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/presales/db";
 import { createProspectAndJourney } from "@/lib/presales/adminActions";
 import { Card, PageHeader, inputClass, labelClass, buttonPrimaryClass } from "../../../_components/ui";
 import { SubmitButton } from "../../../_components/SubmitButton";
+import { FileSizeInput } from "../../../_components/FileSizeInput";
 
 export default async function NewProspectPage() {
   const salesReps = await prisma.salesRep.findMany({ where: { isActive: true }, orderBy: { name: "asc" } });
@@ -64,6 +65,17 @@ export default async function NewProspectPage() {
           <div>
             <label className={labelClass}>Telefon (opsiyonel)</label>
             <input name="contactPhone" className={`${inputClass} w-full`} />
+          </div>
+          <div>
+            <label className={labelClass}>Firma Logosu (opsiyonel)</label>
+            <FileSizeInput
+              name="logo"
+              accept="image/*"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-brand-primary/10 file:px-3 file:py-1.5 file:text-brand-primary"
+            />
+            <p className="mt-1 text-xs text-text-muted">
+              Şimdi eklemesen de olur — daha sonra journeyin Ayarlar sekmesinden ekleyebilirsin.
+            </p>
           </div>
           <div>
             <label className={labelClass}>Satışçı</label>

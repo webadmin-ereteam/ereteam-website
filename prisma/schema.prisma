@@ -18,6 +18,14 @@ model Prospect {
   contactPhone String?
   createdAt    DateTime @default(now())
   journeys     Journey[]
+  // Company logo, shown on the customer-facing journey page for a more
+  // personalized feel. Stored in Drive in a dedicated "_Logolar" folder
+  // (kept separate from per-journey business documents), not tied to any
+  // one journey since the logo belongs to the company. `logoUrl` is a
+  // Drive thumbnail-serving link (not the Drive viewer page), directly
+  // usable as an <img src>.
+  logoDriveFileId String?
+  logoUrl         String?
 }
 
 model SalesRep {

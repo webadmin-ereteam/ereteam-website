@@ -7,10 +7,12 @@ export function FileSizeInput({
   name,
   required,
   className,
+  accept,
 }: {
   name: string;
   required?: boolean;
   className?: string;
+  accept?: string;
 }) {
   const [error, setError] = useState<string | null>(null);
 
@@ -20,6 +22,7 @@ export function FileSizeInput({
         type="file"
         name={name}
         required={required}
+        accept={accept}
         className={className}
         onChange={(e) => {
           const file = e.target.files?.[0];

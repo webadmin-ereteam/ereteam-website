@@ -1,7 +1,13 @@
 "use client";
 
-import { upsertStageDefinition, setStageActive, reorderStageDefinitions } from "@/lib/presales/adminActions";
-import { Badge, Card, inputClass, buttonPrimaryClass, buttonSecondaryClass } from "../../_components/ui";
+import { Trash2 } from "lucide-react";
+import {
+  saveAllStageDefinitions,
+  setStageActive,
+  reorderStageDefinitions,
+  deleteStageDefinition,
+} from "@/lib/presales/adminActions";
+import { Badge, Card, FieldLabel, inputClass, buttonPrimaryClass, buttonSecondaryClass } from "../../_components/ui";
 import { SubmitButton } from "../../_components/SubmitButton";
 import { DragReorderList } from "../../_components/DragReorderList";
 
@@ -26,29 +32,44 @@ export function StageDefinitionsList({
   stages: StageDefinition[];
 }) {
   return (
-    <DragReorderList
-      items={stages}
-      onReorder={(orderedIds) => reorderStageDefinitions(stageTemplateId, orderedIds)}
-      renderItem={(stage, index) => (
-        <Card>
-          <form action={upsertStageDefinition.bind(null, stageTemplateId)} className="space-y-3">
-            <input type="hidden" name="id" value={stage.id} />
+    // Every stage card used to be its own <form> with its own "Kaydet" — editing
+    // several stages meant clicking save once per card. Now the whole list is
+    // one form (fields named stage_{index}_* — same convention as the survey
+    // question editor) with a single save button at the bottom. Activate/
+    // deactivate/delete stay instant, single-click actions via formAction on
+    // their own buttons, same as before.
+    <form action={saveAllStageDefinitions.bind(null, stageTemplateId)} className="space-y-3">
+      <input type="hidden" name="stageCount" value={stages.length} />
+      <DragReorderList
+        items={stages}
+        onReorder={(orderedIds) => reorderStageDefinitions(stageTemplateId, orderedIds)}
+        renderItem={(stage, index) => (
+          <Card className="space-y-4">
+            <input type="hidden" name={`stage_${index}_id`} value={stage.id} />
             <div className="flex items-end gap-3">
-              <span className="mb-[3px] flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-primary/10 text-sm font-semibold text-brand-primary">
+              <span className="mb-[3px] flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-primary/10 text-sm font-semibold text-brand-primary">
                 {index + 1}
               </span>
               <div className="flex-1">
-                <label className="mb-0.5 block text-[10px] text-text-muted">Aşama Adı</label>
-                <input name="name" defaultValue={stage.name} className={`${inputClass} w-full font-medium`} />
-              </div>
-              <div>
-                <label className="mb-0.5 block text-[10px] text-text-muted">Key</label>
-                <input name="key" defaultValue={stage.key} className={`${inputClass} w-48 font-mono text-xs`} />
-              </div>
-              <div>
-                <label className="mb-0.5 block text-[10px] text-text-muted">Süre (gün)</label>
+                <FieldLabel>Aşama Adı</FieldLabel>
                 <input
-                  name="estimatedDays"
+                  name={`stage_${index}_name`}
+                  defaultValue={stage.name}
+                  className={`${inputClass} w-full font-medium`}
+                />
+              </div>
+              <div>
+                <FieldLabel>Key</FieldLabel>
+                <input
+                  name={`stage_${index}_key`}
+                  defaultValue={stage.key}
+                  className={`${inputClass} w-48 font-mono text-xs`}
+                />
+              </div>
+              <div>
+                <FieldLabel>Süre (gün)</FieldLabel>
+                <input
+                  name={`stage_${index}_estimatedDays`}
                   defaultValue={stage.estimatedDays ?? ""}
                   type="number"
                   min={0}
@@ -57,35 +78,58 @@ export function StageDefinitionsList({
               </div>
               {!stage.isActive && <Badge color="gray">pasif</Badge>}
             </div>
-            <textarea
-              name="description"
-              defaultValue={stage.description ?? ""}
-              placeholder="Dahili açıklama (sadece admin görür)"
-              rows={2}
-              className={`${inputClass} w-full`}
-            />
-            <textarea
-              name="customerDescription"
-              defaultValue={stage.customerDescription ?? ""}
-              placeholder="Müşteriye görünen açıklama"
-              rows={2}
-              className={`${inputClass} w-full`}
-            />
-            <textarea
-              name="customerWaitingMessage"
-              defaultValue={stage.customerWaitingMessage ?? ""}
-              placeholder='Aksiyon bizdeyken müşteriye gösterilecek mesaj (ör. "Ekibimiz sizin için özel bir demo hazırlıyor, toplantı planlaması için yakında iletişime geçeceğiz.")'
-              rows={2}
-              className={`${inputClass} w-full`}
-            />
-            <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+
+            <div>
+              <FieldLabel>Dahili Açıklama (sadece admin görür)</FieldLabel>
+              <textarea
+                name={`stage_${index}_description`}
+                defaultValue={stage.description ?? ""}
+                rows={2}
+                className={`${inputClass} w-full`}
+              />
+            </div>
+
+            <div className="space-y-3 rounded-xl bg-brand-primary/[0.03] p-4 ring-1 ring-inset ring-brand-primary/10">
+              <p className="text-[10.5px] font-semibold uppercase tracking-wide text-brand-primary/80">
+                Müşteri Sayfasında Görünenler
+              </p>
+              <div>
+                <FieldLabel>Bu aşamadayken gösterilen açıklama</FieldLabel>
+                <textarea
+                  name={`stage_${index}_customerDescription`}
+                  defaultValue={stage.customerDescription ?? ""}
+                  rows={2}
+                  className={`${inputClass} w-full bg-white`}
+                />
+              </div>
+              <div>
+                <FieldLabel>Aksiyon bizdeyken gösterilen mesaj</FieldLabel>
+                <textarea
+                  name={`stage_${index}_customerWaitingMessage`}
+                  defaultValue={stage.customerWaitingMessage ?? ""}
+                  placeholder='ör. "Ekibimiz sizin için özel bir demo hazırlıyor, toplantı planlaması için yakında iletişime geçeceğiz."'
+                  rows={2}
+                  className={`${inputClass} w-full bg-white`}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between border-t border-gray-100 pt-3.5">
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 text-sm text-text-muted">
-                  <input type="checkbox" name="customerVisible" defaultChecked={stage.customerVisible} />
+                  <input
+                    type="checkbox"
+                    name={`stage_${index}_customerVisible`}
+                    defaultChecked={stage.customerVisible}
+                  />
                   Müşteriye göster
                 </label>
                 <label className="flex items-center gap-2 text-sm text-text-muted">
-                  <input type="checkbox" name="surveysEnabled" defaultChecked={stage.surveysEnabled} />
+                  <input
+                    type="checkbox"
+                    name={`stage_${index}_surveysEnabled`}
+                    defaultChecked={stage.surveysEnabled}
+                  />
                   Anket gönderilsin
                 </label>
               </div>
@@ -96,12 +140,23 @@ export function StageDefinitionsList({
                 >
                   {stage.isActive ? "Pasifleştir" : "Aktifleştir"}
                 </button>
-                <SubmitButton className={buttonPrimaryClass}>Kaydet</SubmitButton>
+                <button
+                  formAction={deleteStageDefinition.bind(null, stage.id, stageTemplateId)}
+                  className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                  title="Aşamayı sil"
+                >
+                  <Trash2 size={15} />
+                </button>
               </div>
             </div>
-          </form>
-        </Card>
-      )}
-    />
+          </Card>
+        )}
+      />
+      <div className="sticky bottom-4 z-10 flex justify-end">
+        <SubmitButton className={buttonPrimaryClass} pendingLabel="Kaydediliyor...">
+          Tüm Değişiklikleri Kaydet
+        </SubmitButton>
+      </div>
+    </form>
   );
 }

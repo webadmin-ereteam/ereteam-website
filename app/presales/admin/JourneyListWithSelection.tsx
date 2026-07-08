@@ -261,7 +261,7 @@ export function JourneyListWithSelection({
             />
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-magenta text-sm font-semibold text-white">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-primary/10 text-sm font-semibold text-brand-primary">
                   {initials(journey.companyName)}
                 </span>
                 <div>

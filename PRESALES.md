@@ -57,7 +57,8 @@ documents with real foreign keys), which fits Postgres, not schemaless documents
 ## Data model (`prisma/schema.prisma`)
 
 - `Prospect` — a company + primary contact (name, email, phone). No "source/kaynak"
-  field — removed as unused.
+  field — removed as unused. `logoDriveFileId`/`logoUrl` hold an optional company
+  logo — see "Company logo" below.
 - `SalesRep` — internal reps, assignable to a journey; customer sees their contact
   card when assigned.
 - `Product` — a product/expertise area (e.g. "Financial Performance & Intelligence"),
@@ -103,7 +104,10 @@ documents with real foreign keys), which fits Postgres, not schemaless documents
   and no way to activate a later stage while earlier ones are open — a case that
   genuinely needs a different flow is built that way directly (reorder or hide
   stages for that case), not by letting the system jump ahead. Mistakes can be
-  undone one step with `reopenLastCompletedStage`.
+  undone one step with `reopenLastCompletedStage`. Both `StageDefinition` and
+  `JourneyStage` rows can be deleted outright now (`deleteStageDefinition`/
+  `deleteJourneyStage`) — see "Deleting a stage" below for the safety rules
+  around each.
 - `SurveyTemplate` / `SurveyTemplateItem` — named, reusable question lists,
   authored once from the admin's "Anket Şablonları" page, not tied to any stage.
   Loaded as an optional starting point when building a real survey, then freely
@@ -307,6 +311,19 @@ default one or the last remaining template (so there's always at least one to
 pick from on "Yeni Prospect"). With only the seeded "Varsayılan" template
 existing, "Sil" never shows at all — that's expected, not a missing feature.
 
+**Company logo** (`uploadCompanyLogo` in `lib/presales/adminActions.ts`,
+`uploadLogoToDrive()` in `lib/presales/drive.ts`): an optional image, settable
+either right on "Yeni Prospect" alongside the rest of the intake info, or
+later from a journey's Ayarlar tab. Stored in its own top-level Drive folder,
+`_Logolar` — deliberately **not** inside any journey's own folder, since a
+logo is a small website asset, not a business document, and shouldn't clutter
+a journey's real deliverables. `_Logolar` gets its own "anyone can view"
+permission grant at creation (it has no parent journey folder to inherit
+sharing from). `Prospect.logoUrl` is a Drive **thumbnail-serving** link
+(`drive.google.com/thumbnail?id=...`), not `webViewLink` — the latter opens
+Drive's own viewer page and isn't directly usable as an `<img src>`. Shown on
+the customer page's header badge in place of the sparkle icon when set.
+
 **Managing sales reps** (`/presales/admin/sales-reps`, `SalesRepRow.tsx`):
 each rep row has its own client-side "Düzenle" toggle — clicking it swaps the
 row for an inline form (name/email/phone/title, `updateSalesRep`) in place,
@@ -318,6 +335,49 @@ are offered when assigning a rep to a journey.
 "Aşamalar" tab render cards via `DragReorderList` — drag a card up/down, drop it,
 and the new order is persisted server-side (`reorderStageDefinitions` /
 `reorderJourneyStages`). There is no manual order number anywhere in the UI.
+
+**Editing several stages at once**: both stage screens used to have a separate
+"Kaydet" per card — editing five stages meant five saves. Now every card on
+the screen lives inside **one shared `<form>`**, fields named `stage_{index}_*`
+(same convention `parseQuestionSlots` uses for survey questions), with a single
+sticky "Tüm Değişiklikleri Kaydet" button at the bottom (`saveAllStageDefinitions`
+/ `saveAllJourneyStages`, one transaction per save). Reordering, activate/
+deactivate, complete/reopen, and delete all stay **instant, single-click**
+actions — each is a `<button formAction={...}>` inside that same shared form
+(not its own nested `<form>`, which HTML doesn't allow), so clicking one of
+them doesn't require or wait on the "Tüm Değişiklikleri Kaydet" button.
+
+**Deleting a stage** — the safety rules differ by which screen you're on:
+- A **template** stage (`deleteStageDefinition`) is always safe to delete —
+  journeys that already copied it keep their own independent `JourneyStage`
+  row regardless, so their `sourceStageDefinitionId` is just nulled out
+  (lineage pointer only, nothing functional depends on it) before the delete.
+- A **case's own** stage (`deleteJourneyStage`) can have real history —
+  `SurveyInstance.stageId` is required, so a stage with any survey already
+  attached **refuses to delete** ("Bu aşamaya bağlı anket(ler) var..." — use
+  "Bu case'te gizle" instead). A stage with no surveys deletes cleanly; any
+  `Document` scoped to it just loses that scoping (`Document.stageId` is
+  optional) and becomes "genel" instead of being deleted or blocking the stage.
+
+**Admin visual language** (`app/presales/_components/ui.tsx`): shared
+primitives (`Card`, `Badge`, `FieldLabel`, `inputClass`, `buttonPrimaryClass`)
+were refined for a cleaner, more "enterprise SaaS" look — softer/layered card
+shadows, an "outlined tint" badge style (low-opacity background + thin
+matching ring, e.g. `bg-emerald-500/[0.08]` + a ring, not a flat pastel
+`bg-emerald-100` fill) instead of solid pastel pills, and a new `FieldLabel`
+atom for form fields whose meaning isn't obvious from placeholder text alone
+(placeholder disappears once you start typing — the three free-text fields on
+a stage card are exactly this case). Two specific choices worth calling out
+because they were reverted once already: the **dashboard stat cards** went
+through a "single unified strip with dot accents" redesign that read as
+worse, not better, and were reverted back to five separate icon-in-a-tinted-box
+`Card`s (the original shape) — so don't re-attempt that particular strip
+layout without a concrete reason. Primary buttons (`buttonPrimaryClass`) and
+initials-avatar circles (journey cards, journey header, sales rep rows) both
+used to be a blue→magenta gradient; both are now a **solid** `bg-brand-primary`
+fill (avatars: a soft `bg-brand-primary/10` tint with brand-primary text) —
+a two-color diagonal gradient repeated on every button/avatar read as
+"template-y" rather than premium once actually compared side by side.
 
 **Uploading documents — two ways** (`journeys/[id]/documents`): a normal
 browser upload (`uploadDocument`, capped at `MAX_UPLOAD_BYTES` = 4MB — Vercel's
@@ -459,14 +519,23 @@ route, so a disabled/archived case can't leak data through any side door.
 "glassmorphism" look — soft, low-opacity blurred color blobs fixed behind the
 whole page, with every card (hero, timeline, action panel, sidebar) a
 semi-transparent, backdrop-blurred surface floating on top rather than a flat
-solid background. The timeline is the visual centerpiece (its own large card,
-every stage's `customerDescription` shown as a caption, not just the current
-one's), with a compact header above it (company badge, greeting, a circular
+solid background. The timeline is the visual centerpiece (its own large card),
+with a compact header above it (company logo/badge, greeting, a circular
 %-progress ring) rather than the full-height hero band it started as. Colors
 are deliberately restrained — the hero gradient is mostly brand-dark→primary
 with only a small magenta glow accent, and decorative shadows/blobs are kept
 at low opacity — a first pass with more saturated color and heavier glow
-effects read as "busy" rather than elegant.
+effects read as "busy" rather than elegant. A stage's `customerDescription`
+caption only shows for the **current** stage, not every stage — an earlier
+version showed it under all of them as a "preview the whole journey" idea,
+but that read as cluttered, so it went back to "see it once you get there."
+Below the `sm` breakpoint the timeline is a **vertical stepper** (own block,
+`sm:hidden`), not the same horizontally-scrolling row shrunk down — a
+sideways-scrolling strip of 5-6 stops has no visual affordance telling a
+phone user to swipe, so most people would never see stages past the first
+couple. `sm` and up render the original horizontal row (`hidden sm:flex`);
+both versions exist in the DOM at all times, CSS `display` picks the right
+one, so there's no client JS needed to switch between them.
 
 **Admin chatbot**: bottom-right widget on every `/presales/admin/**` page. On each
 message it fetches essentially the whole presales DB (prospects, journeys, stages,

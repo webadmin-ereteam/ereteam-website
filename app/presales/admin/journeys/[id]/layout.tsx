@@ -37,7 +37,7 @@ export default async function JourneyLayout({
     <div>
       <div className="mb-6 flex items-center justify-between rounded-2xl border border-gray-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
         <div className="flex items-center gap-4">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-magenta text-sm font-semibold text-white shadow-sm shadow-brand-primary/20">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-primary/10 text-sm font-semibold text-brand-primary">
             {initials(journey!.prospect.companyName)}
           </span>
           <div>

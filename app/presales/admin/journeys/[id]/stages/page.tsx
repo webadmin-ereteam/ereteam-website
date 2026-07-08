@@ -23,7 +23,10 @@ export default async function JourneyStagesTab({ params }: { params: { id: strin
       <h2 className="mb-1 text-base font-semibold text-brand-dark">Aşamalar (bu case&apos;e özel)</h2>
       <p className="mb-4 text-xs text-text-muted">
         Bu aşamalar varsayılan şablondan kopyalandı — burada değiştirmen sadece bu journey&apos;i etkiler.
-        Sırayı değiştirmek için kartları sürükleyip bırak. Otomatik kayıt yoktur, her kart kendi &quot;Kaydet&quot;ini bekler.
+        Sırayı değiştirmek için kartları sürükleyip bırak — bu anında kaydedilir. Diğer alanlardaki
+        değişiklikler için tüm kartları düzenledikten sonra en alttaki &quot;Tüm Değişiklikleri Kaydet&quot;
+        butonuna bir kez basman yeterli. Tamamla/geri al/gizle/silme de anında uygulanır — anket
+        gönderilmiş bir aşama silinemez, onun yerine gizleyebilirsin.
       </p>
       <JourneyStagesList journeyId={journey!.id} stages={journey!.stages} />
 

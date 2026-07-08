@@ -9,6 +9,30 @@ import { formatDisplayDate } from "@/lib/presales/formatDate";
 import { Card, PageHeader, buttonPrimaryClass, buttonSecondaryClass, inputClass } from "../_components/ui";
 import { JourneyListWithSelection, type JourneyRow } from "./JourneyListWithSelection";
 
+function StatCard({
+  icon: Icon,
+  value,
+  label,
+  tint,
+}: {
+  icon: typeof Users;
+  value: number;
+  label: string;
+  tint: string;
+}) {
+  return (
+    <Card className="flex items-center gap-3">
+      <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${tint}`}>
+        <Icon size={18} />
+      </span>
+      <div>
+        <p className="text-xl font-semibold text-brand-dark">{value}</p>
+        <p className="text-xs text-text-muted">{label}</p>
+      </div>
+    </Card>
+  );
+}
+
 export default async function AdminDashboardPage({
   searchParams,
 }: {
@@ -105,51 +129,11 @@ export default async function AdminDashboardPage({
       />
 
       <div className="mb-8 grid grid-cols-5 gap-4">
-        <Card className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-primary/10 text-brand-primary">
-            <Users size={18} />
-          </span>
-          <div>
-            <p className="text-xl font-semibold text-brand-dark">{activeCount}</p>
-            <p className="text-xs text-text-muted">Aktif Süreç</p>
-          </div>
-        </Card>
-        <Card className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
-            <Clock size={18} />
-          </span>
-          <div>
-            <p className="text-xl font-semibold text-brand-dark">{pendingSurveyCount}</p>
-            <p className="text-xs text-text-muted">Müşteride Bekleyen</p>
-          </div>
-        </Card>
-        <Card className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-magenta/10 text-brand-magenta">
-            <Zap size={18} />
-          </span>
-          <div>
-            <p className="text-xl font-semibold text-brand-dark">{ballInOurCourtCount}</p>
-            <p className="text-xs text-text-muted">Aksiyon Bizde</p>
-          </div>
-        </Card>
-        <Card className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
-            <CheckCircle2 size={18} />
-          </span>
-          <div>
-            <p className="text-xl font-semibold text-brand-dark">{wonCount}</p>
-            <p className="text-xs text-text-muted">Kazanılan</p>
-          </div>
-        </Card>
-        <Card className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-500">
-            <XCircle size={18} />
-          </span>
-          <div>
-            <p className="text-xl font-semibold text-brand-dark">{lostCount}</p>
-            <p className="text-xs text-text-muted">Kaybedilen</p>
-          </div>
-        </Card>
+        <StatCard icon={Users} value={activeCount} label="Aktif Süreç" tint="bg-brand-primary/10 text-brand-primary" />
+        <StatCard icon={Clock} value={pendingSurveyCount} label="Müşteride Bekleyen" tint="bg-amber-100 text-amber-600" />
+        <StatCard icon={Zap} value={ballInOurCourtCount} label="Aksiyon Bizde" tint="bg-brand-magenta/10 text-brand-magenta" />
+        <StatCard icon={CheckCircle2} value={wonCount} label="Kazanılan" tint="bg-emerald-100 text-emerald-600" />
+        <StatCard icon={XCircle} value={lostCount} label="Kaybedilen" tint="bg-gray-100 text-gray-500" />
       </div>
 
       <Card className="mb-6">

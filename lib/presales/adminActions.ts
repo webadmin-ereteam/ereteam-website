@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/presales/db";
 import { generateAccessToken } from "@/lib/presales/tokens";
-import { uploadFileToDrive, copyExistingDriveFile, extractDriveFileId } from "@/lib/presales/drive";
+import { uploadFileToDrive, copyExistingDriveFile, extractDriveFileId, uploadLogoToDrive } from "@/lib/presales/drive";
 import { findCurrentStage } from "@/lib/presales/stageProgress";
 import { encodeOtherOption } from "@/lib/presales/surveyOptions";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/presales/fileUpload";
@@ -34,6 +34,23 @@ export async function createProspectAndJourney(formData: FormData) {
     throw new Error("Hangi aşama şablonuyla başlanacağı zorunludur.");
   }
 
+  // Logo is optional here — admin may not have the file on hand yet and can
+  // always add it later from the journey's Ayarlar tab.
+  const logoFile = formData.get("logo") as File | null;
+  let logoDriveFileId: string | null = null;
+  let logoUrl: string | null = null;
+  if (logoFile && logoFile.size > 0) {
+    if (logoFile.size > MAX_UPLOAD_BYTES) {
+      throw new Error(`Logo dosyası çok büyük (maksimum ${MAX_UPLOAD_LABEL}).`);
+    }
+    if (!logoFile.type.startsWith("image/")) {
+      throw new Error("Logo bir resim dosyası olmalı (PNG, JPG, SVG vb.).");
+    }
+    const uploaded = await uploadLogoToDrive({ file: logoFile, fileName: logoFile.name });
+    logoDriveFileId = uploaded.driveFileId;
+    logoUrl = uploaded.thumbnailUrl;
+  }
+
   const stageDefs = await prisma.stageDefinition.findMany({
     where: { stageTemplateId, isActive: true },
     orderBy: { order: "asc" },
@@ -42,7 +59,7 @@ export async function createProspectAndJourney(formData: FormData) {
   const product = await prisma.product.findUnique({ where: { id: productId } });
 
   const prospect = await prisma.prospect.create({
-    data: { companyName, contactName, contactEmail, contactPhone },
+    data: { companyName, contactName, contactEmail, contactPhone, logoDriveFileId, logoUrl },
   });
 
   const createdAt = new Date();
@@ -377,6 +394,63 @@ export async function reorderStageDefinitions(stageTemplateId: string, orderedId
   revalidatePath(`/presales/admin/stages/${stageTemplateId}`);
 }
 
+// Deletes one stage out of a template. `JourneyStage.sourceStageDefinitionId`
+// is only a lineage pointer back to the template row it was copied from —
+// journeys that already copied this stage keep their own independent name/
+// description/etc regardless, so it's nulled out (not restricted) before the
+// delete rather than blocking it.
+export async function deleteStageDefinition(id: string, stageTemplateId: string) {
+  await prisma.$transaction([
+    prisma.journeyStage.updateMany({
+      where: { sourceStageDefinitionId: id },
+      data: { sourceStageDefinitionId: null },
+    }),
+    prisma.stageDefinition.delete({ where: { id } }),
+  ]);
+  revalidatePath(`/presales/admin/stages/${stageTemplateId}`);
+}
+
+// Saves every stage card on the template editor in one call — editing several
+// stages used to mean clicking "Kaydet" once per card, which got tedious fast.
+// Fields are named `stage_{index}_*` (same convention as QuestionListEditor's
+// `question_{index}_*`), read back here and applied in a single transaction.
+export async function saveAllStageDefinitions(stageTemplateId: string, formData: FormData) {
+  const count = Number(formData.get("stageCount") ?? 0);
+
+  const updates = [];
+  for (let i = 0; i < count; i++) {
+    const id = String(formData.get(`stage_${i}_id`) ?? "").trim();
+    if (!id) continue;
+
+    const key = String(formData.get(`stage_${i}_key`) ?? "").trim();
+    const name = String(formData.get(`stage_${i}_name`) ?? "").trim();
+    if (!key || !name) {
+      throw new Error(`Aşama ${i + 1}: anahtar (key) ve ad zorunludur.`);
+    }
+
+    const estimatedDaysRaw = String(formData.get(`stage_${i}_estimatedDays`) ?? "").trim();
+
+    updates.push(
+      prisma.stageDefinition.update({
+        where: { id },
+        data: {
+          key,
+          name,
+          description: String(formData.get(`stage_${i}_description`) ?? "").trim() || null,
+          customerDescription: String(formData.get(`stage_${i}_customerDescription`) ?? "").trim() || null,
+          customerWaitingMessage: String(formData.get(`stage_${i}_customerWaitingMessage`) ?? "").trim() || null,
+          customerVisible: formData.get(`stage_${i}_customerVisible`) === "on",
+          surveysEnabled: formData.get(`stage_${i}_surveysEnabled`) === "on",
+          estimatedDays: estimatedDaysRaw ? Number(estimatedDaysRaw) : null,
+        },
+      })
+    );
+  }
+
+  await prisma.$transaction(updates);
+  revalidatePath(`/presales/admin/stages/${stageTemplateId}`);
+}
+
 // --- Per-case stages (JourneyStage): freely editable copies scoped to one journey ---
 
 export async function createJourneyStage(formData: FormData) {
@@ -444,6 +518,67 @@ export async function reorderJourneyStages(journeyId: string, orderedIds: string
   await prisma.$transaction(
     orderedIds.map((id, index) => prisma.journeyStage.update({ where: { id }, data: { order: index } }))
   );
+  revalidatePath(`/presales/admin/journeys/${journeyId}`);
+  revalidatePath(`/presales/admin/journeys/${journeyId}/stages`);
+}
+
+// Unlike a template stage, a JourneyStage can have real history (sent
+// surveys) — `SurveyInstance.stageId` is required, so deleting a stage that
+// already has one would leave it dangling. Refuse in that case ("Bu case'te
+// gizle" is the safe way to remove a stage that's already been used) rather
+// than silently cascading; any Documents scoped to the stage instead just
+// lose that scoping (Document.stageId is optional) and become "genel".
+export async function deleteJourneyStage(id: string, journeyId: string) {
+  const surveyCount = await prisma.surveyInstance.count({ where: { stageId: id } });
+  if (surveyCount > 0) {
+    throw new Error(
+      "Bu aşamaya bağlı anket(ler) olduğu için silinemez — bunun yerine \"Bu case'te gizle\" kullanabilirsin."
+    );
+  }
+
+  await prisma.$transaction([
+    prisma.document.updateMany({ where: { stageId: id }, data: { stageId: null } }),
+    prisma.journeyStage.delete({ where: { id } }),
+  ]);
+
+  revalidatePath(`/presales/admin/journeys/${journeyId}`);
+  revalidatePath(`/presales/admin/journeys/${journeyId}/stages`);
+}
+
+// Saves every stage card on a case's "Aşamalar" tab in one call — same fix as
+// the stage template editor's "Tüm Değişiklikleri Kaydet": editing several
+// stages used to mean clicking "Kaydet" once per card.
+export async function saveAllJourneyStages(journeyId: string, formData: FormData) {
+  const count = Number(formData.get("stageCount") ?? 0);
+
+  const updates = [];
+  for (let i = 0; i < count; i++) {
+    const id = String(formData.get(`stage_${i}_id`) ?? "").trim();
+    if (!id) continue;
+
+    const name = String(formData.get(`stage_${i}_name`) ?? "").trim();
+    if (!name) {
+      throw new Error(`Aşama ${i + 1}: adı zorunludur.`);
+    }
+
+    const estimatedDaysRaw = String(formData.get(`stage_${i}_estimatedDays`) ?? "").trim();
+
+    updates.push(
+      prisma.journeyStage.update({
+        where: { id },
+        data: {
+          name,
+          customerDescription: String(formData.get(`stage_${i}_customerDescription`) ?? "").trim() || null,
+          customerWaitingMessage: String(formData.get(`stage_${i}_customerWaitingMessage`) ?? "").trim() || null,
+          customerVisible: formData.get(`stage_${i}_customerVisible`) === "on",
+          surveysEnabled: formData.get(`stage_${i}_surveysEnabled`) === "on",
+          estimatedDays: estimatedDaysRaw ? Number(estimatedDaysRaw) : null,
+        },
+      })
+    );
+  }
+
+  await prisma.$transaction(updates);
   revalidatePath(`/presales/admin/journeys/${journeyId}`);
   revalidatePath(`/presales/admin/journeys/${journeyId}/stages`);
 }
@@ -773,6 +908,34 @@ export async function assignProduct(journeyId: string, formData: FormData) {
   const productId = String(formData.get("productId") ?? "").trim() || null;
   await prisma.journey.update({ where: { id: journeyId }, data: { productId } });
   revalidatePath(`/presales/admin/journeys/${journeyId}`);
+}
+
+// Company logo — belongs to the Prospect (the company), not the journey, but
+// is uploaded from a journey's Ayarlar tab since that's the only place an
+// admin is looking at one specific company at a time.
+export async function uploadCompanyLogo(journeyId: string, formData: FormData) {
+  const file = formData.get("logo") as File | null;
+  if (!file || file.size === 0) {
+    throw new Error("Bir logo dosyası seçmelisin.");
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    throw new Error(`Dosya çok büyük (maksimum ${MAX_UPLOAD_LABEL}).`);
+  }
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Logo bir resim dosyası olmalı (PNG, JPG, SVG vb.).");
+  }
+
+  const journey = await prisma.journey.findUniqueOrThrow({ where: { id: journeyId } });
+
+  const { driveFileId, thumbnailUrl } = await uploadLogoToDrive({ file, fileName: file.name });
+
+  await prisma.prospect.update({
+    where: { id: journey.prospectId },
+    data: { logoDriveFileId: driveFileId, logoUrl: thumbnailUrl },
+  });
+
+  revalidatePath(`/presales/admin/journeys/${journeyId}/settings`);
+  revalidatePath(`/presales/j/${journey.accessToken}`);
 }
 
 // --- Admin login (shared Basic-Auth credentials, editable from the panel) ---

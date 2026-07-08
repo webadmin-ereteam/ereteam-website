@@ -23,13 +23,7 @@ function getDriveClient() {
 }
 
 async function createJourneyFolder(drive: ReturnType<typeof getDriveClient>, folderName: string) {
-  // .trim() guards against a stray trailing newline/whitespace from how the
-  // value was pasted into the hosting provider's env var UI — Drive treats
-  // "<id>\n" as a different, nonexistent id and fails with a 404.
-  const rootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID?.trim();
-  if (!rootFolderId) {
-    throw new Error("GOOGLE_DRIVE_ROOT_FOLDER_ID is not set. Add it to .env.local.");
-  }
+  const rootFolderId = getRootFolderId();
 
   const folder = await drive.files.create({
     requestBody: {
@@ -61,7 +55,11 @@ function escapeForDriveQuery(value: string) {
 async function getOrCreateSubfolder(
   drive: ReturnType<typeof getDriveClient>,
   parentFolderId: string,
-  name: string
+  name: string,
+  // Subfolders under a journey folder inherit its sharing automatically, so
+  // they never need this. A folder created directly under the Drive root
+  // (e.g. the shared logos folder) has no such parent to inherit from.
+  grantPublicAccessOnCreate = false
 ) {
   const existing = await drive.files.list({
     q: `'${parentFolderId}' in parents and name = '${escapeForDriveQuery(name)}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
@@ -82,8 +80,28 @@ async function getOrCreateSubfolder(
     fields: "id",
     supportsAllDrives: true,
   });
+  const folderId = created.data.id!;
 
-  return created.data.id!;
+  if (grantPublicAccessOnCreate) {
+    await drive.permissions.create({
+      fileId: folderId,
+      requestBody: { type: "anyone", role: "reader" },
+      supportsAllDrives: true,
+    });
+  }
+
+  return folderId;
+}
+
+function getRootFolderId(): string {
+  // .trim() guards against a stray trailing newline/whitespace from how the
+  // value was pasted into the hosting provider's env var UI — Drive treats
+  // "<id>\n" as a different, nonexistent id and fails with a 404.
+  const rootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID?.trim();
+  if (!rootFolderId) {
+    throw new Error("GOOGLE_DRIVE_ROOT_FOLDER_ID is not set. Add it to .env.local.");
+  }
+  return rootFolderId;
 }
 
 async function resolveTargetFolder(
@@ -185,5 +203,48 @@ export async function uploadFileToDrive(params: {
     driveFileId: created.data.id!,
     webViewLink: created.data.webViewLink!,
     folderId: journeyFolderId,
+  };
+}
+
+// Company logos live in their own top-level "_Logolar" folder — not inside
+// any journey's folder — since they're a small, separate concern (a website
+// asset, not a business document) that a company's actual journey folder
+// shouldn't be cluttered with.
+export async function uploadLogoToDrive(params: {
+  file: File;
+  fileName: string;
+}): Promise<{ driveFileId: string; thumbnailUrl: string }> {
+  const drive = getDriveClient();
+  const logosFolderId = await getOrCreateSubfolder(drive, getRootFolderId(), "_Logolar", true);
+
+  const buffer = Buffer.from(await params.file.arrayBuffer());
+
+  // Same two-step create-then-update as uploadFileToDrive, to avoid the
+  // multipart charset issue that mangles non-ASCII file names.
+  const created = await drive.files.create({
+    requestBody: {
+      name: params.fileName,
+      parents: [logosFolderId],
+    },
+    fields: "id",
+    supportsAllDrives: true,
+  });
+
+  await drive.files.update({
+    fileId: created.data.id!,
+    media: {
+      mimeType: params.file.type || "application/octet-stream",
+      body: Readable.from(buffer),
+    },
+    supportsAllDrives: true,
+  });
+
+  const driveFileId = created.data.id!;
+  return {
+    driveFileId,
+    // Drive's dedicated thumbnail-serving endpoint — meant for hotlinking a
+    // publicly-shared file's image content directly (e.g. <img src>),
+    // unlike webViewLink which opens Drive's own viewer page.
+    thumbnailUrl: `https://drive.google.com/thumbnail?id=${driveFileId}&sz=w400`,
   };
 }
