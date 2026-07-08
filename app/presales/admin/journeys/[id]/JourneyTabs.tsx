@@ -8,7 +8,8 @@ export default function JourneyTabs({ journeyId }: { journeyId: string }) {
   const base = `/presales/admin/journeys/${journeyId}`;
 
   const tabs = [
-    { href: base, label: "Aşamalar", active: pathname === base },
+    { href: base, label: "Genel Bakış", active: pathname === base },
+    { href: `${base}/stages`, label: "Aşamalar", active: pathname.startsWith(`${base}/stages`) },
     { href: `${base}/surveys`, label: "Anketler", active: pathname.startsWith(`${base}/surveys`) },
     { href: `${base}/documents`, label: "Belgeler", active: pathname.startsWith(`${base}/documents`) },
     { href: `${base}/settings`, label: "Ayarlar", active: pathname.startsWith(`${base}/settings`) },

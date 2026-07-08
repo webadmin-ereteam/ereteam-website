@@ -121,6 +121,7 @@ export async function completeCurrentStage(journeyId: string) {
   ]);
 
   revalidatePath(`/presales/admin/journeys/${journeyId}`);
+  revalidatePath(`/presales/admin/journeys/${journeyId}/stages`);
 }
 
 export async function reopenLastCompletedStage(journeyId: string) {
@@ -153,6 +154,7 @@ export async function reopenLastCompletedStage(journeyId: string) {
   ]);
 
   revalidatePath(`/presales/admin/journeys/${journeyId}`);
+  revalidatePath(`/presales/admin/journeys/${journeyId}/stages`);
 }
 
 export async function toggleProposalRequested(journeyId: string, requested: boolean) {
@@ -384,6 +386,7 @@ export async function createJourneyStage(formData: FormData) {
   });
 
   revalidatePath(`/presales/admin/journeys/${journeyId}`);
+  revalidatePath(`/presales/admin/journeys/${journeyId}/stages`);
 }
 
 export async function updateJourneyStage(formData: FormData) {
@@ -407,11 +410,13 @@ export async function updateJourneyStage(formData: FormData) {
   });
 
   revalidatePath(`/presales/admin/journeys/${journeyId}`);
+  revalidatePath(`/presales/admin/journeys/${journeyId}/stages`);
 }
 
 export async function setJourneyStageActive(id: string, journeyId: string, isActive: boolean) {
   await prisma.journeyStage.update({ where: { id }, data: { isActive } });
   revalidatePath(`/presales/admin/journeys/${journeyId}`);
+  revalidatePath(`/presales/admin/journeys/${journeyId}/stages`);
 }
 
 export async function reorderJourneyStages(journeyId: string, orderedIds: string[]) {
@@ -419,6 +424,7 @@ export async function reorderJourneyStages(journeyId: string, orderedIds: string
     orderedIds.map((id, index) => prisma.journeyStage.update({ where: { id }, data: { order: index } }))
   );
   revalidatePath(`/presales/admin/journeys/${journeyId}`);
+  revalidatePath(`/presales/admin/journeys/${journeyId}/stages`);
 }
 
 // --- Shared question parsing (used by both survey templates and per-case surveys) ---
@@ -508,16 +514,22 @@ function parseQuestionSlots(formData: FormData) {
 
 export async function createSurveyTemplate(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
-  const questions = parseQuestionSlots(formData);
-
-  if (!name || questions.length === 0) {
-    throw new Error("Şablon adı ve en az bir soru zorunludur.");
+  if (!name) {
+    throw new Error("Şablon adı zorunludur.");
   }
 
-  await prisma.surveyTemplate.create({
-    data: { name, items: { create: questions } },
-  });
+  const template = await prisma.surveyTemplate.create({ data: { name } });
+  revalidatePath("/presales/admin/survey-templates");
+  redirect(`/presales/admin/survey-templates/${template.id}`);
+}
 
+export async function renameSurveyTemplate(id: string, formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) {
+    throw new Error("Şablon adı zorunludur.");
+  }
+  await prisma.surveyTemplate.update({ where: { id }, data: { name } });
+  revalidatePath(`/presales/admin/survey-templates/${id}`);
   revalidatePath("/presales/admin/survey-templates");
 }
 
@@ -525,8 +537,8 @@ export async function updateSurveyTemplate(id: string, formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const questions = parseQuestionSlots(formData);
 
-  if (!name || questions.length === 0) {
-    throw new Error("Şablon adı ve en az bir soru zorunludur.");
+  if (!name) {
+    throw new Error("Şablon adı zorunludur.");
   }
 
   await prisma.$transaction([
@@ -537,6 +549,7 @@ export async function updateSurveyTemplate(id: string, formData: FormData) {
     }),
   ]);
 
+  revalidatePath(`/presales/admin/survey-templates/${id}`);
   revalidatePath("/presales/admin/survey-templates");
 }
 

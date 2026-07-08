@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
-import { ExternalLink } from "lucide-react";
 import { prisma } from "@/lib/presales/db";
 import { Badge } from "../../../_components/ui";
 import { isJourneyLinkActive } from "@/lib/presales/journeyLink";
 import { JOURNEY_STATUS_LABELS } from "@/lib/presales/journeyStatus";
 import JourneyTabs from "./JourneyTabs";
+import { CustomerLinkActions } from "./CustomerLinkActions";
 
 const OUTCOME_BADGE: Record<string, "blue" | "green" | "gray" | "amber"> = {
   active: "blue",
@@ -61,15 +61,7 @@ export default async function JourneyLayout({
           </div>
           <div className="flex items-center justify-end gap-1.5">
             <code className="text-xs text-brand-primary">/presales/j/{journey!.accessToken}</code>
-            <a
-              href={`/presales/j/${journey!.accessToken}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Müşteri sayfasını aç"
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-white hover:text-brand-primary"
-            >
-              <ExternalLink size={13} />
-            </a>
+            <CustomerLinkActions accessToken={journey!.accessToken} />
           </div>
         </div>
       </div>

@@ -8,9 +8,9 @@ import {
   reopenLastCompletedStage,
 } from "@/lib/presales/adminActions";
 import { findCurrentStage } from "@/lib/presales/stageProgress";
-import { Badge, buttonPrimaryClass, buttonSecondaryClass, inputClass } from "../../../_components/ui";
-import { SubmitButton } from "../../../_components/SubmitButton";
-import { DragReorderList } from "../../../_components/DragReorderList";
+import { Badge, buttonPrimaryClass, buttonSecondaryClass, inputClass } from "../../../../_components/ui";
+import { SubmitButton } from "../../../../_components/SubmitButton";
+import { DragReorderList } from "../../../../_components/DragReorderList";
 
 type JourneyStage = {
   id: string;
