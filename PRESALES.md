@@ -177,6 +177,9 @@ lib/presales/journeyStatus.ts    Turkish display labels for Journey.status (DB v
 lib/presales/surveyOptions.ts    encode/decode the "Diğer" (other) marker on option strings
 lib/presales/surveyExcel.ts      builds an .xlsx buffer of a survey's questions/answers
 lib/presales/fileUpload.ts       shared MAX_UPLOAD_BYTES constant (upload size guard, see below)
+lib/presales/dateRangePresets.ts DATE_RANGE_PRESETS + resolveDateRangePreset() — Bugün/Bu Ay/Geçen
+                                  Ay/Bu Yıl presets shared by the dashboard's Kapanış/Oluşturma filters
+lib/presales/formatDate.ts       formatDisplayDate() — shared "-" fallback for null dates
 lib/generated/prisma/**          generated Prisma client (gitignored, regenerate with `npx prisma generate`)
 
 middleware.ts                    session-cookie gate for /presales/admin/** and /api/presales/admin/**
@@ -185,7 +188,8 @@ app/presales/login/page.tsx      admin login form (posts to loginAdmin)
 app/presales/_components/**      shared UI atoms, QuestionListEditor, DragReorderList, SubmitButton, FileSizeInput
 app/presales/j/[token]/**        customer-facing journey page + survey answer pages/form + actions.ts
 app/presales/admin/**            admin dashboard, prospects/new, stages, survey-templates (+ [id] editor),
-                                  sales-reps, products, journeys/[id]/** — page.tsx is "Genel Bakış" (the
+                                  sales-reps (incl. SalesRepRow.tsx — inline edit toggle), products,
+                                  journeys/[id]/** — page.tsx is "Genel Bakış" (the
                                   default landing tab, see below), stages/ is the old per-case stage editor
                                   (moved out of the base route to make room for Genel Bakış), plus
                                   surveys/documents/settings, AdminNav.tsx (incl. logout button),
@@ -269,6 +273,13 @@ default one or the last remaining template (so there's always at least one to
 pick from on "Yeni Prospect"). With only the seeded "Varsayılan" template
 existing, "Sil" never shows at all — that's expected, not a missing feature.
 
+**Managing sales reps** (`/presales/admin/sales-reps`, `SalesRepRow.tsx`):
+each rep row has its own client-side "Düzenle" toggle — clicking it swaps the
+row for an inline form (name/email/phone/title, `updateSalesRep`) in place,
+no separate edit page. "Vazgeç" collapses it back without saving. Reps can
+also be activated/deactivated or deleted from the same row; only active reps
+are offered when assigning a rep to a journey.
+
 **Reordering stages**: both a stage template's editor page and a case's
 "Aşamalar" tab render cards via `DragReorderList` — drag a card up/down, drop it,
 and the new order is persisted server-side (`reorderStageDefinitions` /
@@ -284,18 +295,26 @@ al" appears on the most recently completed stage to undo exactly that step.
 + `JourneyListWithSelection.tsx`): combinable filters — Ara (search), Durum,
 Satışçı, Ürün, Arşiv, Müşteri Linki, Aksiyon (Aksiyon Bizde / Müşteride —
 same "whose turn" logic as the Genel Bakış tab below, computed per journey
-from its survey statuses), and Kapanış Tarihi (from/to, filters on
-`Journey.outcomeSetAt`). **Arşiv defaults to "Arşivlenmemiş"** the moment no
-filter param is present at all — archived cases never show up by accident,
-you have to explicitly pick "Arşivlenmiş" or "Tümü (arşiv dahil)" to see them.
-Each journey card's heading is the full `Journey.name` (not just the company
-name), with the assigned **satışçı right underneath it** (the prospect's own
-contact name/email moved down into the bottom meta row instead — sales rep is
-the more actionable field to see at a glance, and it's the one that gets
-reassigned often). Also shows the outcome badge plus a separate "Arşivlendi"
-badge when archived, a "Müşteri Linki: Aktif/Pasif" line, and two small
-buttons at the bottom-right — copy the customer link, or open it in a new tab
-(both stop the card's own click-through navigation). Checkboxes let you
+from its survey statuses), and two separate date filters, **Kapanış Tarihi**
+(`Journey.outcomeSetAt`) and **Oluşturma Tarihi** (`Journey.createdAt`). Both
+render as a single preset dropdown (Tümü/Bugün/Bu Ay/Geçen Ay/Bu Yıl,
+`lib/presales/dateRangePresets.ts`) rather than raw date pickers — a raw
+from/to pair was confusing for two single-value dates people actually think
+of in "this month" / "last month" terms. **Arşiv defaults to "Arşivlenmemiş"**
+the moment no filter param is present at all — archived cases never show up by
+accident, you have to explicitly pick "Arşivlenmiş" or "Tümü (arşiv dahil)" to
+see them. Each journey card's heading is the full `Journey.name` (not just the
+company name), with the assigned **satışçı right underneath it** (the
+prospect's own contact name/email moved down into the bottom meta row instead
+— sales rep is the more actionable field to see at a glance, and it's the one
+that gets reassigned often). The top-right of the card also shows **Açılış**
+(`createdAt`) and **Kapanış** (`outcomeSetAt`, "-" until an outcome is set) —
+`formatDisplayDate()` in `lib/presales/formatDate.ts` is the shared "-"
+fallback used both here and on the journey header below. Also shows the
+outcome badge plus a separate "Arşivlendi" badge when archived, a "Müşteri
+Linki: Aktif/Pasif" line, and two small buttons at the bottom-right — copy the
+customer link, or open it in a new tab (both stop the card's own click-through
+navigation). Checkboxes let you
 multi-select journeys and, from the bulk-action bar that appears, change
 Durum, reassign Satışçı, toggle Müşteri Linki, or archive/unarchive — all in
 one call across the whole selection (`bulkSetJourneyStatus`/
@@ -308,8 +327,10 @@ also revalidates the customer's own page (`/presales/j/[token]`), so the
 
 **Journey detail header** (`app/presales/admin/journeys/[id]/layout.tsx`): same
 pattern as the dashboard card — heading is `Journey.name`, with the assigned
-satışçı directly underneath and the prospect's contact info as a smaller line
-below that. The "Müşteri Linki" box (top-right) has copy + open-in-new-tab
+satışçı directly underneath, the prospect's contact info as a smaller line
+below that, and an **Açılış / Kapanış** date line below that (same
+`formatDisplayDate()` fallback as the dashboard card, "-" until an outcome is
+set). The "Müşteri Linki" box (top-right) has copy + open-in-new-tab
 buttons next to the link code (`CustomerLinkActions.tsx`, a small client
 component — everything else on this layout is a Server Component, so copying
 to the clipboard is the one thing that needs to be pulled out client-side).
