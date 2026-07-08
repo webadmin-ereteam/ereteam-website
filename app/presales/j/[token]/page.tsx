@@ -49,6 +49,12 @@ const DOCUMENT_COLORS: Record<string, string> = {
   other: "bg-gray-100 text-text-muted",
 };
 
+// Shared "frosted glass" card treatment — semi-transparent white + blur so the
+// decorative gradient blobs behind the page show through softly, with a
+// gentle colored shadow instead of a flat gray one for a more elevated feel.
+const glassCardClass =
+  "rounded-[28px] border border-white/80 bg-white/80 shadow-[0_16px_40px_-22px_rgba(15,23,42,0.18)] backdrop-blur-xl";
+
 function initialsOf(name: string) {
   return name
     .split(" ")
@@ -56,6 +62,19 @@ function initialsOf(name: string) {
     .slice(0, 2)
     .join("")
     .toUpperCase();
+}
+
+// Decorative, fixed-position blurred color blobs behind the whole page —
+// the signature of the glassmorphism look; every card above floats on top
+// of these via backdrop-blur instead of a flat solid background.
+function BackgroundBlobs() {
+  return (
+    <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[#F7F8FB]">
+      <div className="absolute -left-40 -top-48 h-[28rem] w-[28rem] rounded-full bg-brand-primary/[0.07] blur-[130px]" />
+      <div className="absolute -right-32 top-1/4 h-[26rem] w-[26rem] rounded-full bg-brand-magenta/[0.05] blur-[130px]" />
+      <div className="absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-brand-primary/[0.04] blur-[130px]" />
+    </div>
+  );
 }
 
 export default async function CustomerJourneyPage({ params }: { params: { token: string } }) {
@@ -82,8 +101,9 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
 
   if (!isJourneyLinkActive(journey)) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F8F9FB] px-6 text-text-body">
-        <div className="max-w-sm rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F7F8FB] px-6 text-text-body">
+        <BackgroundBlobs />
+        <div className={`max-w-sm p-8 text-center ${glassCardClass}`}>
           <span className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-gray-100 text-gray-400">
             <Lock size={18} />
           </span>
@@ -97,12 +117,12 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
   }
 
   const visibleStages = journey!.stages.filter((s) => s.customerVisible && s.isActive);
-  const reachedStageIds = new Set(
-    journey!.stages.filter((s) => s.status === "active" || s.status === "completed").map((s) => s.id)
-  );
-  const visibleDocuments = journey!.documents.filter(
-    (doc) => !doc.stageId || reachedStageIds.has(doc.stageId)
-  );
+  // `Document.customerVisible` is the single, explicit toggle admins use for
+  // this — it used to also be silently gated on the document's stage having
+  // started, so a document uploaded ahead of time for a future stage would
+  // stay invisible with no indication why. Admins can just upload it later if
+  // they want it to appear only once that stage begins.
+  const visibleDocuments = journey!.documents;
 
   const pendingSurveys = journey!.surveyInstances.filter((s) => s.status === "sent");
   const completedSurveys = journey!.surveyInstances.filter((s) => s.status === "completed");
@@ -123,80 +143,65 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
   const remainingEstimatedDays = remainingStages.reduce((sum, s) => sum + (s.estimatedDays ?? 0), 0);
 
   return (
-    <div className="min-h-screen bg-[#F8F9FB] text-text-body">
-      {/* Full-bleed hero */}
-      <header className="relative overflow-hidden bg-gradient-to-br from-brand-dark via-brand-primary to-brand-magenta text-white">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-25"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 12% 15%, white 0, transparent 32%), radial-gradient(circle at 88% 85%, white 0, transparent 32%), radial-gradient(circle at 90% 10%, white 0, transparent 22%)",
-          }}
-        />
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px)",
-            backgroundSize: "44px 44px",
-          }}
-        />
-        <div className="relative mx-auto max-w-7xl px-6 py-16 sm:px-10 lg:px-16">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-1.5 ring-1 ring-inset ring-white/20 backdrop-blur-sm">
-            <Sparkles size={13} className="text-white/80" />
-            <span className="text-xs font-medium uppercase tracking-wider text-white/80">
-              {journey!.prospect.companyName}
-            </span>
-          </div>
-          <h1 className="mb-3 text-4xl font-semibold tracking-tight sm:text-5xl">
-            Merhaba {journey!.prospect.contactName}
-          </h1>
-          <p className="mb-10 max-w-xl text-[15px] leading-relaxed text-white/75">
-            Birlikte yürüttüğümüz presales sürecini burada uçtan uca takip edebilir, bekleyen aksiyonları
-            tamamlayabilirsiniz.
-          </p>
+    <div className="relative min-h-screen overflow-hidden bg-[#F7F8FB] text-text-body">
+      <BackgroundBlobs />
 
-          <div className="max-w-2xl">
-            <div className="mb-2.5 flex items-end justify-between">
-              <span className="text-sm font-medium text-white/80">Süreç ilerlemesi</span>
-              <span className="text-2xl font-semibold tabular-nums">%{progressPct}</span>
-            </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-white/15">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-white/80 to-white shadow-[0_0_12px_rgba(255,255,255,0.5)] transition-all"
-                style={{ width: `${Math.max(progressPct, 4)}%` }}
-              />
-            </div>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <div className="rounded-xl bg-white/10 px-4 py-2.5 ring-1 ring-inset ring-white/15 backdrop-blur-sm">
-                <p className="text-[11px] uppercase tracking-wide text-white/60">Aşama</p>
-                <p className="text-sm font-semibold">
-                  {completedCount} / {totalCount} tamamlandı
-                </p>
+      <div className="mx-auto max-w-7xl px-6 pb-14 pt-8 sm:px-10 lg:px-16">
+        {/* Hero — a floating gradient card, not a full-bleed banner, so it reads
+            as one element among several rather than eating the whole viewport. */}
+        <div className="relative mb-7 overflow-hidden rounded-[28px] bg-gradient-to-br from-brand-dark to-brand-primary shadow-[0_20px_45px_-24px_rgba(15,23,42,0.5)] ring-1 ring-white/10">
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at 96% 8%, rgba(233,30,140,0.3) 0, transparent 42%), radial-gradient(circle at 6% 100%, rgba(255,255,255,0.08) 0, transparent 35%)",
+            }}
+          />
+          <div className="relative px-7 py-10 text-white sm:px-10 sm:py-14">
+            <div className="flex flex-wrap items-center justify-between gap-5">
+              <div>
+                <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 ring-1 ring-inset ring-white/25 backdrop-blur-sm">
+                  <Sparkles size={11} className="text-white/80" />
+                  <span className="text-[10.5px] font-medium uppercase tracking-wider text-white/80">
+                    {journey!.prospect.companyName}
+                  </span>
+                </div>
+                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                  Merhaba {journey!.prospect.contactName}
+                </h1>
+                {hasRemainingEstimates && (
+                  <p className="mt-2 text-sm text-white/70">Tahmini kalan süre: ~{remainingEstimatedDays} gün</p>
+                )}
               </div>
-              {hasEstimates && (
-                <div className="rounded-xl bg-white/10 px-4 py-2.5 ring-1 ring-inset ring-white/15 backdrop-blur-sm">
-                  <p className="text-[11px] uppercase tracking-wide text-white/60">Toplam Süreç</p>
-                  <p className="text-sm font-semibold">~{totalEstimatedDays} gün</p>
+              <div className="flex items-center gap-4">
+                <div
+                  className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-full shadow-[0_0_16px_rgba(255,255,255,0.18)]"
+                  style={{ background: `conic-gradient(white ${progressPct * 3.6}deg, rgba(255,255,255,0.18) 0deg)` }}
+                >
+                  <div className="flex h-[66px] w-[66px] items-center justify-center rounded-full bg-brand-primary">
+                    <span className="text-base font-semibold tabular-nums">%{progressPct}</span>
+                  </div>
                 </div>
-              )}
-              {hasRemainingEstimates && (
-                <div className="rounded-xl bg-white/10 px-4 py-2.5 ring-1 ring-inset ring-white/15 backdrop-blur-sm">
-                  <p className="text-[11px] uppercase tracking-wide text-white/60">Kalan Süre</p>
-                  <p className="text-sm font-semibold">~{remainingEstimatedDays} gün</p>
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-white/60">Süreç İlerlemesi</p>
+                  <p className="text-base font-semibold">
+                    {completedCount} / {totalCount} aşama tamamlandı
+                  </p>
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </div>
-      </header>
 
-      {/* Full-bleed process band */}
-      <section className="border-b border-gray-200/80 bg-white">
-        <div className="mx-auto max-w-7xl px-6 py-11 sm:px-10 lg:px-16">
-          <h2 className="mb-9 text-xs font-semibold uppercase tracking-[0.15em] text-text-muted">Süreç</h2>
-          <div className="flex w-full items-start">
+        {/* Timeline — the visual centerpiece, floating as a frosted glass card */}
+        <div className={`mb-9 p-7 sm:p-9 ${glassCardClass}`}>
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-text-muted">Süreciniz</h2>
+            {hasEstimates && (
+              <span className="text-xs text-text-muted">Toplam tahmini süre: ~{totalEstimatedDays} gün</span>
+            )}
+          </div>
+          <div className="flex w-full items-start overflow-x-auto pb-1">
             {visibleStages.map((stage, index) => {
               // Stages always proceed strictly in order now — there is no "started early"
               // state anymore, so a stage is either done, the current one, or upcoming.
@@ -209,19 +214,19 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
                 <Fragment key={stage.id}>
                   {index > 0 && (
                     <div
-                      className={`mt-[22px] h-[3px] flex-1 rounded-full ${
-                        isPastOrCurrent ? "bg-gradient-to-r from-brand-primary to-brand-magenta" : "bg-gray-200"
+                      className={`mt-[22px] h-[2px] flex-1 rounded-full ${
+                        isPastOrCurrent ? "bg-brand-primary/40" : "bg-gray-200/70"
                       }`}
                     />
                   )}
-                  <div className="flex min-w-[100px] max-w-[168px] flex-col items-center px-2 text-center">
+                  <div className="flex min-w-[120px] max-w-[190px] flex-col items-center px-2 text-center">
                     <div
                       className={`relative flex h-11 w-11 items-center justify-center rounded-full text-base font-semibold transition-all ${
                         isCompleted
-                          ? "bg-gradient-to-br from-brand-primary to-brand-magenta text-white shadow-md shadow-brand-primary/20"
+                          ? "bg-brand-primary text-white shadow-[0_4px_12px_-4px_rgba(26,111,168,0.4)]"
                           : isCurrent
-                          ? "border-2 border-brand-primary bg-white text-brand-primary shadow-md shadow-brand-primary/10 ring-[5px] ring-brand-primary/10"
-                          : "border-2 border-gray-200 bg-gray-50 text-gray-400"
+                          ? "border-2 border-brand-primary bg-white/90 text-brand-primary shadow-[0_4px_12px_-4px_rgba(26,111,168,0.18)] ring-[5px] ring-brand-primary/[0.06]"
+                          : "border-2 border-gray-200/80 bg-gray-50/80 text-gray-400"
                       }`}
                     >
                       {isCurrent && (
@@ -240,12 +245,18 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
                       <p className="mt-0.5 text-[11px] text-text-muted">~{stage.estimatedDays} gün</p>
                     )}
                     {isCurrent && (
-                      <span className="mt-2 rounded-full bg-brand-primary/10 px-2.5 py-1 text-[11px] font-semibold text-brand-primary">
+                      <span className="mt-2 rounded-full bg-brand-primary/10 px-2.5 py-1 text-[11px] font-semibold text-brand-primary ring-1 ring-inset ring-brand-primary/15">
                         Şu anda bu aşamadasınız
                       </span>
                     )}
-                    {isCurrent && label && (
-                      <p className="mt-2.5 text-[12.5px] leading-snug text-text-muted">{label}</p>
+                    {label && (
+                      <p
+                        className={`mt-2.5 text-[12px] leading-snug ${
+                          isCurrent || isCompleted ? "text-text-muted" : "text-gray-400"
+                        }`}
+                      >
+                        {label}
+                      </p>
                     )}
                   </div>
                 </Fragment>
@@ -253,10 +264,7 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
             })}
           </div>
         </div>
-      </section>
 
-      {/* Content grid */}
-      <div className="mx-auto max-w-7xl px-6 py-14 sm:px-10 lg:px-16">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div className="space-y-7 lg:col-span-2">
             {pendingSurveys.length > 0 ? (
@@ -264,12 +272,12 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
                 <form
                   key={survey.id}
                   action={submitSurveyResponses.bind(null, params.token, survey.id)}
-                  className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-[0_4px_24px_-4px_rgba(26,111,168,0.12)]"
+                  className={`overflow-hidden ${glassCardClass}`}
                 >
                   <div className="h-1.5 w-full bg-gradient-to-r from-brand-primary to-brand-magenta" />
                   <div className="space-y-6 p-8">
                     <div className="flex items-center gap-2.5">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-magenta">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-magenta shadow-[0_4px_10px_-4px_rgba(26,111,168,0.3)]">
                         <Sparkles size={14} className="text-white" />
                       </span>
                       <span className="text-xs font-semibold uppercase tracking-wider text-brand-magenta">
@@ -280,7 +288,7 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
                     <SurveyAnswerForm selections={survey.selections} />
                     <div className="flex flex-wrap items-center gap-3">
                       <SubmitButton
-                        className="rounded-xl border border-gray-300 bg-white px-5 py-2.5 font-medium text-text-body transition-colors hover:border-brand-primary hover:text-brand-primary"
+                        className="rounded-xl border border-gray-300 bg-white/80 px-5 py-2.5 font-medium text-text-body backdrop-blur-sm transition-colors hover:border-brand-primary hover:text-brand-primary"
                         pendingLabel="Kaydediliyor..."
                         formNoValidate
                         formAction={saveSurveyDraft.bind(null, params.token, survey.id)}
@@ -288,7 +296,7 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
                         Taslağı Kaydet
                       </SubmitButton>
                       <SubmitButton
-                        className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-primary to-brand-magenta px-6 py-2.5 font-medium text-white shadow-sm shadow-brand-primary/20 transition-opacity hover:opacity-90"
+                        className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-primary to-brand-magenta px-6 py-2.5 font-medium text-white shadow-[0_6px_16px_-6px_rgba(26,111,168,0.35)] transition-opacity hover:opacity-90"
                         pendingLabel="Gönderiliyor..."
                       >
                         Gönder <ArrowRight size={15} />
@@ -302,14 +310,18 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
                 </form>
               ))
             ) : (
-              <div className="flex flex-col items-center gap-3 rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
-                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-50 text-emerald-500">
-                  <Check size={20} />
-                </span>
-                <p className="text-[15px] font-medium text-brand-dark">Şu anda sizden beklenen bir aksiyon yok</p>
-                <p className="max-w-xs text-sm text-text-muted">
-                  Yeni bir adım olduğunda burada göreceksiniz — bu sayfayı yer imlerinize ekleyebilirsiniz.
-                </p>
+              <div className={`overflow-hidden ${glassCardClass}`}>
+                <div className="h-1.5 w-full bg-gradient-to-r from-emerald-400 to-brand-primary" />
+                <div className="flex flex-col items-center gap-3 p-10 text-center">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-50 text-emerald-500 ring-1 ring-inset ring-emerald-100">
+                    <Check size={20} />
+                  </span>
+                  <p className="text-[15px] font-medium text-brand-dark">Şu anda sizden beklenen bir aksiyon yok</p>
+                  <p className="max-w-sm text-sm leading-relaxed text-text-muted">
+                    {currentStage?.customerWaitingMessage ||
+                      "Yeni bir adım olduğunda burada göreceksiniz — bu sayfayı yer imlerinize ekleyebilirsiniz."}
+                  </p>
+                </div>
               </div>
             )}
 
@@ -323,7 +335,7 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
                     <Link
                       key={survey.id}
                       href={`/presales/j/${params.token}/surveys/${survey.id}`}
-                      className="group flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-primary/30 hover:shadow-md"
+                      className={`group flex flex-wrap items-center justify-between gap-2 p-4 transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-18px_rgba(26,111,168,0.2)] ${glassCardClass}`}
                     >
                       <span className="flex items-center gap-2.5 text-sm font-medium text-brand-dark">
                         <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-500">
@@ -344,7 +356,7 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
 
           <div className="space-y-5">
             {(journey!.product || journey!.salesRep) && (
-              <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+              <div className={`overflow-hidden ${glassCardClass}`}>
                 {journey!.product && (
                   <div className="p-5">
                     <p className="mb-2.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted">
@@ -357,7 +369,7 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
                   </div>
                 )}
 
-                {journey!.product && journey!.salesRep && <div className="border-t border-gray-100" />}
+                {journey!.product && journey!.salesRep && <div className="border-t border-white/60" />}
 
                 {journey!.salesRep && (
                   <div className="p-5">
@@ -375,7 +387,7 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
                         )}
                       </div>
                     </div>
-                    <div className="mt-3.5 space-y-1.5 border-t border-gray-100 pt-3.5 text-sm">
+                    <div className="mt-3.5 space-y-1.5 border-t border-white/60 pt-3.5 text-sm">
                       <a
                         href={`mailto:${journey!.salesRep.email}`}
                         className="flex items-center gap-2 text-text-body transition-colors hover:text-brand-primary"
@@ -410,7 +422,7 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
                       href={doc.driveWebViewLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-primary/30 hover:shadow-md"
+                      className={`flex items-center gap-3 p-4 transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-18px_rgba(26,111,168,0.2)] ${glassCardClass}`}
                     >
                       <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${colorClass}`}>
                         <Icon size={17} />
@@ -424,7 +436,7 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
                 })}
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-gray-200 bg-white/60 p-6 text-center">
+              <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-gray-300/70 bg-white/40 p-6 text-center backdrop-blur-sm">
                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-400">
                   <Inbox size={16} />
                 </span>

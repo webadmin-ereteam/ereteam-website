@@ -16,6 +16,7 @@ type JourneyStage = {
   id: string;
   name: string;
   customerDescription: string | null;
+  customerWaitingMessage: string | null;
   customerVisible: boolean;
   surveysEnabled: boolean;
   estimatedDays: number | null;
@@ -73,6 +74,13 @@ export function JourneyStagesList({ journeyId, stages }: { journeyId: string; st
                 name="customerDescription"
                 defaultValue={stage.customerDescription ?? ""}
                 placeholder="Müşteriye görünen açıklama"
+                rows={2}
+                className={`${inputClass} w-full bg-white`}
+              />
+              <textarea
+                name="customerWaitingMessage"
+                defaultValue={stage.customerWaitingMessage ?? ""}
+                placeholder="Aksiyon bizdeyken müşteriye gösterilecek mesaj"
                 rows={2}
                 className={`${inputClass} w-full bg-white`}
               />

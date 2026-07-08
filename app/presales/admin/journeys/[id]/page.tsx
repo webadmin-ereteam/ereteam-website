@@ -1,11 +1,66 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Zap, Clock, CheckCircle2, ArrowRight, FileText, Send } from "lucide-react";
+import { Zap, Clock, CheckCircle2, Circle, ArrowRight, FileText, Send, ListChecks } from "lucide-react";
 import { prisma } from "@/lib/presales/db";
 import { findCurrentStage } from "@/lib/presales/stageProgress";
 import { completeCurrentStage } from "@/lib/presales/adminActions";
 import { Badge, Card, buttonPrimaryClass, buttonSecondaryClass } from "../../../_components/ui";
 import { SubmitButton } from "../../../_components/SubmitButton";
+
+const SURVEY_STATUS_BADGE: Record<string, "gray" | "amber" | "green"> = {
+  draft: "gray",
+  sent: "amber",
+  completed: "green",
+};
+const SURVEY_STATUS_LABEL: Record<string, string> = {
+  draft: "Taslak",
+  sent: "Müşteride bekliyor",
+  completed: "Tamamlandı",
+};
+
+function formatDate(date: Date | null) {
+  return date ? new Date(date).toLocaleDateString("tr-TR") : null;
+}
+
+function AnswerPreview({
+  selection,
+}: {
+  selection: {
+    id: string;
+    text: string;
+    type: string;
+    response: { answerText: string | null; answerJson: unknown; document: { title: string; driveWebViewLink: string } | null } | null;
+  };
+}) {
+  const response = selection.response;
+  return (
+    <p className="text-sm">
+      <span className="font-medium text-brand-dark">{selection.text}: </span>
+      {!response ? (
+        <span className="italic text-text-muted">cevaplanmadı</span>
+      ) : selection.type === "multi_choice" ? (
+        <span className="text-text-body">
+          {((response.answerJson as string[] | null) ?? []).join(", ") || "—"}
+        </span>
+      ) : selection.type === "file_upload" ? (
+        response.document ? (
+          <a
+            href={response.document.driveWebViewLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-brand-primary hover:underline"
+          >
+            {response.document.title}
+          </a>
+        ) : (
+          <span className="text-text-muted">dosya yüklenmedi</span>
+        )
+      ) : (
+        <span className="text-text-body">{response.answerText || "—"}</span>
+      )}
+    </p>
+  );
+}
 
 export default async function JourneyOverviewTab({ params }: { params: { id: string } }) {
   const journey = await prisma.journey.findUnique({
@@ -13,7 +68,17 @@ export default async function JourneyOverviewTab({ params }: { params: { id: str
     include: {
       stages: {
         orderBy: { order: "asc" },
-        include: { surveyInstances: { orderBy: { createdAt: "desc" } } },
+        include: {
+          surveyInstances: {
+            orderBy: { createdAt: "desc" },
+            include: {
+              selections: {
+                include: { response: { include: { document: true } } },
+                orderBy: { order: "asc" },
+              },
+            },
+          },
+        },
       },
     },
   });
@@ -28,6 +93,9 @@ export default async function JourneyOverviewTab({ params }: { params: { id: str
   );
   const pendingOnCustomer = allSurveys.filter((s) => s.status === "sent");
   const waitingOnUs = allSurveys.filter((s) => s.status === "completed" && s.stageStatus !== "completed");
+  const allSurveysByStageOrder = activeStages.flatMap((stage) =>
+    stage.surveyInstances.map((survey) => ({ ...survey, stageName: stage.name }))
+  );
 
   const isCaseOpen = journey!.status === "active" && !journey!.archived;
   const currentStagePendingSurveys = currentStage
@@ -139,6 +207,12 @@ export default async function JourneyOverviewTab({ params }: { params: { id: str
           {currentStage.customerDescription && (
             <p className="text-sm text-text-muted">{currentStage.customerDescription}</p>
           )}
+          {currentStage.customerWaitingMessage && (
+            <p className="mt-2 border-t border-gray-100 pt-2 text-xs text-text-muted">
+              <span className="font-medium text-brand-dark">Aksiyon bizdeyken müşteri şunu görüyor: </span>
+              {currentStage.customerWaitingMessage}
+            </p>
+          )}
         </Card>
       )}
 
@@ -185,6 +259,102 @@ export default async function JourneyOverviewTab({ params }: { params: { id: str
                 <Badge color="amber">
                   {survey.sentAt ? new Date(survey.sentAt).toLocaleDateString("tr-TR") : "—"} tarihinde gönderildi
                 </Badge>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      <Card>
+        <p className="mb-4 flex items-center gap-1.5 text-sm font-semibold text-brand-dark">
+          <ListChecks size={15} className="text-brand-primary" /> Süreç Akışı
+        </p>
+        <ol className="space-y-3">
+          {activeStages.map((stage) => {
+            const isCompleted = stage.status === "completed";
+            const isCurrent = stage.id === currentStage?.id;
+            const stageSurveyCount = stage.surveyInstances.length;
+            return (
+              <li key={stage.id} className="flex items-start gap-3">
+                <span
+                  className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
+                    isCompleted
+                      ? "bg-brand-primary text-white"
+                      : isCurrent
+                      ? "border-2 border-brand-primary text-brand-primary"
+                      : "border-2 border-gray-200 text-gray-300"
+                  }`}
+                >
+                  {isCompleted ? (
+                    <CheckCircle2 size={13} strokeWidth={2.5} />
+                  ) : (
+                    <Circle size={8} fill="currentColor" />
+                  )}
+                </span>
+                <div className="flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className={`text-sm font-medium ${isCurrent ? "text-brand-primary" : "text-brand-dark"}`}>
+                      {stage.name}
+                    </p>
+                    {isCurrent && <Badge color="blue">şu anda burada</Badge>}
+                    {stageSurveyCount > 0 && (
+                      <span className="text-xs text-text-muted">
+                        {stageSurveyCount} anket
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-text-muted">
+                    {formatDate(stage.enteredAt) && `Başladı: ${formatDate(stage.enteredAt)}`}
+                    {formatDate(stage.enteredAt) && formatDate(stage.completedAt) && " · "}
+                    {formatDate(stage.completedAt) && `Tamamlandı: ${formatDate(stage.completedAt)}`}
+                    {!stage.enteredAt && !stage.completedAt && "Henüz başlamadı"}
+                  </p>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      </Card>
+
+      {allSurveysByStageOrder.length > 0 && (
+        <Card>
+          <p className="mb-4 flex items-center gap-1.5 text-sm font-semibold text-brand-dark">
+            <FileText size={15} className="text-brand-primary" /> Tüm Anketler ve Cevaplar
+          </p>
+          <div className="space-y-5">
+            {allSurveysByStageOrder.map((survey) => (
+              <div key={survey.id} className="border-b border-gray-100 pb-5 last:border-0 last:pb-0">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-sm">
+                    <span className="font-medium text-brand-dark">{survey.title}</span>
+                    <span className="text-xs text-text-muted"> · {survey.stageName}</span>
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Badge color={SURVEY_STATUS_BADGE[survey.status] ?? "gray"}>
+                      {SURVEY_STATUS_LABEL[survey.status] ?? survey.status}
+                    </Badge>
+                    <Link
+                      href={`/presales/admin/journeys/${journey!.id}/surveys/${survey.id}`}
+                      className="text-xs font-medium text-brand-primary hover:underline"
+                    >
+                      Detay / Excel
+                    </Link>
+                  </div>
+                </div>
+                {survey.status === "completed" ? (
+                  <div className="space-y-1.5 rounded-lg bg-gray-50 p-3">
+                    {survey.selections.map((selection) => (
+                      <AnswerPreview key={selection.id} selection={selection} />
+                    ))}
+                    {survey.selections.length === 0 && (
+                      <p className="text-sm italic text-text-muted">Bu ankette soru yok.</p>
+                    )}
+                  </div>
+                ) : survey.status === "sent" ? (
+                  <p className="text-xs text-amber-600">Müşteriye gönderildi, henüz cevaplanmadı.</p>
+                ) : (
+                  <p className="text-xs text-text-muted">Henüz gönderilmedi (taslak).</p>
+                )}
               </div>
             ))}
           </div>

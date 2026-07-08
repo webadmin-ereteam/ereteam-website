@@ -27,7 +27,7 @@ export default async function StageTemplateEditorPage({ params }: { params: { id
       <PageHeader
         title={template!.name}
         description={
-          'Bu şablondaki aşamalar, bu şablon seçilerek başlatılan her yeni journey\'e kopyalanır. "Dahili açıklama" sadece burada görünür; "müşteriye görünen açıklama" müşteri sayfasında gösterilir. Sırayı değiştirmek için kartları sürükleyip bırak. Otomatik kayıt yoktur — bir alanı değiştirdikten sonra o kartın "Kaydet" butonuna basmalısın.'
+          'Bu şablondaki aşamalar, bu şablon seçilerek başlatılan her yeni journey\'e kopyalanır. "Dahili açıklama" sadece burada görünür; "müşteriye görünen açıklama" müşteri sayfasında her zaman gösterilir; "aksiyon bizdeyken gösterilecek mesaj" ise sadece müşteriden beklenen bir şey yokken (top bizdeyken) görünür. Sırayı değiştirmek için kartları sürükleyip bırak. Otomatik kayıt yoktur — bir alanı değiştirdikten sonra o kartın "Kaydet" butonuna basmalısın.'
         }
       />
 
@@ -66,6 +66,12 @@ export default async function StageTemplateEditorPage({ params }: { params: { id
           <textarea
             name="customerDescription"
             placeholder="Müşteriye görünen açıklama"
+            rows={2}
+            className={`${inputClass} w-full`}
+          />
+          <textarea
+            name="customerWaitingMessage"
+            placeholder="Aksiyon bizdeyken müşteriye gösterilecek mesaj"
             rows={2}
             className={`${inputClass} w-full`}
           />

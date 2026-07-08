@@ -62,6 +62,7 @@ export async function createProspectAndJourney(formData: FormData) {
         name: def.name,
         description: def.description,
         customerDescription: def.customerDescription,
+        customerWaitingMessage: def.customerWaitingMessage,
         customerVisible: def.customerVisible,
         surveysEnabled: def.surveysEnabled,
         estimatedDays: def.estimatedDays,
@@ -298,6 +299,7 @@ export async function duplicateStageTemplate(id: string) {
       name: s.name,
       description: s.description,
       customerDescription: s.customerDescription,
+      customerWaitingMessage: s.customerWaitingMessage,
       customerVisible: s.customerVisible,
       surveysEnabled: s.surveysEnabled,
       estimatedDays: s.estimatedDays,
@@ -332,6 +334,7 @@ export async function upsertStageDefinition(stageTemplateId: string, formData: F
   const name = String(formData.get("name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim() || null;
   const customerDescription = String(formData.get("customerDescription") ?? "").trim() || null;
+  const customerWaitingMessage = String(formData.get("customerWaitingMessage") ?? "").trim() || null;
   const customerVisible = formData.get("customerVisible") === "on";
   const surveysEnabled = formData.get("surveysEnabled") === "on";
   const estimatedDaysRaw = String(formData.get("estimatedDays") ?? "").trim();
@@ -341,7 +344,16 @@ export async function upsertStageDefinition(stageTemplateId: string, formData: F
     throw new Error("Aşama anahtarı (key) ve adı zorunludur.");
   }
 
-  const data = { key, name, description, customerDescription, customerVisible, surveysEnabled, estimatedDays };
+  const data = {
+    key,
+    name,
+    description,
+    customerDescription,
+    customerWaitingMessage,
+    customerVisible,
+    surveysEnabled,
+    estimatedDays,
+  };
 
   if (id) {
     await prisma.stageDefinition.update({ where: { id }, data });
@@ -395,6 +407,7 @@ export async function updateJourneyStage(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim() || null;
   const customerDescription = String(formData.get("customerDescription") ?? "").trim() || null;
+  const customerWaitingMessage = String(formData.get("customerWaitingMessage") ?? "").trim() || null;
   const customerVisible = formData.get("customerVisible") === "on";
   const surveysEnabled = formData.get("surveysEnabled") === "on";
   const estimatedDaysRaw = String(formData.get("estimatedDays") ?? "").trim();
@@ -406,7 +419,15 @@ export async function updateJourneyStage(formData: FormData) {
 
   await prisma.journeyStage.update({
     where: { id },
-    data: { name, description, customerDescription, customerVisible, surveysEnabled, estimatedDays },
+    data: {
+      name,
+      description,
+      customerDescription,
+      customerWaitingMessage,
+      customerVisible,
+      surveysEnabled,
+      estimatedDays,
+    },
   });
 
   revalidatePath(`/presales/admin/journeys/${journeyId}`);

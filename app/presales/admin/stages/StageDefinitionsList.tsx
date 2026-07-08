@@ -11,6 +11,7 @@ type StageDefinition = {
   name: string;
   description: string | null;
   customerDescription: string | null;
+  customerWaitingMessage: string | null;
   customerVisible: boolean;
   surveysEnabled: boolean;
   estimatedDays: number | null;
@@ -67,6 +68,13 @@ export function StageDefinitionsList({
               name="customerDescription"
               defaultValue={stage.customerDescription ?? ""}
               placeholder="Müşteriye görünen açıklama"
+              rows={2}
+              className={`${inputClass} w-full`}
+            />
+            <textarea
+              name="customerWaitingMessage"
+              defaultValue={stage.customerWaitingMessage ?? ""}
+              placeholder='Aksiyon bizdeyken müşteriye gösterilecek mesaj (ör. "Ekibimiz sizin için özel bir demo hazırlıyor, toplantı planlaması için yakında iletişime geçeceğiz.")'
               rows={2}
               className={`${inputClass} w-full`}
             />

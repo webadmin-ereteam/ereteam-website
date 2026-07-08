@@ -72,7 +72,11 @@ documents with real foreign keys), which fits Postgres, not schemaless documents
   (a manual, admin-only note for when a proposal was asked for ahead of schedule —
   it does **not** move any stage), `salesRepId`, `productId`, `driveFolderId`, and
   `linkDisabled` (manual kill-switch for the customer link — see "Customer link
-  activation" below).
+  activation" below). `productId` is set once at creation and **locked after
+  that** — `assignProduct` refuses a second call once it's non-null, and the
+  Ayarlar tab shows the product as read-only text instead of a form once
+  assigned (a journey's name and Drive folder are both derived from the
+  product chosen at creation, so changing it later would desync them).
 - `StageTemplate` — a named, reusable stage flow (e.g. "Varsayılan", "Enterprise
   Süreç"). Picked once on "Yeni Prospect"; its `StageDefinition` rows are copied
   into that journey's own `JourneyStage` rows and never referenced again. Exactly
@@ -81,7 +85,13 @@ documents with real foreign keys), which fits Postgres, not schemaless documents
   deleted while it's the default or the last one remaining.
 - `StageDefinition` — one stage within a `StageTemplate` (name, description,
   customer-facing description, estimated duration, position). Editing a template
-  never changes journeys that already copied from it.
+  never changes journeys that already copied from it. Also carries
+  `customerWaitingMessage` — shown to the customer only while this is the
+  current stage *and* the ball is in our court (no sent-but-unanswered survey)
+  — distinct from `customerDescription` (a general blurb about the stage,
+  always shown). E.g. "Ekibimiz sizin için özel bir demo hazırlıyor, toplantı
+  planlaması için yakında iletişime geçeceğiz." Falls back to a generic
+  message on the customer page if left blank.
 - `JourneyStage` — a **per-case copy** of a stage, freely editable (rename, hide,
   add one-off stages, reorder) without touching the template or other cases.
   Tracks `status` (pending/active/completed/skipped) independently per stage.
@@ -110,9 +120,16 @@ documents with real foreign keys), which fits Postgres, not schemaless documents
 - `SurveyResponse` — the customer's answer to one question (text, JSON, or a
   linked uploaded `Document`). When a "Diğer" choice is picked with accompanying
   free text, the stored answer is the human-readable combined string
-  (`"<label>: <free text>"`), not the raw marker-suffixed option.
+  (`"<label>: <free text>"`), not the raw marker-suffixed option. Rows are
+  written via **upsert**, not create-only — a "Taslağı Kaydet" (draft save,
+  see "Answering a survey" below) can write a row before the real "Gönder"
+  does, and the final submit revises it in place rather than colliding on the
+  unique `surveyQuestionSelectionId` constraint.
 - `Document` — a deliverable (see the type list below), optionally scoped to a
-  stage, optionally customer-visible.
+  stage, optionally customer-visible. Visibility on the customer page is
+  driven **solely** by `customerVisible` — it used to also require the
+  document's stage to have started, which silently hid documents uploaded
+  ahead of time for a future stage; that extra gate was removed.
 - `AdminCredential` — a singleton (at most one row) holding the shared admin
   login; see "Admin login" below.
 
@@ -166,7 +183,12 @@ lib/presales/auth.ts             getEffectiveAdminCredentials() — used by the 
 lib/presales/session.ts          signs/verifies the admin session cookie (Web Crypto, no DB access — middleware-safe)
 lib/presales/sessionActions.ts   loginAdmin / logoutAdmin Server Actions
 lib/presales/tokens.ts           no-login access token generation
-lib/presales/drive.ts            Google Drive upload wrapper (creates/reuses the journey folder + type subfolders)
+lib/presales/drive.ts            Google Drive upload wrapper (creates/reuses the journey folder + type subfolders);
+                                  uploadFileToDrive() creates file metadata and media content in two separate
+                                  calls (not one combined multipart request) — googleapis' multipart upload
+                                  doesn't declare a charset on the metadata part, which mangled Turkish
+                                  characters (ı/ş/ğ/ü/ö/ç) in file names; copyExistingDriveFile() + extractDriveFileId()
+                                  handle linking an already-existing Drive file instead of uploading one (see below)
 lib/presales/documentTypes.ts    Document type list/labels + their Drive subfolder names
 lib/presales/notify.ts           Gmail SMTP email to sales rep on customer actions
 lib/presales/adminActions.ts     all admin Server Actions (create/update/reorder/assign/...)
@@ -257,6 +279,18 @@ the results page, or the customer on their own "Cevaplarımı Gör" page) can al
 pull that same Excel on demand via an "Excel İndir" button, independent of the
 auto-archived copy.
 
+**Saving a survey as a draft** (`saveSurveyDraft` in `app/presales/j/[token]/actions.ts`):
+a second button, "Taslağı Kaydet", sits next to "Gönder" on every pending
+survey — it uses `formNoValidate` so partially-filled required fields don't
+block it, upserts whatever's been answered so far, and leaves the survey
+`status` at `"sent"` (no completion side-effects: no stage auto-advance, no
+sales-rep notification, no Excel export). The customer can leave and come back
+to the same link later — `SurveyAnswerForm.tsx` prefills every field
+(including which "Diğer" option was picked and its free text) from any prior
+draft response. File-upload questions show "Zaten yüklendi: <ad>" once
+answered and stop being required, so re-saving without re-choosing a file
+doesn't block submission or wipe out the earlier upload.
+
 Once every survey for a stage is completed, the stage auto-completes and the
 next pending stage auto-activates — the customer's "current stage" marker
 follows automatically since it's derived, not stored.
@@ -284,6 +318,19 @@ are offered when assigning a rep to a journey.
 "Aşamalar" tab render cards via `DragReorderList` — drag a card up/down, drop it,
 and the new order is persisted server-side (`reorderStageDefinitions` /
 `reorderJourneyStages`). There is no manual order number anywhere in the UI.
+
+**Uploading documents — two ways** (`journeys/[id]/documents`): a normal
+browser upload (`uploadDocument`, capped at `MAX_UPLOAD_BYTES` = 4MB — Vercel's
+serverless payload limit) for anything small, and a second form, "Var Olan
+Drive Dosyasını Bağla" (`linkExistingDriveFile`), for files that already exist
+elsewhere in Drive — meeting recordings especially, routinely ~40-50MB and
+already saved there as a matter of course. It takes a pasted Drive share link
+or bare file id (`extractDriveFileId()` in `lib/presales/drive.ts` parses
+either), and copies the file **server-to-server** via `drive.files.copy`
+straight into the journey's folder — no bytes ever pass through our app or
+browser, so the 4MB guard doesn't apply. Requires the service account to
+already have read access to the source file (same Shared Drive, or explicitly
+shared with its email) — otherwise the copy 404s.
 
 **Advancing a stage that has no survey** (e.g. a meeting): the case's "Aşamalar"
 tab shows a single "Tamamla ve sıradakine geç" button, only on the current stage,
@@ -352,6 +399,16 @@ read-only **Genel Bakış** tab that answers exactly that:
   and none has been sent yet.
 - A list of completed-but-unreviewed surveys, each linking straight to its
   results page, and a list of surveys still sitting with the customer.
+- **Süreç Akışı**: every active stage in order, with a status dot
+  (completed/current/upcoming), entered/completed dates, and how many surveys
+  each stage has — the whole flow at a glance, without switching to the
+  "Aşamalar" tab.
+- **Tüm Anketler ve Cevaplar**: every survey on the case (draft/sent/completed,
+  badge per status), and for completed ones the actual question/answer pairs
+  rendered inline (`AnswerPreview`, same encode/decode helpers as the survey
+  results page) — no click-through needed just to read what the customer said.
+  A "Detay / Excel" link still goes to the full per-question results page for
+  exporting or reviewing file-upload answers.
 
 The old stage editor (add/reorder/hide stages, `JourneyStagesList.tsx`) moved
 to its own **Aşamalar** tab at `journeys/[id]/stages/` — same component, same
@@ -397,6 +454,19 @@ inactive, the customer sees a plain "Bu bağlantı artık aktif değil" screen
 instead of any journey content — enforced identically on the main page, the
 per-survey answers page, the submit action, and the public Excel-export
 route, so a disabled/archived case can't leak data through any side door.
+
+**Customer-facing page design** (`app/presales/j/[token]/page.tsx`): a
+"glassmorphism" look — soft, low-opacity blurred color blobs fixed behind the
+whole page, with every card (hero, timeline, action panel, sidebar) a
+semi-transparent, backdrop-blurred surface floating on top rather than a flat
+solid background. The timeline is the visual centerpiece (its own large card,
+every stage's `customerDescription` shown as a caption, not just the current
+one's), with a compact header above it (company badge, greeting, a circular
+%-progress ring) rather than the full-height hero band it started as. Colors
+are deliberately restrained — the hero gradient is mostly brand-dark→primary
+with only a small magenta glow accent, and decorative shadows/blobs are kept
+at low opacity — a first pass with more saturated color and heavier glow
+effects read as "busy" rather than elegant.
 
 **Admin chatbot**: bottom-right widget on every `/presales/admin/**` page. On each
 message it fetches essentially the whole presales DB (prospects, journeys, stages,
