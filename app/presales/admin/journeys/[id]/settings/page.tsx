@@ -8,6 +8,7 @@ import {
   setJourneyLinkDisabled,
   setJourneyArchived,
   uploadCompanyLogo,
+  removeCompanyLogo,
 } from "@/lib/presales/adminActions";
 import { isJourneyLinkActive } from "@/lib/presales/journeyLink";
 import { JOURNEY_STATUSES, JOURNEY_STATUS_LABELS } from "@/lib/presales/journeyStatus";
@@ -85,15 +86,18 @@ export default async function JourneySettingsTab({ params }: { params: { id: str
       <Card>
         <p className="mb-2 text-sm font-medium text-brand-dark">Firma Logosu</p>
         <p className="mb-3 text-xs text-text-muted">
-          Müşteri sayfasının üst kısmında şirket adının yanında gösterilir. Drive&apos;da ayrı bir
-          &quot;_Logolar&quot; klasöründe tutulur, journey belgelerinize karışmaz.
+          Müşteri sayfasının üst kısmında büyük şekilde gösterilir. Transparan PNG öneriyoruz — arka
+          plan eklenmez, logo olduğu gibi görünür. Drive&apos;da ayrı bir &quot;_Logolar&quot; klasöründe
+          tutulur, journey belgelerinize karışmaz.
         </p>
         {journey!.prospect.logoUrl && (
-          <img
-            src={journey!.prospect.logoUrl}
-            alt={journey!.prospect.companyName}
-            className="mb-3 h-12 w-12 rounded-lg border border-gray-200 object-contain p-1"
-          />
+          <div className="mb-3 flex h-20 max-w-xs items-center rounded-xl bg-gray-50 px-4">
+            <img
+              src={journey!.prospect.logoUrl}
+              alt={journey!.prospect.companyName}
+              className="max-h-14 max-w-full object-contain"
+            />
+          </div>
         )}
         <form action={uploadCompanyLogo.bind(null, journey!.id)} className="flex gap-2">
           <FileSizeInput
@@ -105,6 +109,16 @@ export default async function JourneySettingsTab({ params }: { params: { id: str
           <SubmitButton className={buttonSecondaryClass} pendingLabel="Yükleniyor...">
             {journey!.prospect.logoUrl ? "Değiştir" : "Yükle"}
           </SubmitButton>
+          {journey!.prospect.logoUrl && (
+            <SubmitButton
+              formAction={removeCompanyLogo.bind(null, journey!.id)}
+              formNoValidate
+              className="rounded-lg px-3 py-2 text-sm font-medium text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500"
+              pendingLabel="Kaldırılıyor..."
+            >
+              Kaldır
+            </SubmitButton>
+          )}
         </form>
       </Card>
 

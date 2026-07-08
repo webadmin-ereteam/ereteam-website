@@ -311,18 +311,30 @@ default one or the last remaining template (so there's always at least one to
 pick from on "Yeni Prospect"). With only the seeded "Varsayılan" template
 existing, "Sil" never shows at all — that's expected, not a missing feature.
 
-**Company logo** (`uploadCompanyLogo` in `lib/presales/adminActions.ts`,
-`uploadLogoToDrive()` in `lib/presales/drive.ts`): an optional image, settable
-either right on "Yeni Prospect" alongside the rest of the intake info, or
-later from a journey's Ayarlar tab. Stored in its own top-level Drive folder,
+**Company logo** (`uploadCompanyLogo`/`removeCompanyLogo` in
+`lib/presales/adminActions.ts`, `uploadLogoToDrive()`/`trashDriveFile()` in
+`lib/presales/drive.ts`): an optional image, settable either right on "Yeni
+Prospect" alongside the rest of the intake info, or later from a journey's
+Ayarlar tab, where "Kaldır" removes it again (clears `Prospect.logoDriveFileId`/
+`logoUrl` and trashes the Drive file — best-effort, doesn't block the DB
+update if the Drive call fails). Stored in its own top-level Drive folder,
 `_Logolar` — deliberately **not** inside any journey's own folder, since a
 logo is a small website asset, not a business document, and shouldn't clutter
 a journey's real deliverables. `_Logolar` gets its own "anyone can view"
 permission grant at creation (it has no parent journey folder to inherit
 sharing from). `Prospect.logoUrl` is a Drive **thumbnail-serving** link
 (`drive.google.com/thumbnail?id=...`), not `webViewLink` — the latter opens
-Drive's own viewer page and isn't directly usable as an `<img src>`. Shown on
-the customer page's header badge in place of the sparkle icon when set.
+Drive's own viewer page and isn't directly usable as an `<img src>`; the
+thumbnail endpoint does preserve PNG transparency (confirmed: fetching it
+back returns an 8-bit RGBA PNG). On the customer page it's shown **large**
+(h-11, h-14 on `sm`+) directly above the "Merhaba X" heading, not cropped
+into a small circle — a first version squeezed it into the tiny 20px
+company-name pill with a forced `rounded-full` + white background, which
+looked cramped and put a visible white halo around anything that wasn't
+already a circular logo. `object-contain`, no background, no rounding — we
+tell admins to upload a transparent PNG so it just sits on the gradient. The
+"Yeni Prospect" and Ayarlar upload forms don't set a background either, for
+the same reason.
 
 **Managing sales reps** (`/presales/admin/sales-reps`, `SalesRepRow.tsx`):
 each rep row has its own client-side "Düzenle" toggle — clicking it swaps the

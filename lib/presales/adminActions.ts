@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/presales/db";
 import { generateAccessToken } from "@/lib/presales/tokens";
-import { uploadFileToDrive, copyExistingDriveFile, extractDriveFileId, uploadLogoToDrive } from "@/lib/presales/drive";
+import { uploadFileToDrive, copyExistingDriveFile, extractDriveFileId, uploadLogoToDrive, trashDriveFile } from "@/lib/presales/drive";
 import { findCurrentStage } from "@/lib/presales/stageProgress";
 import { encodeOtherOption } from "@/lib/presales/surveyOptions";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/presales/fileUpload";
@@ -932,6 +932,25 @@ export async function uploadCompanyLogo(journeyId: string, formData: FormData) {
   await prisma.prospect.update({
     where: { id: journey.prospectId },
     data: { logoDriveFileId: driveFileId, logoUrl: thumbnailUrl },
+  });
+
+  revalidatePath(`/presales/admin/journeys/${journeyId}/settings`);
+  revalidatePath(`/presales/j/${journey.accessToken}`);
+}
+
+export async function removeCompanyLogo(journeyId: string) {
+  const journey = await prisma.journey.findUniqueOrThrow({
+    where: { id: journeyId },
+    include: { prospect: true },
+  });
+
+  if (journey.prospect.logoDriveFileId) {
+    await trashDriveFile(journey.prospect.logoDriveFileId);
+  }
+
+  await prisma.prospect.update({
+    where: { id: journey.prospectId },
+    data: { logoDriveFileId: null, logoUrl: null },
   });
 
   revalidatePath(`/presales/admin/journeys/${journeyId}/settings`);

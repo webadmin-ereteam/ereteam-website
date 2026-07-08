@@ -248,3 +248,15 @@ export async function uploadLogoToDrive(params: {
     thumbnailUrl: `https://drive.google.com/thumbnail?id=${driveFileId}&sz=w400`,
   };
 }
+
+// Moves a file to Drive's trash (recoverable there, not a hard delete) — used
+// when removing a company logo. Best-effort: swallows the error if the file
+// is already gone rather than blocking whatever's clearing the DB reference.
+export async function trashDriveFile(fileId: string): Promise<void> {
+  const drive = getDriveClient();
+  try {
+    await drive.files.update({ fileId, requestBody: { trashed: true }, supportsAllDrives: true });
+  } catch (err) {
+    console.error(`Failed to trash Drive file ${fileId}:`, err);
+  }
+}
