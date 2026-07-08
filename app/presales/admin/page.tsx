@@ -4,12 +4,10 @@ import { prisma } from "@/lib/presales/db";
 import { findCurrentStage } from "@/lib/presales/stageProgress";
 import { isJourneyLinkActive } from "@/lib/presales/journeyLink";
 import { JOURNEY_STATUSES, JOURNEY_STATUS_LABELS } from "@/lib/presales/journeyStatus";
+import { DATE_RANGE_PRESETS, resolveDateRangePreset } from "@/lib/presales/dateRangePresets";
+import { formatDisplayDate } from "@/lib/presales/formatDate";
 import { Card, PageHeader, buttonPrimaryClass, buttonSecondaryClass, inputClass } from "../_components/ui";
 import { JourneyListWithSelection, type JourneyRow } from "./JourneyListWithSelection";
-
-function formatDate(date: Date) {
-  return date.toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" });
-}
 
 export default async function AdminDashboardPage({
   searchParams,
@@ -22,8 +20,8 @@ export default async function AdminDashboardPage({
     archived?: string;
     linkActive?: string;
     action?: string;
-    closeDateFrom?: string;
-    closeDateTo?: string;
+    closeDate?: string;
+    createdDate?: string;
   };
 }) {
   const [journeys, salesReps, products] = await Promise.all([
@@ -59,6 +57,9 @@ export default async function AdminDashboardPage({
   // not just an option someone has to remember to pick.
   const archivedFilter = searchParams.archived || "no";
 
+  const closeDateRange = resolveDateRangePreset(searchParams.closeDate);
+  const createdDateRange = resolveDateRangePreset(searchParams.createdDate);
+
   const query = (searchParams.q ?? "").trim().toLowerCase();
   const filteredJourneys = journeys.filter((j) => {
     if (searchParams.status && j.status !== searchParams.status) return false;
@@ -70,8 +71,8 @@ export default async function AdminDashboardPage({
     if (searchParams.linkActive === "no" && isJourneyLinkActive(j)) return false;
     if (searchParams.action === "ours" && ballInOurCourt(j) === 0) return false;
     if (searchParams.action === "customer" && pendingOnCustomer(j) === 0) return false;
-    if (searchParams.closeDateFrom && (!j.outcomeSetAt || j.outcomeSetAt < new Date(searchParams.closeDateFrom))) return false;
-    if (searchParams.closeDateTo && (!j.outcomeSetAt || j.outcomeSetAt > new Date(`${searchParams.closeDateTo}T23:59:59`))) return false;
+    if (closeDateRange && (!j.outcomeSetAt || j.outcomeSetAt < closeDateRange.from || j.outcomeSetAt >= closeDateRange.to)) return false;
+    if (createdDateRange && (j.createdAt < createdDateRange.from || j.createdAt >= createdDateRange.to)) return false;
     if (query) {
       const haystack = `${j.prospect.companyName} ${j.prospect.contactName} ${j.prospect.contactEmail}`.toLowerCase();
       if (!haystack.includes(query)) return false;
@@ -87,8 +88,8 @@ export default async function AdminDashboardPage({
     (searchParams.archived && searchParams.archived !== "no") ||
     searchParams.linkActive ||
     searchParams.action ||
-    searchParams.closeDateFrom ||
-    searchParams.closeDateTo
+    searchParams.closeDate ||
+    searchParams.createdDate
   );
 
   return (
@@ -220,22 +221,24 @@ export default async function AdminDashboardPage({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-text-muted">Kapanış Tarihi (başlangıç)</label>
-            <input
-              type="date"
-              name="closeDateFrom"
-              defaultValue={searchParams.closeDateFrom ?? ""}
-              className={`${inputClass} w-40`}
-            />
+            <label className="mb-1 block text-xs text-text-muted">Kapanış Tarihi</label>
+            <select name="closeDate" defaultValue={searchParams.closeDate ?? ""} className={`${inputClass} w-32`}>
+              {DATE_RANGE_PRESETS.map((preset) => (
+                <option key={preset.value} value={preset.value}>
+                  {preset.label}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-text-muted">Kapanış Tarihi (bitiş)</label>
-            <input
-              type="date"
-              name="closeDateTo"
-              defaultValue={searchParams.closeDateTo ?? ""}
-              className={`${inputClass} w-40`}
-            />
+            <label className="mb-1 block text-xs text-text-muted">Oluşturma Tarihi</label>
+            <select name="createdDate" defaultValue={searchParams.createdDate ?? ""} className={`${inputClass} w-32`}>
+              {DATE_RANGE_PRESETS.map((preset) => (
+                <option key={preset.value} value={preset.value}>
+                  {preset.label}
+                </option>
+              ))}
+            </select>
           </div>
           <button className={buttonPrimaryClass}>Filtrele</button>
           {hasActiveFilters && (
@@ -277,7 +280,8 @@ export default async function AdminDashboardPage({
             accessToken: journey.accessToken,
             salesRepName: journey.salesRep?.name ?? null,
             productName: journey.product?.name ?? null,
-            createdAtLabel: formatDate(journey.createdAt),
+            createdAtLabel: formatDisplayDate(journey.createdAt),
+            closeDateLabel: formatDisplayDate(journey.outcomeSetAt),
             currentStageName: findCurrentStage(journey.stages)?.name ?? null,
             pendingSurveys: pendingOnCustomer(journey),
             ourTurnSurveys: ballInOurCourt(journey),

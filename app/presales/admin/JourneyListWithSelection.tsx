@@ -44,6 +44,7 @@ export type JourneyRow = {
   salesRepName: string | null;
   productName: string | null;
   createdAtLabel: string;
+  closeDateLabel: string;
   currentStageName: string | null;
   pendingSurveys: number;
   ourTurnSurveys: number;
@@ -287,6 +288,10 @@ export function JourneyListWithSelection({
                     {journey.archived && <Badge color="gray">Arşivlendi</Badge>}
                   </div>
                   <p className="mt-1 text-xs text-text-muted">{journey.currentStageName ?? "—"}</p>
+                  <p className="mt-1 flex items-center justify-end gap-1 text-[11px] text-text-muted/70">
+                    <CalendarDays size={11} />
+                    Açılış: {journey.createdAtLabel} · Kapanış: {journey.closeDateLabel}
+                  </p>
                 </div>
                 <ArrowRight size={16} className="text-gray-300" />
               </div>
@@ -299,10 +304,6 @@ export function JourneyListWithSelection({
               <span className="flex items-center gap-1.5">
                 <Package size={13} />
                 {journey.productName ?? "Ürün atanmadı"}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <CalendarDays size={13} />
-                {journey.createdAtLabel}
               </span>
               <span
                 className={`flex items-center gap-1.5 ${journey.linkActive ? "text-emerald-600" : "text-gray-400"}`}

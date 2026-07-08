@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
+import { CalendarDays } from "lucide-react";
 import { prisma } from "@/lib/presales/db";
 import { Badge } from "../../../_components/ui";
 import { isJourneyLinkActive } from "@/lib/presales/journeyLink";
 import { JOURNEY_STATUS_LABELS } from "@/lib/presales/journeyStatus";
+import { formatDisplayDate } from "@/lib/presales/formatDate";
 import JourneyTabs from "./JourneyTabs";
 import { CustomerLinkActions } from "./CustomerLinkActions";
 
@@ -49,6 +51,10 @@ export default async function JourneyLayout({
             <p className="mt-0.5 text-sm text-text-muted">{journey!.salesRep?.name ?? "Satışçı atanmadı"}</p>
             <p className="mt-1 text-xs text-text-muted/70">
               {journey!.prospect.contactName} · {journey!.prospect.contactEmail}
+            </p>
+            <p className="mt-1.5 flex items-center gap-1 text-xs text-text-muted/70">
+              <CalendarDays size={12} />
+              Açılış: {formatDisplayDate(journey!.createdAt)} · Kapanış: {formatDisplayDate(journey!.outcomeSetAt)}
             </p>
           </div>
         </div>

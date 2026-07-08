@@ -654,6 +654,21 @@ export async function setSalesRepActive(id: string, isActive: boolean) {
   revalidatePath("/presales/admin/sales-reps");
 }
 
+export async function updateSalesRep(id: string, formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim() || null;
+  const title = String(formData.get("title") ?? "").trim() || null;
+
+  if (!name || !email) {
+    throw new Error("Ad ve e-posta zorunludur.");
+  }
+
+  await prisma.salesRep.update({ where: { id }, data: { name, email, phone, title } });
+  revalidatePath("/presales/admin/sales-reps");
+  revalidatePath("/presales/admin");
+}
+
 export async function deleteSalesRep(id: string) {
   // Journey.salesRepId -> SalesRep has ON DELETE SET NULL, so any case currently
   // assigned to this rep is simply left unassigned rather than blocking deletion.
