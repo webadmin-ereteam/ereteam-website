@@ -227,9 +227,7 @@ export function JourneyListWithSelection({
                 </span>
                 <div>
                   <p className="font-medium text-brand-dark">{journey.name}</p>
-                  <p className="text-sm text-text-muted">
-                    {journey.contactName} · {journey.contactEmail}
-                  </p>
+                  <p className="text-sm text-text-muted">{journey.salesRepName ?? "Satışçı atanmadı"}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -258,7 +256,7 @@ export function JourneyListWithSelection({
             <div className="mt-3 flex items-center gap-4 border-t border-gray-100 pt-3 text-xs text-text-muted">
               <span className="flex items-center gap-1.5">
                 <UserRound size={13} />
-                {journey.salesRepName ?? "Satışçı atanmadı"}
+                {journey.contactName}
               </span>
               <span className="flex items-center gap-1.5">
                 <Package size={13} />

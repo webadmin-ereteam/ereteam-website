@@ -186,8 +186,14 @@ export async function setJourneyOutcome(journeyId: string, formData: FormData) {
 
 export async function assignSalesRep(journeyId: string, formData: FormData) {
   const salesRepId = String(formData.get("salesRepId") ?? "").trim() || null;
-  await prisma.journey.update({ where: { id: journeyId }, data: { salesRepId } });
+  const journey = await prisma.journey.update({
+    where: { id: journeyId },
+    data: { salesRepId },
+    select: { accessToken: true },
+  });
   revalidatePath(`/presales/admin/journeys/${journeyId}`);
+  revalidatePath("/presales/admin");
+  revalidatePath(`/presales/j/${journey.accessToken}`);
 }
 
 export async function setJourneyLinkDisabled(journeyId: string, linkDisabled: boolean) {
@@ -224,8 +230,13 @@ export async function bulkSetJourneyStatus(journeyIds: string[], status: string)
 
 export async function bulkAssignSalesRep(journeyIds: string[], salesRepId: string | null) {
   if (journeyIds.length === 0) return;
+  const journeys = await prisma.journey.findMany({
+    where: { id: { in: journeyIds } },
+    select: { accessToken: true },
+  });
   await prisma.journey.updateMany({ where: { id: { in: journeyIds } }, data: { salesRepId } });
   revalidateJourneys(journeyIds);
+  for (const j of journeys) revalidatePath(`/presales/j/${j.accessToken}`);
 }
 
 export async function bulkSetJourneyLinkDisabled(journeyIds: string[], linkDisabled: boolean) {
