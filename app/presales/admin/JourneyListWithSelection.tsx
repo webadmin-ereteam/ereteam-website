@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CalendarDays, Check, Copy, ExternalLink, FileCheck2, Link2, Package, UserRound, Zap } from "lucide-react";
+import { ArrowRight, CalendarDays, Check, Copy, ExternalLink, FileCheck2, FileSignature, Link2, Package, UserRound, Zap } from "lucide-react";
 import {
   bulkAssignSalesRep,
   bulkSetJourneyArchived,
@@ -48,6 +48,7 @@ export type JourneyRow = {
   currentStageName: string | null;
   pendingSurveys: number;
   ourTurnSurveys: number;
+  proposalRequested: boolean;
 };
 
 export function JourneyListWithSelection({
@@ -270,6 +271,11 @@ export function JourneyListWithSelection({
                 </div>
               </div>
               <div className="flex items-center gap-3">
+                {journey.proposalRequested && (
+                  <Badge color="pink">
+                    <FileSignature size={12} className="mr-1" /> Teklif talep edildi
+                  </Badge>
+                )}
                 {journey.pendingSurveys > 0 && (
                   <Badge color="amber">
                     <FileCheck2 size={12} className="mr-1" /> {journey.pendingSurveys} müşteride

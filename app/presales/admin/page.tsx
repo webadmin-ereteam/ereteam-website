@@ -269,6 +269,7 @@ export default async function AdminDashboardPage({
             currentStageName: findCurrentStage(journey.stages)?.name ?? null,
             pendingSurveys: pendingOnCustomer(journey),
             ourTurnSurveys: ballInOurCourt(journey),
+            proposalRequested: journey.proposalRequested,
           })
         )}
         salesReps={salesReps.map((rep) => ({ id: rep.id, name: rep.name }))}

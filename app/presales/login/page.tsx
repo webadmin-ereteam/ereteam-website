@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import Image from "next/image";
 import { loginAdmin } from "@/lib/presales/sessionActions";
 import { Card, inputClass, labelClass, buttonPrimaryClass } from "../_components/ui";
 import { SubmitButton } from "../_components/SubmitButton";
@@ -13,12 +13,12 @@ export default function AdminLoginPage({
   searchParams: { error?: string; next?: string };
 }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-dark to-[#0f2a3d] px-4">
-      <Card className="w-full max-w-sm">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-brand-dark to-[#0f2a3d] px-4">
+      <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-brand-primary/[0.18] blur-[110px]" />
+      <div className="pointer-events-none absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-brand-magenta/[0.14] blur-[110px]" />
+      <Card className="relative w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-brand-primary to-brand-magenta shadow-sm shadow-brand-primary/30">
-            <Sparkles size={20} className="text-white" />
-          </span>
+          <Image src="/logos/ereteam-logo.png" alt="Ereteam" width={160} height={92} className="h-11 w-auto" priority />
           <div>
             <h1 className="text-lg font-semibold text-brand-dark">Presales Admin</h1>
             <p className="text-sm text-text-muted">Devam etmek için giriş yap</p>

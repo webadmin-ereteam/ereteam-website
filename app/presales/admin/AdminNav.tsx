@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -10,7 +11,6 @@ import {
   Users,
   Package,
   KeyRound,
-  Sparkles,
   LogOut,
 } from "lucide-react";
 import { logoutAdmin } from "@/lib/presales/sessionActions";
@@ -63,16 +63,23 @@ export default function AdminNav() {
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.4]"
         style={{
-          backgroundImage: "radial-gradient(circle at 15% 0%, rgba(26,111,168,0.35) 0, transparent 45%)",
+          backgroundImage:
+            "radial-gradient(circle at 15% 0%, rgba(26,111,168,0.35) 0, transparent 45%), radial-gradient(circle at 100% 85%, rgba(233,30,140,0.22) 0, transparent 45%)",
         }}
       />
-      <div className="relative flex items-center gap-2.5 px-6 py-6">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-primary to-brand-magenta shadow-sm shadow-brand-primary/30">
-          <Sparkles size={16} className="text-white" />
-        </div>
-        <span className="font-semibold tracking-tight text-white">Presales Admin</span>
+      <div className="pointer-events-none absolute -left-10 top-40 h-52 w-52 rounded-full bg-brand-primary/[0.12] blur-[70px]" />
+      <div className="relative flex flex-col gap-2 px-6 py-6">
+        <Image
+          src="/logos/ereteam-logo.png"
+          alt="Ereteam"
+          width={160}
+          height={92}
+          className="h-9 w-auto brightness-0 invert"
+          priority
+        />
+        <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">Presales Admin</span>
       </div>
-      <div className="relative mx-6 mb-2 h-px bg-white/[0.06]" />
+      <div className="relative mx-6 mb-2 h-px bg-gradient-to-r from-white/[0.1] via-white/[0.1] to-transparent" />
       <nav className="relative flex-1 space-y-7 px-3 pt-3">
         <div className="space-y-1">
           {JOURNEY_NAV_ITEMS.map((item) => (

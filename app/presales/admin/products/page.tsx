@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/presales/db";
-import { createProduct, setProductActive } from "@/lib/presales/adminActions";
-import { Badge, Card, PageHeader, inputClass, labelClass, buttonPrimaryClass, buttonSecondaryClass } from "../../_components/ui";
-import { SubmitButton } from "../../_components/SubmitButton";
+import { setProductActive } from "@/lib/presales/adminActions";
+import { Badge, Card, PageHeader, buttonSecondaryClass } from "../../_components/ui";
+import { NewProductForm } from "./NewProductForm";
 
 export default async function ProductsAdminPage() {
   const products = await prisma.product.findMany({ orderBy: { createdAt: "asc" } });
@@ -31,22 +31,7 @@ export default async function ProductsAdminPage() {
         {products.length === 0 && <Card className="text-sm text-text-muted">Henüz ürün/uzmanlık eklenmedi.</Card>}
       </div>
 
-      <Card className="max-w-xl">
-        <h2 className="mb-4 text-base font-semibold text-brand-dark">Yeni Ürün / Uzmanlık Ekle</h2>
-        <form action={createProduct} className="space-y-4">
-          <div>
-            <label className={labelClass}>Ad</label>
-            <input name="name" required placeholder="ör. Obserian" className={`${inputClass} w-full`} />
-          </div>
-          <div>
-            <label className={labelClass}>Açıklama (opsiyonel)</label>
-            <input name="description" className={`${inputClass} w-full`} />
-          </div>
-          <SubmitButton className={buttonPrimaryClass} pendingLabel="Ekleniyor...">
-            Ekle
-          </SubmitButton>
-        </form>
-      </Card>
+      <NewProductForm />
     </div>
   );
 }

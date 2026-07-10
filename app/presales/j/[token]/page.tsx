@@ -160,20 +160,35 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
           <div className="relative px-6 py-8 text-white sm:px-10 sm:py-14">
             <div className="flex flex-wrap items-center justify-between gap-5">
               <div>
-                {journey!.prospect.logoUrl ? (
-                  <img
-                    src={journey!.prospect.logoUrl}
-                    alt={journey!.prospect.companyName}
-                    className="mb-3 h-11 max-w-[220px] object-contain object-left sm:h-14"
-                  />
-                ) : (
-                  <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 ring-1 ring-inset ring-white/25 backdrop-blur-sm">
-                    <Sparkles size={11} className="text-white/80" />
-                    <span className="text-[10.5px] font-medium uppercase tracking-wider text-white/80">
-                      {journey!.prospect.companyName}
-                    </span>
-                  </div>
-                )}
+                {/* Only the logo/company-name row is aligned per `logoAlign` —
+                    intentionally not the whole column (heading + estimate
+                    text below stay left-aligned regardless), since a wider
+                    heading made a left-pinned logo look off-center under it
+                    with no way for admins to fix it themselves. */}
+                <div
+                  className={
+                    journey!.prospect.logoAlign === "center"
+                      ? "text-center"
+                      : journey!.prospect.logoAlign === "right"
+                      ? "text-right"
+                      : "text-left"
+                  }
+                >
+                  {journey!.prospect.logoUrl ? (
+                    <img
+                      src={journey!.prospect.logoUrl}
+                      alt={journey!.prospect.companyName}
+                      className="mb-3 h-11 max-w-[220px] object-contain sm:h-14"
+                    />
+                  ) : (
+                    <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 ring-1 ring-inset ring-white/25 backdrop-blur-sm">
+                      <Sparkles size={11} className="text-white/80" />
+                      <span className="text-[10.5px] font-medium uppercase tracking-wider text-white/80">
+                        {journey!.prospect.companyName}
+                      </span>
+                    </div>
+                  )}
+                </div>
                 <h1 className="text-2xl font-semibold tracking-tight sm:text-4xl">
                   Merhaba {journey!.prospect.contactName}
                 </h1>

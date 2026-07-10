@@ -184,6 +184,7 @@ export async function toggleProposalRequested(journeyId: string, requested: bool
     },
   });
   revalidatePath(`/presales/admin/journeys/${journeyId}`);
+  revalidatePath("/presales/admin");
 }
 
 export async function setJourneyOutcome(journeyId: string, formData: FormData) {
@@ -227,6 +228,29 @@ export async function setJourneyArchived(journeyId: string, archived: boolean) {
   await prisma.journey.update({ where: { id: journeyId }, data: { archived } });
   revalidatePath(`/presales/admin/journeys/${journeyId}`);
   revalidatePath("/presales/admin");
+}
+
+// Deletes a journey and everything in Postgres tied to it — but deliberately
+// never touches Drive. The journey's Drive folder has real business files in
+// it (proposals, recordings, survey exports); an automated delete there is
+// unrecoverable if anything ever pointed at the wrong folder, unlike a DB
+// row. So Drive cleanup stays a manual step — the Ayarlar tab links straight
+// to the folder and warns about this before the delete, and again in the
+// confirm prompt itself. `Prospect` is left alone too (a company record can
+// outlive any one journey).
+export async function deleteJourney(journeyId: string) {
+  await prisma.$transaction([
+    prisma.document.deleteMany({ where: { journeyId } }),
+    prisma.surveyResponse.deleteMany({
+      where: { surveyQuestionSelection: { surveyInstance: { journeyId } } },
+    }),
+    prisma.surveyQuestionSelection.deleteMany({ where: { surveyInstance: { journeyId } } }),
+    prisma.surveyInstance.deleteMany({ where: { journeyId } }),
+    prisma.journeyStage.deleteMany({ where: { journeyId } }),
+    prisma.journey.delete({ where: { id: journeyId } }),
+  ]);
+  revalidatePath("/presales/admin");
+  redirect("/presales/admin");
 }
 
 // --- Bulk actions (Dashboard: select several journeys, apply one change to all) ---
@@ -949,6 +973,23 @@ export async function removeCompanyLogo(journeyId: string) {
     where: { id: journey.prospectId },
     data: { logoDriveFileId: null, logoUrl: null },
   });
+
+  revalidatePath(`/presales/admin/journeys/${journeyId}/settings`);
+  revalidatePath(`/presales/j/${journey.accessToken}`);
+}
+
+// Different logos crop differently against the fixed-height logo box on the
+// customer page depending on their own aspect ratio/whitespace — this lets
+// an admin nudge the visible portion left/center/right per company instead
+// of every logo being forced to the same fixed position.
+export async function setProspectLogoAlign(journeyId: string, formData: FormData) {
+  const logoAlign = String(formData.get("logoAlign") ?? "left").trim();
+  if (!["left", "center", "right"].includes(logoAlign)) {
+    throw new Error("Geçersiz hizalama.");
+  }
+
+  const journey = await prisma.journey.findUniqueOrThrow({ where: { id: journeyId } });
+  await prisma.prospect.update({ where: { id: journey.prospectId }, data: { logoAlign } });
 
   revalidatePath(`/presales/admin/journeys/${journeyId}/settings`);
   revalidatePath(`/presales/j/${journey.accessToken}`);

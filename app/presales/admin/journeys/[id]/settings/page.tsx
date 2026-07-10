@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { ExternalLink } from "lucide-react";
 import { prisma } from "@/lib/presales/db";
 import {
   assignSalesRep,
@@ -9,6 +10,8 @@ import {
   setJourneyArchived,
   uploadCompanyLogo,
   removeCompanyLogo,
+  setProspectLogoAlign,
+  deleteJourney,
 } from "@/lib/presales/adminActions";
 import { isJourneyLinkActive } from "@/lib/presales/journeyLink";
 import { JOURNEY_STATUSES, JOURNEY_STATUS_LABELS } from "@/lib/presales/journeyStatus";
@@ -91,13 +94,34 @@ export default async function JourneySettingsTab({ params }: { params: { id: str
           tutulur, journey belgelerinize karışmaz.
         </p>
         {journey!.prospect.logoUrl && (
-          <div className="mb-3 flex h-20 max-w-xs items-center rounded-xl bg-gray-50 px-4">
+          <div
+            className={`mb-3 flex h-20 max-w-xs items-center rounded-xl bg-gray-50 px-4 ${
+              journey!.prospect.logoAlign === "center"
+                ? "justify-center"
+                : journey!.prospect.logoAlign === "right"
+                ? "justify-end"
+                : "justify-start"
+            }`}
+          >
             <img
               src={journey!.prospect.logoUrl}
               alt={journey!.prospect.companyName}
               className="max-h-14 max-w-full object-contain"
             />
           </div>
+        )}
+        {journey!.prospect.logoUrl && (
+          <form action={setProspectLogoAlign.bind(null, journey!.id)} className="mb-3 flex items-center gap-2">
+            <label className="text-xs text-text-muted">Müşteri sayfasında hizalama:</label>
+            <select name="logoAlign" defaultValue={journey!.prospect.logoAlign} className={`${inputClass} w-32`}>
+              <option value="left">Sola</option>
+              <option value="center">Ortaya</option>
+              <option value="right">Sağa</option>
+            </select>
+            <SubmitButton className={buttonSecondaryClass} pendingLabel="Uygulanıyor...">
+              Uygula
+            </SubmitButton>
+          </form>
         )}
         <form action={uploadCompanyLogo.bind(null, journey!.id)} className="flex gap-2">
           <FileSizeInput
@@ -204,6 +228,38 @@ export default async function JourneySettingsTab({ params }: { params: { id: str
             className={`${inputClass} w-full`}
           />
           <SubmitButton className={buttonPrimaryClass}>Kaydet</SubmitButton>
+        </form>
+      </Card>
+
+      <Card className="col-span-2 border-red-200 bg-red-50/30">
+        <p className="mb-2 text-sm font-medium text-red-700">Tehlikeli Bölge</p>
+        <p className="mb-3 text-xs text-text-muted">
+          Journey&apos;i ve buna bağlı tüm anket/cevap/belge kayıtlarını veritabanından siler — bu geri
+          alınamaz. <strong className="text-text-body">Drive&apos;daki klasör otomatik silinmez</strong> —
+          içinde teklif, kayıt gibi gerçek dosyalar olabileceği için bu adım kasıtlı olarak elle
+          bırakıldı. Silmeden önce{" "}
+          {journey!.driveFolderId ? (
+            <a
+              href={`https://drive.google.com/drive/folders/${journey!.driveFolderId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 font-medium text-brand-primary hover:underline"
+            >
+              Drive&apos;da klasörü aç <ExternalLink size={11} />
+            </a>
+          ) : (
+            <span>Drive&apos;da &quot;{journey!.name}&quot; adlı klasörü bul</span>
+          )}{" "}
+          ve gerekiyorsa elle sil.
+        </p>
+        <form action={deleteJourney.bind(null, journey!.id)}>
+          <SubmitButton
+            className="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
+            pendingLabel="Siliniyor..."
+            confirmMessage={`"${journey!.name}" journey'ini silmek üzeresin. Bu, veritabanındaki tüm anket/cevap/belge kayıtlarını kalıcı olarak siler ve geri alınamaz. Drive'daki klasör otomatik silinmez — onu elle silmen gerekir. Devam edilsin mi?`}
+          >
+            Journey&apos;i Sil
+          </SubmitButton>
         </form>
       </Card>
     </div>

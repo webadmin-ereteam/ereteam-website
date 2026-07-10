@@ -10,12 +10,17 @@ export function SubmitButton({
   className,
   formAction,
   formNoValidate,
+  confirmMessage,
 }: {
   children: React.ReactNode;
   pendingLabel?: string;
   className?: string;
   formAction?: (formData: FormData) => void | Promise<void>;
   formNoValidate?: boolean;
+  // Native confirm() prompt before the form actually submits — for
+  // destructive actions (delete). Cancelling stops the click from
+  // submitting at all.
+  confirmMessage?: string;
 }) {
   const { pending } = useFormStatus();
   const wasPending = useRef(false);
@@ -39,6 +44,9 @@ export function SubmitButton({
       disabled={pending}
       formAction={formAction}
       formNoValidate={formNoValidate}
+      onClick={(e) => {
+        if (confirmMessage && !window.confirm(confirmMessage)) e.preventDefault();
+      }}
       className={`${className} disabled:cursor-wait disabled:opacity-60`}
     >
       {pending ? (

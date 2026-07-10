@@ -58,7 +58,8 @@ documents with real foreign keys), which fits Postgres, not schemaless documents
 
 - `Prospect` — a company + primary contact (name, email, phone). No "source/kaynak"
   field — removed as unused. `logoDriveFileId`/`logoUrl` hold an optional company
-  logo — see "Company logo" below.
+  logo, `logoAlign` (`"left"` default / `"center"` / `"right"`) its horizontal
+  position on the customer page — see "Company logo" below.
 - `SalesRep` — internal reps, assignable to a journey; customer sees their contact
   card when assigned.
 - `Product` — a product/expertise area (e.g. "Financial Performance & Intelligence"),
@@ -71,13 +72,17 @@ documents with real foreign keys), which fits Postgres, not schemaless documents
   *outcome*), `archived` (a boolean, fully independent of `status` — a won or lost
   case can also be archived; see "Archiving a case" below), `proposalRequested`
   (a manual, admin-only note for when a proposal was asked for ahead of schedule —
-  it does **not** move any stage), `salesRepId`, `productId`, `driveFolderId`, and
-  `linkDisabled` (manual kill-switch for the customer link — see "Customer link
-  activation" below). `productId` is set once at creation and **locked after
-  that** — `assignProduct` refuses a second call once it's non-null, and the
-  Ayarlar tab shows the product as read-only text instead of a form once
-  assigned (a journey's name and Drive folder are both derived from the
-  product chosen at creation, so changing it later would desync them).
+  it does **not** move any stage, but is surfaced as a pink "Teklif talep edildi"
+  badge on the dashboard card and the Genel Bakış banner so marking it actually
+  shows up somewhere instead of being buried in Ayarlar), `salesRepId`,
+  `productId`, `driveFolderId`, and `linkDisabled` (manual kill-switch for the
+  customer link — see "Customer link activation" below). `productId` is set
+  once at creation and **locked after that** — `assignProduct` refuses a second
+  call once it's non-null, and the Ayarlar tab shows the product as read-only
+  text instead of a form once assigned (a journey's name and Drive folder are
+  both derived from the product chosen at creation, so changing it later would
+  desync them). A journey can be deleted outright (`deleteJourney`, Ayarlar
+  tab "Tehlikeli Bölge") — see "Deleting a journey" below.
 - `StageTemplate` — a named, reusable stage flow (e.g. "Varsayılan", "Enterprise
   Süreç"). Picked once on "Yeni Prospect"; its `StageDefinition` rows are copied
   into that journey's own `JourneyStage` rows and never referenced again. Exactly
@@ -360,14 +365,27 @@ looked cramped and put a visible white halo around anything that wasn't
 already a circular logo. `object-contain`, no background, no rounding — we
 tell admins to upload a transparent PNG so it just sits on the gradient. The
 "Yeni Prospect" and Ayarlar upload forms don't set a background either, for
-the same reason.
+the same reason. Only the logo/company-name row itself gets a `text-align`
+from `Prospect.logoAlign` (`setProspectLogoAlign`, a "Sola/Ortaya/Sağa"
+select on the Ayarlar tab, right under the logo preview) — not the whole
+hero column — since the "Merhaba X" heading below it is usually wider than
+the logo, which otherwise looks pinned to the left edge under it with no
+way for an admin to fix it themselves (different logos need different
+positions depending on their own whitespace/aspect ratio).
 
 **Managing sales reps** (`/presales/admin/sales-reps`, `SalesRepRow.tsx`):
 each rep row has its own client-side "Düzenle" toggle — clicking it swaps the
 row for an inline form (name/email/phone/title, `updateSalesRep`) in place,
 no separate edit page. "Vazgeç" collapses it back without saving. Reps can
 also be activated/deactivated or deleted from the same row; only active reps
-are offered when assigning a rep to a journey.
+are offered when assigning a rep to a journey. The "Yeni Satışçı Ekle" /
+"Yeni Ürün / Uzmanlık Ekle" forms on this page and `/presales/admin/products`
+are likewise collapsed behind a "+ ..." toggle button by default
+(`NewSalesRepForm.tsx`/`NewProductForm.tsx`, both the same
+`useState`-toggle-then-await-then-collapse shape as `SalesRepRow.tsx`'s
+inline edit) rather than sitting permanently open at the bottom of the
+list — the always-visible form read as the primary thing on the page even
+though adding a new one is the rarer action next to editing existing rows.
 
 **Reordering stages**: both a stage template's editor page and a case's
 "Aşamalar" tab render cards via `DragReorderList` — drag a card up/down, drop it,
@@ -397,6 +415,20 @@ them doesn't require or wait on the "Tüm Değişiklikleri Kaydet" button.
   `Document` scoped to it just loses that scoping (`Document.stageId` is
   optional) and becomes "genel" instead of being deleted or blocking the stage.
 
+**Deleting a journey** (`deleteJourney`, Ayarlar tab "Tehlikeli Bölge"):
+deletes the journey and everything in Postgres that points at it — documents,
+survey responses/selections/instances, stages — in one transaction, then
+redirects to the dashboard. Deliberately does **not** touch Drive: the
+journey's Drive folder can hold real business files (proposals, meeting
+recordings), and an automated delete there is unrecoverable if a folder id
+ever pointed at the wrong place, unlike a DB row. So Drive cleanup stays a
+manual step — the warning text links straight to the folder
+(`drive.google.com/drive/folders/<driveFolderId>`, or names it by journey
+name if the folder was never lazily created) and repeats the same warning
+inside the native `confirm()` prompt (`SubmitButton`'s new `confirmMessage`
+prop) before the delete actually fires. `Prospect` is left alone too — a
+company record can outlive any one journey against it.
+
 **Admin visual language** (`app/presales/_components/ui.tsx`): shared
 primitives (`Card`, `Badge`, `FieldLabel`, `inputClass`, `buttonPrimaryClass`)
 were refined for a cleaner, more "enterprise SaaS" look — softer/layered card
@@ -416,6 +448,18 @@ used to be a blue→magenta gradient; both are now a **solid** `bg-brand-primary
 fill (avatars: a soft `bg-brand-primary/10` tint with brand-primary text) —
 a two-color diagonal gradient repeated on every button/avatar read as
 "template-y" rather than premium once actually compared side by side.
+A later pass added real branding to the three places that still used a
+generic placeholder (`AdminNav.tsx`'s sidebar header and `presales/login`
+both had a plain "Sparkles" icon in a gradient box) — both now show the
+actual `public/logos/ereteam-logo.png` lockup, `brightness-0 invert`'d to
+white on their dark backgrounds, matching exactly how the main site's
+`Navbar`/`Footer` already treat this same asset on dark backgrounds; the
+login page keeps it in full color since its card sits on white. Gradient use
+stayed confined to **decoration only** (a second background blob on the
+sidebar/login, a short gradient accent bar above `PageHeader` titles reusing
+the same brand-primary→brand-magenta pair as the sidebar's active-nav
+indicator and a survey card's top strip) — never on buttons or avatars,
+per the reverted-gradient lesson directly above.
 
 **Uploading documents — two ways** (`journeys/[id]/documents`): a normal
 browser upload (`uploadDocument`, capped at `MAX_UPLOAD_BYTES` = 4MB — Vercel's

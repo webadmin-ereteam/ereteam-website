@@ -61,6 +61,7 @@ export function PageHeader({
   return (
     <div className="mb-8 flex items-start justify-between gap-4 border-b border-gray-200/70 pb-6">
       <div>
+        <div className="mb-2.5 h-1 w-9 rounded-full bg-gradient-to-r from-brand-primary to-brand-magenta" />
         <h1 className="text-[28px] font-semibold tracking-tight text-brand-dark">{title}</h1>
         {description && <p className="mt-1.5 max-w-2xl text-[13.5px] leading-relaxed text-text-muted">{description}</p>}
       </div>

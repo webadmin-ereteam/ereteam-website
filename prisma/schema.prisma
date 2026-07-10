@@ -26,6 +26,12 @@ model Prospect {
   // usable as an <img src>.
   logoDriveFileId String?
   logoUrl         String?
+  // How the logo is horizontally positioned within its (fixed-height,
+  // max-width-capped) box on the customer page — "left" | "center" | "right".
+  // Different logos crop differently against that fixed box depending on
+  // their own aspect ratio, so this is admin-adjustable per company rather
+  // than a single hardcoded position.
+  logoAlign String @default("left")
 }
 
 model SalesRep {
@@ -109,12 +115,10 @@ model StageDefinition {
   name                String
   description         String?
   customerDescription String?
-  // Shown to the customer only while this is the current stage *and* nothing
-  // is pending on their side (no sent-but-unanswered survey) — i.e. the ball
-  // is in our court. Distinct from `customerDescription` (a general blurb
-  // about the stage, always shown) since this is specifically "here's what
-  // we're doing while you wait," e.g. "Ekibimiz sizin için özel bir demo
-  // hazırlıyor, toplantı planlaması için yakında iletişime geçeceğiz."
+  // The stage's main customer-facing message, always shown while this is the
+  // current stage (regardless of whether a survey is pending) — distinct from
+  // `customerDescription`, which is the short line rendered under the stage's
+  // step marker in the timeline itself.
   customerWaitingMessage String?
   customerVisible     Boolean @default(true)
   surveysEnabled      Boolean @default(true)

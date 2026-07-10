@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Zap, Clock, CheckCircle2, Circle, ArrowRight, FileText, Send, ListChecks } from "lucide-react";
+import { Zap, Clock, CheckCircle2, Circle, ArrowRight, FileText, Send, ListChecks, FileSignature } from "lucide-react";
 import { prisma } from "@/lib/presales/db";
 import { findCurrentStage } from "@/lib/presales/stageProgress";
 import { completeCurrentStage } from "@/lib/presales/adminActions";
@@ -106,6 +106,13 @@ export default async function JourneyOverviewTab({ params }: { params: { id: str
     : 0;
   const currentStageCanComplete =
     !!currentStage && currentStagePendingSurveys === 0 && currentStageWaitingSurveys === 0;
+  // A stage that requires a survey but hasn't had one sent yet — the real
+  // next action is creating/sending that survey, not completing the stage,
+  // so that action should read as primary, not "Tamamla ve sıradakine geç".
+  const currentStageNeedsSurveySent =
+    !!currentStage &&
+    currentStage.surveysEnabled &&
+    !currentStage.surveyInstances.some((s) => s.status === "sent" || s.status === "completed");
 
   let banner: { color: "pink" | "amber" | "green" | "gray"; icon: typeof Zap; title: string; description: string };
 
@@ -175,10 +182,15 @@ export default async function JourneyOverviewTab({ params }: { params: { id: str
         <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${bannerIconStyles[banner.color]}`}>
           <BannerIcon size={20} />
         </span>
-        <div>
+        <div className="flex-1">
           <p className="text-base font-semibold text-brand-dark">{banner.title}</p>
           <p className="text-sm text-text-muted">{banner.description}</p>
         </div>
+        {journey!.proposalRequested && (
+          <Badge color="pink">
+            <FileSignature size={12} className="mr-1" /> Teklif talep edildi
+          </Badge>
+        )}
       </Card>
 
       {currentStage && (
@@ -188,21 +200,26 @@ export default async function JourneyOverviewTab({ params }: { params: { id: str
               <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">Şu anki aşama</p>
               <p className="text-lg font-semibold text-brand-dark">{currentStage.name}</p>
             </div>
-            {currentStageCanComplete && (
-              <form action={completeCurrentStage.bind(null, journey!.id)}>
-                <SubmitButton className={buttonPrimaryClass} pendingLabel="İşleniyor...">
-                  Tamamla ve sıradakine geç
-                </SubmitButton>
-              </form>
-            )}
-            {currentStage.surveysEnabled && currentStagePendingSurveys === 0 && currentStageWaitingSurveys === 0 && (
-              <Link
-                href={`/presales/admin/journeys/${journey!.id}/surveys/new?stageId=${currentStage.id}`}
-                className={buttonSecondaryClass}
-              >
-                <Send size={14} className="mr-1.5" /> Anket Oluştur
-              </Link>
-            )}
+            <div className="flex items-center gap-2">
+              {currentStageCanComplete && (
+                <form action={completeCurrentStage.bind(null, journey!.id)}>
+                  <SubmitButton
+                    className={currentStageNeedsSurveySent ? buttonSecondaryClass : buttonPrimaryClass}
+                    pendingLabel="İşleniyor..."
+                  >
+                    Tamamla ve sıradakine geç
+                  </SubmitButton>
+                </form>
+              )}
+              {currentStage.surveysEnabled && currentStagePendingSurveys === 0 && currentStageWaitingSurveys === 0 && (
+                <Link
+                  href={`/presales/admin/journeys/${journey!.id}/surveys/new?stageId=${currentStage.id}`}
+                  className={currentStageNeedsSurveySent ? buttonPrimaryClass : buttonSecondaryClass}
+                >
+                  <Send size={14} className="mr-1.5" /> Anket Oluştur
+                </Link>
+              )}
+            </div>
           </div>
           {currentStage.customerDescription && (
             <p className="text-sm text-text-muted">{currentStage.customerDescription}</p>
