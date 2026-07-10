@@ -149,24 +149,6 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
       <BackgroundBlobs />
 
       <div className="mx-auto max-w-7xl px-6 pb-14 pt-8 sm:px-10 lg:px-16">
-        {/* Ereteam's own mark, above the fold and separate from the hero
-            (which is the customer's own logo/name) — a footer mark got
-            missed entirely since it sat below a page's worth of content;
-            this is the first thing rendered instead. */}
-        <div className="mb-5 flex items-center gap-2">
-          <Image
-            src="/logos/ereteam-logo.png"
-            alt="Ereteam"
-            width={175}
-            height={100}
-            className="h-6 w-auto object-contain"
-            priority
-          />
-          <span className="text-xs font-medium uppercase tracking-wide text-text-muted">
-            Presales Süreç Yönetimi
-          </span>
-        </div>
-
         {/* Hero — a floating gradient card, not a full-bleed banner, so it reads
             as one element among several rather than eating the whole viewport. */}
         <div className="relative mb-7 overflow-hidden rounded-[28px] bg-gradient-to-br from-brand-dark to-brand-primary shadow-[0_20px_45px_-24px_rgba(15,23,42,0.5)] ring-1 ring-white/10">
@@ -177,6 +159,23 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
                 "radial-gradient(circle at 96% 8%, rgba(233,30,140,0.3) 0, transparent 42%), radial-gradient(circle at 6% 100%, rgba(255,255,255,0.08) 0, transparent 35%)",
             }}
           />
+          {/* Ereteam's own mark — a quiet corner badge on the hero itself
+              rather than a separate row competing with it for attention.
+              Same glass-pill treatment as the no-logo company badge below,
+              so it reads as part of the hero's own visual language instead
+              of a bolted-on header bar. Hidden below `sm` — there's no room
+              for it once the hero wraps to two lines on a phone, and it's
+              decorative, not information the customer needs. */}
+          <div className="absolute right-6 top-6 hidden items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 ring-1 ring-inset ring-white/15 backdrop-blur-sm sm:right-10 sm:top-8 sm:flex">
+            <Image
+              src="/logos/ereteam-logo.png"
+              alt=""
+              width={175}
+              height={100}
+              className="h-3 w-auto object-contain brightness-0 invert opacity-80"
+            />
+            <span className="text-[9px] font-medium uppercase tracking-wider text-white/50">Presales</span>
+          </div>
           <div className="relative px-6 py-8 text-white sm:px-10 sm:py-14">
             <div className="flex flex-wrap items-center justify-between gap-5">
               <div>
