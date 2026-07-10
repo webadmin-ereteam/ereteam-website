@@ -68,13 +68,13 @@ export default function AdminNav() {
         }}
       />
       <div className="pointer-events-none absolute -left-10 top-40 h-52 w-52 rounded-full bg-brand-primary/[0.12] blur-[70px]" />
-      <div className="relative flex flex-col gap-2 px-6 py-6">
+      <div className="relative flex flex-col items-start gap-2.5 px-6 py-6">
         <Image
           src="/logos/ereteam-logo.png"
           alt="Ereteam"
           width={175}
           height={100}
-          className="h-9 w-auto object-contain brightness-0 invert"
+          className="h-12 w-auto object-contain brightness-0 invert"
           priority
         />
         <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">Presales Admin</span>

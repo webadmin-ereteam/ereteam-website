@@ -17,13 +17,13 @@ export default function AdminLoginPage({
       <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-brand-primary/[0.18] blur-[110px]" />
       <div className="pointer-events-none absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-brand-magenta/[0.14] blur-[110px]" />
       <Card className="relative w-full max-w-sm">
-        <div className="mb-6 flex flex-col items-center gap-3 text-center">
+        <div className="mb-6 flex flex-col items-start gap-3">
           <Image
             src="/logos/ereteam-logo.png"
             alt="Ereteam"
             width={175}
             height={100}
-            className="h-11 w-auto object-contain"
+            className="h-16 w-auto object-contain"
             priority
           />
           <div>

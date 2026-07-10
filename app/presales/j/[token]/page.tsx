@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import {
   Check,
@@ -148,6 +149,24 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
       <BackgroundBlobs />
 
       <div className="mx-auto max-w-7xl px-6 pb-14 pt-8 sm:px-10 lg:px-16">
+        {/* Ereteam's own mark, above the fold and separate from the hero
+            (which is the customer's own logo/name) — a footer mark got
+            missed entirely since it sat below a page's worth of content;
+            this is the first thing rendered instead. */}
+        <div className="mb-5 flex items-center gap-2">
+          <Image
+            src="/logos/ereteam-logo.png"
+            alt="Ereteam"
+            width={175}
+            height={100}
+            className="h-6 w-auto object-contain"
+            priority
+          />
+          <span className="text-xs font-medium uppercase tracking-wide text-text-muted">
+            Presales Süreç Yönetimi
+          </span>
+        </div>
+
         {/* Hero — a floating gradient card, not a full-bleed banner, so it reads
             as one element among several rather than eating the whole viewport. */}
         <div className="relative mb-7 overflow-hidden rounded-[28px] bg-gradient-to-br from-brand-dark to-brand-primary shadow-[0_20px_45px_-24px_rgba(15,23,42,0.5)] ring-1 ring-white/10">
