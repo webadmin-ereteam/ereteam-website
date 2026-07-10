@@ -73,8 +73,9 @@ documents with real foreign keys), which fits Postgres, not schemaless documents
   case can also be archived; see "Archiving a case" below), `proposalRequested`
   (a manual, admin-only note for when a proposal was asked for ahead of schedule —
   it does **not** move any stage, but is surfaced as a pink "Teklif talep edildi"
-  badge on the dashboard card and the Genel Bakış banner so marking it actually
-  shows up somewhere instead of being buried in Ayarlar), `salesRepId`,
+  badge on the dashboard card and the Genel Bakış banner, and as a customer-facing
+  "Teklif talebiniz alındı..." notice card on their journey page, so marking it
+  actually shows up somewhere instead of being buried in Ayarlar), `salesRepId`,
   `productId`, `driveFolderId`, and `linkDisabled` (manual kill-switch for the
   customer link — see "Customer link activation" below). `productId` is set
   once at creation and **locked after that** — `assignProduct` refuses a second

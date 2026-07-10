@@ -15,6 +15,7 @@ import {
   Sparkles,
   Inbox,
   Lock,
+  FileSignature,
 } from "lucide-react";
 import { prisma } from "@/lib/presales/db";
 import { findCurrentStage } from "@/lib/presales/stageProgress";
@@ -349,6 +350,21 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div className="space-y-7 lg:col-span-2">
+            {/* Journey-level, not stage-specific — an early proposal request
+                (marked by admin from Ayarlar) so the customer sees their
+                request was actually received, instead of it only being
+                visible internally. */}
+            {journey!.proposalRequested && (
+              <div className={`flex items-center gap-3 p-4 sm:p-5 ${glassCardClass}`}>
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-magenta/10 text-brand-magenta">
+                  <FileSignature size={16} />
+                </span>
+                <p className="text-sm text-text-body">
+                  <span className="font-medium text-brand-dark">Teklif talebiniz alındı.</span>{" "}
+                  Ekibimiz üzerinde çalışıyor, en kısa sürede sizinle paylaşacağız.
+                </p>
+              </div>
+            )}
             {/* The stage's main customer-facing message — shown for the current
                 stage regardless of whether there's a pending survey, since it's
                 meant to be the primary thing we want the customer to read at
