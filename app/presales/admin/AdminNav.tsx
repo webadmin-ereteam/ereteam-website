@@ -72,9 +72,9 @@ export default function AdminNav() {
         <Image
           src="/logos/ereteam-logo.png"
           alt="Ereteam"
-          width={160}
-          height={92}
-          className="h-9 w-auto brightness-0 invert"
+          width={175}
+          height={100}
+          className="h-9 w-auto object-contain brightness-0 invert"
           priority
         />
         <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">Presales Admin</span>

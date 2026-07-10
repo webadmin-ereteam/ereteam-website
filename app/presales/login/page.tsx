@@ -18,7 +18,14 @@ export default function AdminLoginPage({
       <div className="pointer-events-none absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-brand-magenta/[0.14] blur-[110px]" />
       <Card className="relative w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
-          <Image src="/logos/ereteam-logo.png" alt="Ereteam" width={160} height={92} className="h-11 w-auto" priority />
+          <Image
+            src="/logos/ereteam-logo.png"
+            alt="Ereteam"
+            width={175}
+            height={100}
+            className="h-11 w-auto object-contain"
+            priority
+          />
           <div>
             <h1 className="text-lg font-semibold text-brand-dark">Presales Admin</h1>
             <p className="text-sm text-text-muted">Devam etmek için giriş yap</p>
