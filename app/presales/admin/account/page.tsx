@@ -1,10 +1,10 @@
-import { getEffectiveAdminCredentials } from "@/lib/presales/auth";
+import { getAdminUsername } from "@/lib/presales/auth";
 import { updateAdminCredentials } from "@/lib/presales/adminActions";
 import { Card, PageHeader, inputClass, labelClass, buttonPrimaryClass } from "../../_components/ui";
 import { SubmitButton } from "../../_components/SubmitButton";
 
 export default async function AdminAccountPage() {
-  const credentials = await getEffectiveAdminCredentials();
+  const username = await getAdminUsername();
 
   return (
     <div>
@@ -17,25 +17,25 @@ export default async function AdminAccountPage() {
         <form action={updateAdminCredentials} className="space-y-4">
           <div>
             <label className={labelClass}>Kullanıcı Adı</label>
-            <input
-              name="username"
-              required
-              defaultValue={credentials?.username ?? ""}
-              className={`${inputClass} w-full`}
-            />
+            <input name="username" required defaultValue={username ?? ""} className={`${inputClass} w-full`} />
           </div>
           <div>
-            <label className={labelClass}>Şifre</label>
+            <label className={labelClass}>Yeni Şifre</label>
             <input
               name="password"
-              required
-              defaultValue={credentials?.password ?? ""}
+              type="password"
+              placeholder="Değiştirmek istemiyorsan boş bırak"
               className={`${inputClass} w-full`}
             />
+            <p className="mt-1 text-xs text-text-muted">
+              Şifre güvenlik nedeniyle burada gösterilmez — mevcut şifreyi kontrol edemezsin, sadece
+              yenisini belirleyebilirsin.
+            </p>
           </div>
           <p className="text-xs text-text-muted">
-            Kaydettikten sonra tarayıcı yeni bilgileri isteyecek — açık oturumlar dahil, herkes yeni
-            kullanıcı adı/şifre ile tekrar giriş yapmalı.
+            Kaydettikten sonra yeni şifreyle tekrar giriş yapman gerekir — ama halihazırda açık
+            oturumlar (kendi tarayıcın dahil) otomatik olarak kapanmaz, 7 gün sonra kendi kendine
+            sona erer.
           </p>
           <SubmitButton className={buttonPrimaryClass}>Kaydet</SubmitButton>
         </form>

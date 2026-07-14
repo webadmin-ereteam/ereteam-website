@@ -649,14 +649,32 @@ A real login page at `/presales/login` (not the browser's native Basic-Auth
 prompt — that was the original v1 gate and the UX was rough: no branding, no
 logout, credentials cached indefinitely by the browser). How it works:
 
-- **Login** (`loginAdmin` in `lib/presales/sessionActions.ts`): checks the
-  submitted username/password against `getEffectiveAdminCredentials()`
-  (`lib/presales/auth.ts` — reads the singleton `AdminCredential` DB row, or
-  falls back to `ADMIN_BASIC_USER`/`ADMIN_BASIC_PASS` if that row doesn't exist
-  yet). On success it signs a session token (`lib/presales/session.ts`) and
-  sets it as an HttpOnly cookie (`presales_admin_session`, 7-day expiry), then
-  redirects to wherever the visitor was headed (`?next=`). On failure it
-  redirects back to the login page with `?error=1` and shows an inline message.
+- **Login** (`loginAdmin` in `lib/presales/sessionActions.ts`): first checks
+  `checkLoginLock()` (`lib/presales/loginRateLimit.ts`) — if the shared login
+  is currently locked out from repeated failures, it redirects straight back
+  with `?error=locked&retry=<minutes>` without even checking the password.
+  Otherwise it checks the submitted username/password via
+  `verifyAdminPassword()` (`lib/presales/auth.ts` — reads the singleton
+  `AdminCredential` DB row, or falls back to `ADMIN_BASIC_USER`/
+  `ADMIN_BASIC_PASS` if that row doesn't exist yet), records the result
+  (`recordLoginResult`), and on success signs a session token
+  (`lib/presales/session.ts`) and sets it as an HttpOnly cookie
+  (`presales_admin_session`, 7-day expiry), then redirects to wherever the
+  visitor was headed (`?next=`). On failure it redirects back with `?error=1`.
+- **Password storage** (`lib/presales/passwordHash.ts`): `AdminCredential.password`
+  is a scrypt hash (`<16-byte salt hex>:<64-byte key hex>`), never the raw
+  value, compared with `crypto.timingSafeEqual`. `verifyPassword()` detects
+  the hash format and falls back to a constant-time *direct* compare for two
+  cases that can't be hashed: a DB row saved before hashing existed, and the
+  `ADMIN_BASIC_PASS` env-var fallback (there's nowhere durable to keep a salt
+  for a value re-read fresh from the environment on every call).
+- **Rate limiting** (`lib/presales/loginRateLimit.ts`, singleton
+  `AdminLoginAttempt` row): 6 consecutive failures locks the shared login for
+  10 minutes. Global, not per-IP/per-user — there's exactly one shared login
+  for the whole team, so one counter is enough and needed no new
+  infrastructure (Redis/Upstash) beyond the Postgres already used everywhere
+  else. A success resets the counter; a lock that already expired doesn't
+  carry its old count into the next attempt.
 - **Gate** (`middleware.ts`): only ever checks that cookie's signature and
   expiry (`verifySessionToken`) — no DB call at all. This is why it can run
   in the Edge Runtime with zero special-casing: the token is signed with
@@ -666,10 +684,13 @@ logout, credentials cached indefinitely by the browser). How it works:
   plain 401 JSON for `/api/presales/admin/**` requests.
 - **Logout** (`logoutAdmin`): clears the cookie, redirects to the login page.
   A "Çıkış Yap" button lives at the bottom of `AdminNav.tsx`.
-- **Changing the login** (`/presales/admin/account`): still shows the current
-  username/password in plain text and lets you change them — saving writes to
-  the same `AdminCredential` row, effective immediately (no redeploy). This
-  does **not** invalidate already-issued session cookies (they're signed
+- **Changing the login** (`/presales/admin/account`): shows the current
+  username (never the password — there's nothing to show anymore once it's
+  hashed) and lets you change either. The password field is optional: left
+  blank, the existing hash is untouched, so changing just the username
+  doesn't force a password reset too. Saving writes to the same
+  `AdminCredential` row, effective immediately (no redeploy). This does
+  **not** invalidate already-issued session cookies (they're signed
   independently of the password) — change `ADMIN_SESSION_SECRET` instead if
   you need to force every open session to log out at once.
 

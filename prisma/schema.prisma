@@ -254,10 +254,25 @@ model Document {
 // Singleton row (at most one) holding the shared admin Basic-Auth login, so it
 // can be changed from within the admin panel instead of only via env vars.
 // Falls back to ADMIN_BASIC_USER/ADMIN_BASIC_PASS whenever no row exists yet —
-// see lib/presales/auth.ts.
+// see lib/presales/auth.ts. `password` is a scrypt hash (`<salt>:<key>`, both
+// hex) once saved via updateAdminCredentials, never the raw value — see
+// lib/presales/passwordHash.ts. A row saved before hashing existed (or the
+// env-var fallback, which has nowhere durable to keep a salt) is still
+// readable: verifyPassword() detects the hash format and falls back to a
+// constant-time direct compare otherwise.
 model AdminCredential {
   id        String   @id @default(cuid())
   username  String
   password  String
   updatedAt DateTime @updatedAt
+}
+
+// Singleton row tracking failed admin login attempts, for basic brute-force
+// throttling on the one shared login endpoint — see lib/presales/loginRateLimit.ts.
+// Global rather than per-IP/per-user since the whole team shares one login.
+model AdminLoginAttempt {
+  id          String    @id @default(cuid())
+  failedCount Int       @default(0)
+  lockedUntil DateTime?
+  updatedAt   DateTime  @updatedAt
 }

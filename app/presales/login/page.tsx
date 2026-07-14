@@ -10,7 +10,7 @@ export const metadata = {
 export default function AdminLoginPage({
   searchParams,
 }: {
-  searchParams: { error?: string; next?: string };
+  searchParams: { error?: string; retry?: string; next?: string };
 }) {
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-brand-dark to-[#0f2a3d] px-4">
@@ -43,8 +43,13 @@ export default function AdminLoginPage({
             <label className={labelClass}>Şifre</label>
             <input name="password" type="password" required className={`${inputClass} w-full`} />
           </div>
-          {searchParams.error && (
-            <p className="text-sm text-red-600">Kullanıcı adı veya şifre hatalı.</p>
+          {searchParams.error === "locked" ? (
+            <p className="text-sm text-red-600">
+              Çok fazla başarısız deneme yapıldı. Yaklaşık {searchParams.retry ?? "birkaç"} dakika sonra
+              tekrar dene.
+            </p>
+          ) : (
+            searchParams.error && <p className="text-sm text-red-600">Kullanıcı adı veya şifre hatalı.</p>
           )}
           <SubmitButton className={`${buttonPrimaryClass} w-full justify-center`} pendingLabel="Giriş yapılıyor...">
             Giriş Yap

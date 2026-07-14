@@ -2,7 +2,8 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getEffectiveAdminCredentials } from "./auth";
+import { verifyAdminPassword } from "./auth";
+import { checkLoginLock, recordLoginResult } from "./loginRateLimit";
 import { createSessionToken, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from "./session";
 
 export async function loginAdmin(formData: FormData) {
@@ -10,8 +11,15 @@ export async function loginAdmin(formData: FormData) {
   const password = String(formData.get("password") ?? "").trim();
   const next = String(formData.get("next") ?? "").trim() || "/presales/admin";
 
-  const expected = await getEffectiveAdminCredentials();
-  const ok = !!expected && username === expected.username && password === expected.password;
+  const lock = await checkLoginLock();
+  if (lock.locked) {
+    redirect(
+      `/presales/login?error=locked&retry=${lock.retryAfterMinutes}&next=${encodeURIComponent(next)}`
+    );
+  }
+
+  const ok = await verifyAdminPassword(username, password);
+  await recordLoginResult(ok);
 
   if (!ok) {
     redirect(`/presales/login?error=1&next=${encodeURIComponent(next)}`);

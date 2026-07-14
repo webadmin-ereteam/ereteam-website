@@ -1,7 +1,7 @@
 // Signed session cookie for the admin login page. Uses Web Crypto (available
 // in both the Edge Runtime and Node) so middleware.ts can verify a session
 // without any DB call — only the login form itself needs to check
-// AdminCredential (via getEffectiveAdminCredentials in auth.ts).
+// AdminCredential (via verifyAdminPassword in auth.ts).
 
 export const SESSION_COOKIE_NAME = "presales_admin_session";
 const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days

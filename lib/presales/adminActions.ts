@@ -8,6 +8,7 @@ import { uploadFileToDrive, copyExistingDriveFile, extractDriveFileId, uploadLog
 import { findCurrentStage } from "@/lib/presales/stageProgress";
 import { encodeOtherOption } from "@/lib/presales/surveyOptions";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/presales/fileUpload";
+import { hashPassword } from "@/lib/presales/passwordHash";
 
 // "Firma - Ürün - 06.07.2026" — the fixed format used for both a journey's own
 // `name` and the Drive folder created for it, so the two always match.
@@ -997,19 +998,30 @@ export async function setProspectLogoAlign(journeyId: string, formData: FormData
 
 // --- Admin login (shared Basic-Auth credentials, editable from the panel) ---
 
+// Password is optional here — left blank, the existing one (hashed, never
+// read back out) stays unchanged, so changing just the username doesn't
+// force a password reset too. Whatever is typed gets hashed before it ever
+// touches the database.
 export async function updateAdminCredentials(formData: FormData) {
   const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "").trim();
 
-  if (!username || !password) {
-    throw new Error("Kullanıcı adı ve şifre zorunludur.");
+  if (!username) {
+    throw new Error("Kullanıcı adı zorunludur.");
   }
 
   const existing = await prisma.adminCredential.findFirst();
+
   if (existing) {
-    await prisma.adminCredential.update({ where: { id: existing.id }, data: { username, password } });
+    await prisma.adminCredential.update({
+      where: { id: existing.id },
+      data: { username, ...(password ? { password: await hashPassword(password) } : {}) },
+    });
   } else {
-    await prisma.adminCredential.create({ data: { username, password } });
+    if (!password) {
+      throw new Error("İlk kayıtta şifre zorunludur.");
+    }
+    await prisma.adminCredential.create({ data: { username, password: await hashPassword(password) } });
   }
 
   revalidatePath("/presales/admin/account");
