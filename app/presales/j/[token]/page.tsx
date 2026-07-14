@@ -572,6 +572,12 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
             )}
           </div>
         </div>
+
+        <p className="mt-12 max-w-2xl text-center text-[11px] leading-relaxed text-text-muted/70 mx-auto">
+          Bu sayfada paylaştığınız iletişim bilgileri ve anket cevapları, yalnızca Ereteam ile
+          aranızdaki bu presales süreci kapsamında işlenir ve saklanır. Verilerinizin silinmesini
+          talep etmek için satış temsilcinizle iletişime geçebilirsiniz.
+        </p>
       </div>
     </div>
   );

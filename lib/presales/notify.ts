@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { escapeHtml, stripNewlines } from "./escapeHtml";
 
 const APP_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -42,15 +43,18 @@ export async function notifySalesRep(params: {
     await mailer.sendMail({
       from: process.env.GMAIL_USER?.trim(),
       to: params.salesRepEmail,
-      subject: params.subject,
+      subject: stripNewlines(params.subject),
+      // actionSummary is pre-built HTML (its own dynamic pieces are already
+      // escaped where it's constructed) — everything else here is raw
+      // admin-entered text, escaped on the way in.
       html: `
         <div style="font-family:sans-serif;max-width:480px;margin:0 auto;">
           <h2 style="color:#1A6FA8;margin-bottom:16px;">Presales güncellemesi</h2>
-          <p>Merhaba ${params.salesRepName},</p>
+          <p>Merhaba ${escapeHtml(params.salesRepName)},</p>
           <p>${params.actionSummary}</p>
           <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-            <tr><td style="padding:8px 0;color:#666;width:100px;">Şirket</td><td style="padding:8px 0;font-weight:600;">${params.companyName}</td></tr>
-            <tr><td style="padding:8px 0;color:#666;">Kişi</td><td style="padding:8px 0;">${params.contactName}</td></tr>
+            <tr><td style="padding:8px 0;color:#666;width:100px;">Şirket</td><td style="padding:8px 0;font-weight:600;">${escapeHtml(params.companyName)}</td></tr>
+            <tr><td style="padding:8px 0;color:#666;">Kişi</td><td style="padding:8px 0;">${escapeHtml(params.contactName)}</td></tr>
           </table>
           <a href="${journeyLink}" style="display:inline-block;padding:10px 16px;background:#1A6FA8;color:white;text-decoration:none;border-radius:6px;">
             Journey'i Görüntüle

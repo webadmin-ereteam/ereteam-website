@@ -694,6 +694,65 @@ logout, credentials cached indefinitely by the browser). How it works:
   independently of the password) — change `ADMIN_SESSION_SECRET` instead if
   you need to force every open session to log out at once.
 
+## Security hardening (from a full review — see git log around this section)
+
+A full pass turned up a handful of gaps beyond login (covered above). Fixed:
+
+- **HTTP security headers** (`next.config.mjs`): `X-Content-Type-Options: nosniff`
+  and `Referrer-Policy: strict-origin-when-cross-origin` site-wide (neither
+  restricts scripts/styles/fonts, so nothing here risks breaking the
+  marketing site's third-party embeds like HubSpot or CookieYes).
+  `X-Frame-Options: DENY` + `Content-Security-Policy: frame-ancestors 'none'`
+  scoped specifically to `/presales/:path*` — both the admin login and the
+  no-login customer survey link take sensitive input (a password, or real
+  business answers) that clickjacking via an invisible iframe overlay could
+  target. `poweredByHeader: false` drops the `X-Powered-By: Next.js` header.
+  Deliberately **not** a full CSP (`script-src` etc.) — that needs auditing
+  every third-party script the marketing site loads elsewhere first, a
+  separate piece of work.
+- **File-upload MIME allowlist** (`lib/presales/fileUpload.ts`,
+  `ALLOWED_UPLOAD_MIME_TYPES`/`ALLOWED_UPLOAD_ACCEPT`/`ALLOWED_UPLOAD_LABEL`):
+  customer file-upload survey answers were size-capped only, any file type
+  accepted. Now checked client-side (`accept` attribute + `handleFileChange`
+  in `SurveyAnswerForm.tsx`) and server-side (`uploadNewFileAnswers` in
+  `app/presales/j/[token]/actions.ts`) against an allowlist of ordinary
+  business-document types (PDF/Office/images/txt/csv/zip). This is a soft
+  check — `file.type` comes from the browser, and a deliberate attacker
+  crafting a raw multipart request could still set it to anything — the
+  real backstop stays Drive's own scanning plus admins not blindly opening
+  unexpected files; this just closes the ordinary/accidental case.
+- **HTML-escaped fields in outbound email** (`lib/presales/escapeHtml.ts`,
+  used in `lib/presales/notify.ts` and where `actionSummary` is built in
+  `app/presales/j/[token]/actions.ts`): company/contact/rep names and survey
+  titles — all admin-authored, never customer-controlled — were interpolated
+  into the sales-rep notification email's HTML body unescaped. `subject`
+  also gets `stripNewlines()` before being handed to nodemailer, since a
+  known CRLF-header-injection class of nodemailer bug means a stray
+  `\r\n` in a header-bound field shouldn't be trusted verbatim.
+- **KVKK notice on the customer page** (`app/presales/j/[token]/page.tsx`,
+  bottom of the page): a short note that contact info and survey answers are
+  processed only for this presales engagement, and how to ask for deletion
+  (`deleteJourney` is the actual mechanism, see "Deleting a journey" above).
+  This is placeholder-quality legal copy, not reviewed by counsel — treat it
+  as a starting point, not a finished KVKK aydınlatma metni.
+- **`npm audit fix`** (non-breaking only — `package.json` itself didn't
+  change, only lockfile-level transitive-dependency patch bumps): took
+  the project from 43 known advisories down to 26, all remaining ones
+  either requiring a breaking major-version bump (Sanity Studio tooling,
+  not part of the presales runtime path) or affecting `next` itself, which
+  has no non-breaking fix available within the installed 14.x line — a
+  deliberate, separate major-version upgrade is the real fix there and
+  wasn't attempted in this pass given the blast radius (the whole site, not
+  just presales).
+
+**Deliberately not done in this pass** (each needs its own dedicated,
+lower-risk piece of work): the Next.js major-version upgrade above;
+narrowing what Shared Drives the Google service account actually belongs to
+(the OAuth scope itself has to stay broad — `drive`, not `drive.file` — for
+the "link an existing Drive file" feature to keep working); and turning the
+KVKK note into a properly reviewed aydınlatma metni with an actual, decided
+retention period (a business/legal decision, not a coding one).
+
 ## Deployment notes (two production-only bugs hit going live)
 
 Both confirmed via live Vercel deployment/log inspection — neither reproduced

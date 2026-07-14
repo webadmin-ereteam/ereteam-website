@@ -7,7 +7,8 @@ import { notifySalesRep } from "@/lib/presales/notify";
 import { buildSurveyExportBuffer, surveyExportFileName } from "@/lib/presales/surveyExcel";
 import { decodeOptions } from "@/lib/presales/surveyOptions";
 import { isJourneyLinkActive } from "@/lib/presales/journeyLink";
-import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/presales/fileUpload";
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL, ALLOWED_UPLOAD_MIME_TYPES, ALLOWED_UPLOAD_LABEL } from "@/lib/presales/fileUpload";
+import { escapeHtml } from "@/lib/presales/escapeHtml";
 import { Prisma } from "@/lib/generated/prisma/client";
 
 type SurveyWithSelections = Prisma.SurveyInstanceGetPayload<{
@@ -47,6 +48,11 @@ async function uploadNewFileAnswers(survey: SurveyWithSelections, formData: Form
     if (file && file.size > MAX_UPLOAD_BYTES) {
       throw new Error(
         `"${selection.text}" için yüklenen dosya çok büyük (maksimum ${MAX_UPLOAD_LABEL}). Lütfen daha küçük bir dosya seçip tekrar gönderin.`
+      );
+    }
+    if (file && file.size > 0 && !ALLOWED_UPLOAD_MIME_TYPES.includes(file.type)) {
+      throw new Error(
+        `"${selection.text}" için desteklenmeyen dosya türü — izin verilenler: ${ALLOWED_UPLOAD_LABEL}.`
       );
     }
   }
@@ -264,9 +270,11 @@ export async function submitSurveyResponses(
   revalidatePath(`/presales/admin/journeys/${survey.journeyId}`);
 
   if (survey.journey.salesRep) {
+    const companyNameHtml = escapeHtml(survey.journey.prospect.companyName);
+    const surveyTitleHtml = escapeHtml(survey.title);
     const actionSummary = advanced.nextStageName
-      ? `<strong>${survey.journey.prospect.companyName}</strong>, "${survey.title}" anketini tamamladı. Süreç otomatik olarak "${advanced.nextStageName}" aşamasına geçti.`
-      : `<strong>${survey.journey.prospect.companyName}</strong>, "${survey.title}" anketini tamamladı.`;
+      ? `<strong>${companyNameHtml}</strong>, "${surveyTitleHtml}" anketini tamamladı. Süreç otomatik olarak "${escapeHtml(advanced.nextStageName)}" aşamasına geçti.`
+      : `<strong>${companyNameHtml}</strong>, "${surveyTitleHtml}" anketini tamamladı.`;
 
     await notifySalesRep({
       salesRepEmail: survey.journey.salesRep.email,

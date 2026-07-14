@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import { decodeOptions } from "@/lib/presales/surveyOptions";
-import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/presales/fileUpload";
+import {
+  MAX_UPLOAD_BYTES,
+  MAX_UPLOAD_LABEL,
+  ALLOWED_UPLOAD_MIME_TYPES,
+  ALLOWED_UPLOAD_ACCEPT,
+  ALLOWED_UPLOAD_LABEL,
+} from "@/lib/presales/fileUpload";
 
 type Selection = {
   id: string;
@@ -79,6 +85,12 @@ export function SurveyAnswerForm({ selections }: { selections: Selection[] }) {
     if (file && file.size > MAX_UPLOAD_BYTES) {
       e.target.value = "";
       setFileErrors((prev) => ({ ...prev, [selectionId]: `Dosya çok büyük (maksimum ${MAX_UPLOAD_LABEL}) — lütfen daha küçük bir dosya seçin.` }));
+    } else if (file && !ALLOWED_UPLOAD_MIME_TYPES.includes(file.type)) {
+      e.target.value = "";
+      setFileErrors((prev) => ({
+        ...prev,
+        [selectionId]: `Desteklenmeyen dosya türü — izin verilenler: ${ALLOWED_UPLOAD_LABEL}.`,
+      }));
     } else {
       setFileErrors((prev) => {
         const next = { ...prev };
@@ -232,6 +244,7 @@ export function SurveyAnswerForm({ selections }: { selections: Selection[] }) {
                 )}
                 <input
                   type="file"
+                  accept={ALLOWED_UPLOAD_ACCEPT}
                   name={fieldName}
                   required={visible && selection.required && !existingDocument}
                   disabled={!visible}
