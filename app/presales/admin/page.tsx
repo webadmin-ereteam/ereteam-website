@@ -1,20 +1,35 @@
 import Link from "next/link";
-import { Users, Clock, CheckCircle2, XCircle, Zap, Plus } from "lucide-react";
+import { Users, Clock, CheckCircle2, XCircle, Zap, Plus, Search } from "lucide-react";
 import { prisma } from "@/lib/presales/db";
 import { findCurrentStage } from "@/lib/presales/stageProgress";
 import { isJourneyLinkActive } from "@/lib/presales/journeyLink";
 import { JOURNEY_STATUSES, JOURNEY_STATUS_LABELS } from "@/lib/presales/journeyStatus";
 import { DATE_RANGE_PRESETS, resolveDateRangePreset } from "@/lib/presales/dateRangePresets";
 import { formatDisplayDate } from "@/lib/presales/formatDate";
-import { Card, PageHeader, FieldLabel, buttonPrimaryClass, buttonSecondaryClass } from "../_components/ui";
+import { Card, PageHeader, buttonPrimaryClass, buttonSecondaryClass } from "../_components/ui";
 import { JourneyListWithSelection, type JourneyRow } from "./JourneyListWithSelection";
 
-// Lighter, flatter than the site-wide `inputClass` (no shadow/ring glow, a
-// thinner near-invisible border) — scoped to just this filter bar rather
-// than changing `inputClass` itself, which every other form in the admin
-// also uses.
-const filterFieldClass =
-  "rounded-lg border border-gray-200/70 bg-white px-3 py-2 text-sm text-text-body transition-colors focus:border-brand-primary focus:outline-none";
+// Notion/Airtable-style filter chip: "Label: value" fused into one soft,
+// pill-shaped control — the label lives *inside* the chip instead of beside
+// it, so each filter reads as one deliberate object rather than a plain
+// label+input pair. `focus-within` lights the whole chip up (not just the
+// invisible select inside it) so keyboard/click focus is still legible.
+const filterSelectClass = "cursor-pointer border-0 bg-transparent p-0 text-[13px] font-medium text-text-body focus:outline-none";
+
+function FilterChip({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="inline-flex items-center gap-1.5 rounded-full bg-gray-100/80 py-[7px] pl-3.5 pr-3 text-[13px] leading-none transition-colors hover:bg-gray-100 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-primary/20">
+      <span className="font-medium tracking-tight text-text-muted">{label}</span>
+      {children}
+    </label>
+  );
+}
 
 function StatCard({
   icon: Icon,
@@ -143,20 +158,20 @@ export default async function AdminDashboardPage({
         <StatCard icon={XCircle} value={lostCount} label="Kaybedilen" tint="bg-gray-100 text-gray-500" />
       </div>
 
-      <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-5">
-        <form method="get" className="flex flex-wrap items-end gap-x-5 gap-y-4">
-          <div>
-            <FieldLabel>Ara</FieldLabel>
+      <div className="mb-8 border-b border-gray-100 pb-6">
+        <form method="get" className="flex flex-wrap items-center gap-2">
+          <div className="relative mr-1">
+            <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               name="q"
               defaultValue={searchParams.q ?? ""}
               placeholder="Şirket, kişi veya e-posta"
-              className={`${filterFieldClass} w-64`}
+              className="w-56 rounded-full border border-gray-200 bg-white py-[7px] pl-8 pr-3.5 text-[13px] tracking-tight transition-colors focus:border-brand-primary focus:outline-none"
             />
           </div>
-          <div>
-            <FieldLabel>Durum</FieldLabel>
-            <select name="status" defaultValue={searchParams.status ?? ""} className={`${filterFieldClass} w-36`}>
+
+          <FilterChip label="Durum">
+            <select name="status" defaultValue={searchParams.status ?? ""} className={filterSelectClass}>
               <option value="">Tümü</option>
               {JOURNEY_STATUSES.map((s) => (
                 <option key={s} value={s}>
@@ -164,10 +179,10 @@ export default async function AdminDashboardPage({
                 </option>
               ))}
             </select>
-          </div>
-          <div>
-            <FieldLabel>Satışçı</FieldLabel>
-            <select name="salesRepId" defaultValue={searchParams.salesRepId ?? ""} className={`${filterFieldClass} w-48`}>
+          </FilterChip>
+
+          <FilterChip label="Satışçı">
+            <select name="salesRepId" defaultValue={searchParams.salesRepId ?? ""} className={filterSelectClass}>
               <option value="">Tümü</option>
               {salesReps.map((rep) => (
                 <option key={rep.id} value={rep.id}>
@@ -175,10 +190,10 @@ export default async function AdminDashboardPage({
                 </option>
               ))}
             </select>
-          </div>
-          <div>
-            <FieldLabel>Ürün / Uzmanlık</FieldLabel>
-            <select name="productId" defaultValue={searchParams.productId ?? ""} className={`${filterFieldClass} w-48`}>
+          </FilterChip>
+
+          <FilterChip label="Ürün">
+            <select name="productId" defaultValue={searchParams.productId ?? ""} className={filterSelectClass}>
               <option value="">Tümü</option>
               {products.map((product) => (
                 <option key={product.id} value={product.id}>
@@ -186,58 +201,59 @@ export default async function AdminDashboardPage({
                 </option>
               ))}
             </select>
-          </div>
-          <div>
-            <FieldLabel>Arşiv</FieldLabel>
-            <select name="archived" defaultValue={archivedFilter} className={`${filterFieldClass} w-40`}>
+          </FilterChip>
+
+          <FilterChip label="Arşiv">
+            <select name="archived" defaultValue={archivedFilter} className={filterSelectClass}>
               <option value="no">Arşivlenmemiş</option>
               <option value="yes">Arşivlenmiş</option>
-              <option value="all">Tümü (arşiv dahil)</option>
+              <option value="all">Tümü</option>
             </select>
-          </div>
-          <div>
-            <FieldLabel>Müşteri Linki</FieldLabel>
-            <select name="linkActive" defaultValue={searchParams.linkActive ?? ""} className={`${filterFieldClass} w-36`}>
+          </FilterChip>
+
+          <FilterChip label="Müşteri Linki">
+            <select name="linkActive" defaultValue={searchParams.linkActive ?? ""} className={filterSelectClass}>
               <option value="">Tümü</option>
               <option value="yes">Aktif</option>
               <option value="no">Pasif</option>
             </select>
-          </div>
-          <div>
-            <FieldLabel>Aksiyon</FieldLabel>
-            <select name="action" defaultValue={searchParams.action ?? ""} className={`${filterFieldClass} w-40`}>
+          </FilterChip>
+
+          <FilterChip label="Aksiyon">
+            <select name="action" defaultValue={searchParams.action ?? ""} className={filterSelectClass}>
               <option value="">Tümü</option>
-              <option value="ours">Aksiyon Bizde</option>
+              <option value="ours">Bizde</option>
               <option value="customer">Müşteride</option>
             </select>
-          </div>
-          <div>
-            <FieldLabel>Kapanış Tarihi</FieldLabel>
-            <select name="closeDate" defaultValue={searchParams.closeDate ?? ""} className={`${filterFieldClass} w-32`}>
+          </FilterChip>
+
+          <FilterChip label="Kapanış">
+            <select name="closeDate" defaultValue={searchParams.closeDate ?? ""} className={filterSelectClass}>
               {DATE_RANGE_PRESETS.map((preset) => (
                 <option key={preset.value} value={preset.value}>
                   {preset.label}
                 </option>
               ))}
             </select>
-          </div>
-          <div>
-            <FieldLabel>Oluşturma Tarihi</FieldLabel>
-            <select name="createdDate" defaultValue={searchParams.createdDate ?? ""} className={`${filterFieldClass} w-32`}>
+          </FilterChip>
+
+          <FilterChip label="Oluşturma">
+            <select name="createdDate" defaultValue={searchParams.createdDate ?? ""} className={filterSelectClass}>
               {DATE_RANGE_PRESETS.map((preset) => (
                 <option key={preset.value} value={preset.value}>
                   {preset.label}
                 </option>
               ))}
             </select>
-          </div>
-          <button className={buttonPrimaryClass}>Filtrele</button>
+          </FilterChip>
+
+          <button className={`${buttonPrimaryClass} ml-1`}>Filtrele</button>
           {hasActiveFilters && (
             <Link href="/presales/admin" className={buttonSecondaryClass}>
               Temizle
             </Link>
           )}
-          <span className="ml-auto self-center text-xs text-text-muted">
+          <span className="ml-auto self-center text-[11px] font-medium uppercase tracking-wide text-text-muted/70">
             {filteredJourneys.length} / {journeys.length} journey
           </span>
         </form>
