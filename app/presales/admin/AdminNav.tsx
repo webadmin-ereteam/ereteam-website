@@ -16,7 +16,7 @@ import {
 import { logoutAdmin } from "@/lib/presales/sessionActions";
 
 const JOURNEY_NAV_ITEMS = [
-  { href: "/presales/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/presales/admin", label: "Kontrol Paneli", icon: LayoutDashboard, exact: true },
   { href: "/presales/admin/prospects/new", label: "Yeni Prospect", icon: UserPlus },
 ];
 

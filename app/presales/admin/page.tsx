@@ -6,8 +6,15 @@ import { isJourneyLinkActive } from "@/lib/presales/journeyLink";
 import { JOURNEY_STATUSES, JOURNEY_STATUS_LABELS } from "@/lib/presales/journeyStatus";
 import { DATE_RANGE_PRESETS, resolveDateRangePreset } from "@/lib/presales/dateRangePresets";
 import { formatDisplayDate } from "@/lib/presales/formatDate";
-import { Card, PageHeader, buttonPrimaryClass, buttonSecondaryClass, inputClass } from "../_components/ui";
+import { Card, PageHeader, FieldLabel, buttonPrimaryClass, buttonSecondaryClass } from "../_components/ui";
 import { JourneyListWithSelection, type JourneyRow } from "./JourneyListWithSelection";
+
+// Lighter, flatter than the site-wide `inputClass` (no shadow/ring glow, a
+// thinner near-invisible border) — scoped to just this filter bar rather
+// than changing `inputClass` itself, which every other form in the admin
+// also uses.
+const filterFieldClass =
+  "rounded-lg border border-gray-200/70 bg-white px-3 py-2 text-sm text-text-body transition-colors focus:border-brand-primary focus:outline-none";
 
 function StatCard({
   icon: Icon,
@@ -119,7 +126,7 @@ export default async function AdminDashboardPage({
   return (
     <div>
       <PageHeader
-        title="Dashboard"
+        title="Kontrol Paneli"
         description="Tüm presales journey'lerine buradan göz atabilirsin."
         action={
           <Link href="/presales/admin/prospects/new" className={buttonPrimaryClass}>
@@ -136,20 +143,20 @@ export default async function AdminDashboardPage({
         <StatCard icon={XCircle} value={lostCount} label="Kaybedilen" tint="bg-gray-100 text-gray-500" />
       </div>
 
-      <Card className="mb-6">
-        <form method="get" className="flex flex-wrap items-end gap-3">
+      <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-5">
+        <form method="get" className="flex flex-wrap items-end gap-x-5 gap-y-4">
           <div>
-            <label className="mb-1 block text-xs text-text-muted">Ara</label>
+            <FieldLabel>Ara</FieldLabel>
             <input
               name="q"
               defaultValue={searchParams.q ?? ""}
               placeholder="Şirket, kişi veya e-posta"
-              className={`${inputClass} w-64`}
+              className={`${filterFieldClass} w-64`}
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-text-muted">Durum</label>
-            <select name="status" defaultValue={searchParams.status ?? ""} className={`${inputClass} w-36`}>
+            <FieldLabel>Durum</FieldLabel>
+            <select name="status" defaultValue={searchParams.status ?? ""} className={`${filterFieldClass} w-36`}>
               <option value="">Tümü</option>
               {JOURNEY_STATUSES.map((s) => (
                 <option key={s} value={s}>
@@ -159,8 +166,8 @@ export default async function AdminDashboardPage({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-text-muted">Satışçı</label>
-            <select name="salesRepId" defaultValue={searchParams.salesRepId ?? ""} className={`${inputClass} w-48`}>
+            <FieldLabel>Satışçı</FieldLabel>
+            <select name="salesRepId" defaultValue={searchParams.salesRepId ?? ""} className={`${filterFieldClass} w-48`}>
               <option value="">Tümü</option>
               {salesReps.map((rep) => (
                 <option key={rep.id} value={rep.id}>
@@ -170,8 +177,8 @@ export default async function AdminDashboardPage({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-text-muted">Ürün / Uzmanlık</label>
-            <select name="productId" defaultValue={searchParams.productId ?? ""} className={`${inputClass} w-48`}>
+            <FieldLabel>Ürün / Uzmanlık</FieldLabel>
+            <select name="productId" defaultValue={searchParams.productId ?? ""} className={`${filterFieldClass} w-48`}>
               <option value="">Tümü</option>
               {products.map((product) => (
                 <option key={product.id} value={product.id}>
@@ -181,32 +188,32 @@ export default async function AdminDashboardPage({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-text-muted">Arşiv</label>
-            <select name="archived" defaultValue={archivedFilter} className={`${inputClass} w-40`}>
+            <FieldLabel>Arşiv</FieldLabel>
+            <select name="archived" defaultValue={archivedFilter} className={`${filterFieldClass} w-40`}>
               <option value="no">Arşivlenmemiş</option>
               <option value="yes">Arşivlenmiş</option>
               <option value="all">Tümü (arşiv dahil)</option>
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-text-muted">Müşteri Linki</label>
-            <select name="linkActive" defaultValue={searchParams.linkActive ?? ""} className={`${inputClass} w-36`}>
+            <FieldLabel>Müşteri Linki</FieldLabel>
+            <select name="linkActive" defaultValue={searchParams.linkActive ?? ""} className={`${filterFieldClass} w-36`}>
               <option value="">Tümü</option>
               <option value="yes">Aktif</option>
               <option value="no">Pasif</option>
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-text-muted">Aksiyon</label>
-            <select name="action" defaultValue={searchParams.action ?? ""} className={`${inputClass} w-40`}>
+            <FieldLabel>Aksiyon</FieldLabel>
+            <select name="action" defaultValue={searchParams.action ?? ""} className={`${filterFieldClass} w-40`}>
               <option value="">Tümü</option>
               <option value="ours">Aksiyon Bizde</option>
               <option value="customer">Müşteride</option>
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-text-muted">Kapanış Tarihi</label>
-            <select name="closeDate" defaultValue={searchParams.closeDate ?? ""} className={`${inputClass} w-32`}>
+            <FieldLabel>Kapanış Tarihi</FieldLabel>
+            <select name="closeDate" defaultValue={searchParams.closeDate ?? ""} className={`${filterFieldClass} w-32`}>
               {DATE_RANGE_PRESETS.map((preset) => (
                 <option key={preset.value} value={preset.value}>
                   {preset.label}
@@ -215,8 +222,8 @@ export default async function AdminDashboardPage({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-text-muted">Oluşturma Tarihi</label>
-            <select name="createdDate" defaultValue={searchParams.createdDate ?? ""} className={`${inputClass} w-32`}>
+            <FieldLabel>Oluşturma Tarihi</FieldLabel>
+            <select name="createdDate" defaultValue={searchParams.createdDate ?? ""} className={`${filterFieldClass} w-32`}>
               {DATE_RANGE_PRESETS.map((preset) => (
                 <option key={preset.value} value={preset.value}>
                   {preset.label}
@@ -234,7 +241,7 @@ export default async function AdminDashboardPage({
             {filteredJourneys.length} / {journeys.length} journey
           </span>
         </form>
-      </Card>
+      </div>
 
       {journeys.length === 0 && (
         <Card className="text-center text-text-muted">

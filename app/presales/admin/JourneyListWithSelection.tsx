@@ -20,13 +20,6 @@ const STATUS_BADGE: Record<string, "blue" | "green" | "amber" | "gray"> = {
   paused: "amber",
 };
 
-const STATUS_ACCENT: Record<string, string> = {
-  active: "bg-brand-primary",
-  won: "bg-emerald-500",
-  lost: "bg-gray-300",
-  paused: "bg-amber-400",
-};
-
 function initials(name: string) {
   return name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 }
@@ -247,12 +240,7 @@ export function JourneyListWithSelection({
 
       {journeys.map((journey) => (
         <Link key={journey.id} href={`/presales/admin/journeys/${journey.id}`} className="block">
-          <Card className="relative overflow-hidden pl-10 transition-all hover:-translate-y-0.5 hover:shadow-md">
-            <span
-              className={`absolute inset-y-0 left-0 w-1 ${
-                journey.archived ? "bg-gray-300" : STATUS_ACCENT[journey.status] ?? "bg-gray-200"
-              }`}
-            />
+          <div className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-6 pl-9 transition-colors hover:border-gray-200">
             <input
               type="checkbox"
               checked={selected.has(journey.id)}
@@ -302,7 +290,7 @@ export function JourneyListWithSelection({
                 <ArrowRight size={16} className="text-gray-300" />
               </div>
             </div>
-            <div className="mt-3 flex items-center gap-4 border-t border-gray-100 pt-3 text-xs text-text-muted">
+            <div className="mt-4 flex items-center gap-4 text-xs text-text-muted">
               <span className="flex items-center gap-1.5">
                 <UserRound size={13} />
                 {journey.contactName}
@@ -344,7 +332,7 @@ export function JourneyListWithSelection({
                 </button>
               </span>
             </div>
-          </Card>
+          </div>
         </Link>
       ))}
     </div>
