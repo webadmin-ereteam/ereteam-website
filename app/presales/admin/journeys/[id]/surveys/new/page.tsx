@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/presales/db";
 import { createSurveyInstance } from "@/lib/presales/adminActions";
+import { findCurrentStage } from "@/lib/presales/stageProgress";
 import { Card, PageHeader, inputClass, labelClass, buttonPrimaryClass, buttonSecondaryClass } from "../../../../../_components/ui";
 import { SubmitButton } from "../../../../../_components/SubmitButton";
 import { QuestionListEditor, type QuestionDraft } from "../../../../../_components/QuestionListEditor";
@@ -20,7 +21,25 @@ export default async function NewSurveyPage({
     orderBy: { order: "asc" },
   });
 
-  const selectedStageId = searchParams.stageId ?? stages[0]?.id;
+  // Reached without a `?stageId=` — via the "Anketler" tab's generic "+ Yeni
+  // Anket" button, not the stage-specific "Anket Oluştur" link on Genel
+  // Bakış — used to silently default to `stages[0]`, i.e. always the
+  // *first* surveys-enabled stage in the whole flow, regardless of which
+  // stage the case is actually on. An admin who didn't separately notice
+  // and correct the "Aşama" dropdown before submitting would get a real
+  // survey (and its answers) attached to the wrong stage — the case's
+  // actual current stage never got a survey, so it never had anything to
+  // auto-advance on. Defaulting to the current stage instead (when it's a
+  // surveys-enabled one) is what an admin creating a new survey almost
+  // always means.
+  const allActiveStages = await prisma.journeyStage.findMany({
+    where: { journeyId: params.id, isActive: true },
+    orderBy: { order: "asc" },
+  });
+  const currentStage = findCurrentStage(allActiveStages);
+  const currentStageTakesSurveys = !!currentStage && stages.some((s) => s.id === currentStage.id);
+
+  const selectedStageId = searchParams.stageId ?? (currentStageTakesSurveys ? currentStage!.id : stages[0]?.id);
   const selectedStage = selectedStageId ? stages.find((s) => s.id === selectedStageId) : null;
 
   const templates = await prisma.surveyTemplate.findMany({ orderBy: { name: "asc" } });

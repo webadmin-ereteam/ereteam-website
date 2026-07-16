@@ -278,7 +278,19 @@ stage (only stages with `surveysEnabled` show up) and optionally load a
 `status: "draft"`. Saving redirects to the case's **Anketler** tab, not back
 to Genel Bakış — that list shows every survey for the case with the "Gönder"
 button right on it, so the draft just built is immediately there to send
-instead of requiring a click back into it.
+instead of requiring a click back into it. The "Aşama" selector defaults to
+the case's actual **current stage** (`findCurrentStage`) when reached without
+a `?stageId=` — as from the "Anketler" tab's generic "+ Yeni Anket" button —
+falling back to the first surveys-enabled stage only if the current stage
+doesn't take surveys. This used to default to `stages[0]` unconditionally,
+i.e. always the *first* surveys-enabled stage regardless of where the case
+actually was; a real journey hit this — a survey meant for "Teknik Demo
+Soruları" got silently created under "İlk Anket" instead, which meant that
+survey's completion never auto-advanced the stage it was actually answering
+(its stage's own auto-advance check only ever looks at surveys attached to
+*that* stageId) and "Teknik Demo Soruları" itself never got the answers
+associated with it. The "Anket Oluştur" link on Genel Bakış was never
+affected — it always passed `?stageId=${currentStage.id}` explicitly.
 
 **Survey authoring** (`QuestionListEditor.tsx`, shared by "Anket Şablonları",
 template editing, and the per-case survey builder):
@@ -628,6 +640,18 @@ into the Groq system prompt, and explicitly instructs the model to answer only f
 that data and say "I don't have that" otherwise (`app/api/presales/admin/chat/route.ts`).
 It reuses the same `generateChatResponse` helper the marketing site's chat already
 uses — no new LLM integration, just a different context builder and system prompt.
+Two correctness fixes to `buildAdminChatContext()` worth knowing about: a
+`file_upload` answer's `SurveyResponse.answerText` is the raw Google Drive
+file id (that's what the customer-facing submit flow writes there) — showing
+that to the model is meaningless, so it's resolved through the linked
+`Document` row (`SurveyResponse.document`) to the file's real title instead.
+And a `Document`'s listing includes which stage it belongs to, since two
+documents can end up with the identical auto-generated title (two completed
+surveys both literally named "İlk Anket Soruları" each export an
+"İlk-Anket-Soruları-cevaplari.xlsx") — the stage name is what actually tells
+them apart. `multi_choice` answers are also joined into plain
+comma-separated text instead of raw `JSON.stringify` output, and stage/
+document `notes` (admin-only free text) are included when present.
 
 ## Email delivery: Gmail SMTP, not Resend
 

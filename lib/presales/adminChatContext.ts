@@ -1,7 +1,33 @@
 import { prisma } from "@/lib/presales/db";
+import { Prisma } from "@/lib/generated/prisma/client";
 
 const MAX_JOURNEYS = 150;
 const MAX_ANSWER_CHARS = 400;
+
+type SelectionWithResponse = Prisma.SurveyQuestionSelectionGetPayload<{
+  include: { response: { include: { document: true } } };
+}>;
+
+// `SurveyResponse.answerText` holds the raw Google Drive file id for a
+// file_upload answer (that's what the customer-facing submit flow writes) —
+// showing that id to the assistant is meaningless. The uploaded file's real
+// title lives on the linked `Document` row instead (joined via
+// `SurveyResponse.document`), so that's what a file_upload question
+// resolves to here.
+function formatAnswer(sel: SelectionWithResponse): string {
+  if (!sel.response) return "(henüz cevaplanmadı)";
+
+  if (sel.type === "file_upload") {
+    return sel.response.document ? `Dosya yüklendi: ${sel.response.document.title}` : "(dosya kaydı bulunamadı)";
+  }
+
+  if (sel.type === "multi_choice" && Array.isArray(sel.response.answerJson)) {
+    return (sel.response.answerJson as unknown[]).map(String).join(", ") || "(henüz cevaplanmadı)";
+  }
+
+  const raw = sel.response.answerText ?? (sel.response.answerJson ? JSON.stringify(sel.response.answerJson) : null);
+  return raw ? raw.slice(0, MAX_ANSWER_CHARS) : "(henüz cevaplanmadı)";
+}
 
 export async function buildAdminChatContext(): Promise<string> {
   const journeys = await prisma.journey.findMany({
@@ -15,11 +41,11 @@ export async function buildAdminChatContext(): Promise<string> {
       surveyInstances: {
         include: {
           stage: true,
-          selections: { include: { response: true }, orderBy: { order: "asc" } },
+          selections: { include: { response: { include: { document: true } } }, orderBy: { order: "asc" } },
         },
         orderBy: { createdAt: "asc" },
       },
-      documents: true,
+      documents: { include: { stage: true } },
     },
   });
 
@@ -43,23 +69,31 @@ export async function buildAdminChatContext(): Promise<string> {
 
     lines.push("Aşamalar:");
     for (const stage of journey.stages) {
-      lines.push(`  - ${stage.name}: durum=${stage.status}${stage.isActive ? "" : " (bu case'te gizli)"}`);
+      lines.push(
+        `  - ${stage.name}: durum=${stage.status}${stage.isActive ? "" : " (bu case'te gizli)"}${
+          stage.notes ? ` — not: ${stage.notes}` : ""
+        }`
+      );
     }
 
     for (const survey of journey.surveyInstances) {
       lines.push(`Anket "${survey.title}" (aşama: ${survey.stage.name}, durum: ${survey.status}):`);
       for (const sel of survey.selections) {
-        const raw = sel.response?.answerText ?? (sel.response?.answerJson ? JSON.stringify(sel.response.answerJson) : null);
-        const answer = raw ? raw.slice(0, MAX_ANSWER_CHARS) : null;
         lines.push(`  - Soru: ${sel.text}`);
-        lines.push(`    Cevap: ${answer ?? "(henüz cevaplanmadı)"}`);
+        lines.push(`    Cevap: ${formatAnswer(sel)}`);
       }
     }
 
     if (journey.documents.length > 0) {
       lines.push("Yüklenen belgeler:");
       for (const doc of journey.documents) {
-        lines.push(`  - [${doc.type}] ${doc.title}`);
+        // Multiple documents can share the exact same auto-generated title
+        // (e.g. two completed surveys both named "İlk Anket Soruları" each
+        // export a "İlk-Anket-Soruları-cevaplari.xlsx") — the stage name is
+        // what actually tells them apart.
+        const stageSuffix = doc.stage ? ` (aşama: ${doc.stage.name})` : "";
+        const noteSuffix = doc.notes ? ` — not: ${doc.notes}` : "";
+        lines.push(`  - [${doc.type}] ${doc.title}${stageSuffix}${noteSuffix}`);
       }
     }
 
