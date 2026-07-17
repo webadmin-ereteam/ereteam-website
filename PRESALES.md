@@ -315,7 +315,13 @@ template editing, and the per-case survey builder):
 - Bulk authoring via Excel: "Örnek Excel İndir" generates a sample workbook
   client-side (SheetJS), "Excel'den Yükle" parses one back into the question
   list. (Bulk import doesn't support flagging "Diğer" or conditions — those are
-  editor-only touches after import.)
+  editor-only touches after import.) "Soruları Excel'e Aktar" is the reverse
+  direction — exports the editor's *current* question list (not a sample) in
+  the exact same column shape "Excel'den Yükle" reads, so a template (or a
+  survey being built) can be pulled out, edited, and re-imported. It reads
+  only live in-memory state, so it works identically everywhere
+  `QuestionListEditor` is used; each call site passes an `exportFileNameHint`
+  (the template/survey name) to name the downloaded file.
 - Once sent, a survey's questions are frozen — only answers can be viewed after that.
 
 **Answering a survey / documenting the result**: customer fills the (conditional,
@@ -326,6 +332,19 @@ into the journey's Drive folder as a `survey_export` Document. Anyone (admin on
 the results page, or the customer on their own "Cevaplarımı Gör" page) can also
 pull that same Excel on demand via an "Excel İndir" button, independent of the
 auto-archived copy.
+
+The two on-demand "Excel İndir" API routes (`.../surveys/[surveyId]/export`,
+admin and public) used to **fail outright** — not just show a mangled name —
+for essentially every real Turkish survey title. `Content-Disposition:
+attachment; filename="..."` is a raw HTTP header value, and `ı`/`ğ`/`ş`/`İ`
+(routine in Turkish — "sorular**ı**" alone triggers it) sit outside Latin-1,
+so `new Response()` threw `Cannot convert argument to a ByteString` while
+constructing the response, before any bytes were ever sent. Fixed by
+`contentDispositionHeader()` in `lib/presales/surveyExcel.ts`, which emits
+both an ASCII-safe `filename="..."` fallback and the RFC 5987
+`filename*=UTF-8''<percent-encoded>` form browsers actually use — same
+pattern that already made the Drive upload path safe for Turkish characters,
+just applied to an HTTP header instead of a Drive API field.
 
 **Saving a survey as a draft** (`saveSurveyDraft` in `app/presales/j/[token]/actions.ts`):
 a second button, "Taslağı Kaydet", sits next to "Gönder" on every pending

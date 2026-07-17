@@ -51,7 +51,7 @@ export default async function SurveyTemplateEditorPage({ params }: { params: { i
       <Card>
         <h2 className="mb-4 text-base font-semibold text-brand-dark">Sorular</h2>
         <form action={updateSurveyTemplate.bind(null, template!.id)} className="space-y-4">
-          <QuestionListEditor initialQuestions={initialQuestions} />
+          <QuestionListEditor initialQuestions={initialQuestions} exportFileNameHint={template!.name} />
           <SubmitButton className={buttonPrimaryClass} pendingLabel="Kaydediliyor...">
             Soruları Kaydet
           </SubmitButton>

@@ -115,6 +115,35 @@ function downloadSampleWorkbook() {
   XLSX.writeFile(workbook, "anket-sablonu-ornek.xlsx");
 }
 
+// Exports the *current* question list as-is (not a generic sample) — same
+// column shape "Excel'den Yükle" reads back, so a template/survey can be
+// pulled out, edited in Excel, and re-imported. Works identically wherever
+// this editor is used (templates, a per-case survey being built) since it
+// only reads the live in-memory `questions` state, nothing saved server-side.
+function downloadQuestionsWorkbook(questions: EditorQuestion[], fileNameHint?: string) {
+  const rows = questions
+    .filter((q) => q.text.trim())
+    .map((q) => ({
+      Soru: q.text,
+      Tür: QUESTION_TYPES.find((t) => t.value === q.type)?.label ?? q.type,
+      Seçenekler: q.options.map((o) => o.text.trim()).filter(Boolean).join(";"),
+      Zorunlu: q.required ? "evet" : "hayır",
+    }));
+
+  const sheet = XLSX.utils.json_to_sheet(rows, { header: [...EXCEL_HEADERS] });
+  sheet["!cols"] = [{ wch: 40 }, { wch: 14 }, { wch: 30 }, { wch: 10 }];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, sheet, "Sorular");
+
+  const safeName =
+    (fileNameHint ?? "anket-sorulari")
+      .replace(/[^a-zA-Z0-9ığüşöçİĞÜŞÖÇ\s-]/g, "")
+      .trim()
+      .replace(/\s+/g, "-") || "anket-sorulari";
+  XLSX.writeFile(workbook, `${safeName}.xlsx`);
+}
+
 async function parseWorkbookFile(file: File): Promise<QuestionDraft[]> {
   const buffer = await file.arrayBuffer();
   const workbook = XLSX.read(buffer, { type: "array" });
@@ -151,7 +180,15 @@ async function parseWorkbookFile(file: File): Promise<QuestionDraft[]> {
   return questions;
 }
 
-export function QuestionListEditor({ initialQuestions }: { initialQuestions?: QuestionDraft[] }) {
+export function QuestionListEditor({
+  initialQuestions,
+  exportFileNameHint,
+}: {
+  initialQuestions?: QuestionDraft[];
+  // Used to name the file when exporting the current question list — the
+  // template or survey title, when the call site has one on hand.
+  exportFileNameHint?: string;
+}) {
   const [questions, setQuestions] = useState<EditorQuestion[]>(() =>
     initialQuestions && initialQuestions.length > 0 ? toEditorQuestions(initialQuestions) : [emptyQuestion()]
   );
@@ -230,7 +267,17 @@ export function QuestionListEditor({ initialQuestions }: { initialQuestions?: Qu
       <input type="hidden" name="questionCount" value={questions.length} />
 
       <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50/60 p-3">
-        <span className="mr-1 text-xs text-text-muted">Soruları Excel ile toplu ekle:</span>
+        <span className="mr-1 text-xs text-text-muted">Excel:</span>
+        <button
+          type="button"
+          onClick={() => downloadQuestionsWorkbook(questions, exportFileNameHint)}
+          disabled={!questions.some((q) => q.text.trim())}
+          className={`${buttonSecondaryClass} disabled:cursor-not-allowed disabled:opacity-50`}
+        >
+          <Download size={14} className="mr-1.5" /> Soruları Excel&apos;e Aktar
+        </button>
+        <span className="mx-1 h-4 w-px bg-gray-300" aria-hidden />
+        <span className="mr-1 text-xs text-text-muted">Toplu ekle:</span>
         <button type="button" onClick={downloadSampleWorkbook} className={buttonSecondaryClass}>
           <Download size={14} className="mr-1.5" /> Örnek Excel İndir
         </button>

@@ -121,6 +121,7 @@ export default async function NewSurveyPage({
                   conditionValues: (item.conditionValues as string[] | null) ?? [],
                 })
               )}
+              exportFileNameHint={selectedTemplate ? selectedTemplate.name : `${selectedStage.name} Anketi`}
             />
 
             <SubmitButton className={buttonPrimaryClass} pendingLabel="Oluşturuluyor...">
