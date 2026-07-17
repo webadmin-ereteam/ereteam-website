@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/presales/db";
+import { Prisma } from "@/lib/generated/prisma/client";
 import { generateAccessToken } from "@/lib/presales/tokens";
 import { uploadFileToDrive, copyExistingDriveFile, extractDriveFileId, uploadLogoToDrive, trashDriveFile } from "@/lib/presales/drive";
 import { findCurrentStage } from "@/lib/presales/stageProgress";
@@ -699,6 +700,35 @@ export async function createSurveyTemplate(formData: FormData) {
   const template = await prisma.surveyTemplate.create({ data: { name } });
   revalidatePath("/presales/admin/survey-templates");
   redirect(`/presales/admin/survey-templates/${template.id}`);
+}
+
+// Mirrors duplicateStageTemplate — same fixed "(kopya)" suffix rather than a
+// counter, so duplicating the same template repeatedly just keeps stacking
+// "(kopya) (kopya)"; nothing currently enforces unique template names (no
+// DB constraint), this is purely so two templates never look identical in
+// the list by accident.
+export async function duplicateSurveyTemplate(id: string) {
+  const source = await prisma.surveyTemplate.findUniqueOrThrow({
+    where: { id },
+    include: { items: { orderBy: { order: "asc" } } },
+  });
+
+  const copy = await prisma.surveyTemplate.create({ data: { name: `${source.name} (kopya)` } });
+
+  await prisma.surveyTemplateItem.createMany({
+    data: source.items.map((item) => ({
+      surveyTemplateId: copy.id,
+      text: item.text,
+      type: item.type,
+      options: item.options ?? Prisma.JsonNull,
+      required: item.required,
+      order: item.order,
+      conditionOnOrder: item.conditionOnOrder,
+      conditionValues: item.conditionValues ?? Prisma.JsonNull,
+    })),
+  });
+
+  revalidatePath("/presales/admin/survey-templates");
 }
 
 export async function renameSurveyTemplate(id: string, formData: FormData) {

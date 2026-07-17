@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/presales/db";
-import { createSurveyTemplate, deleteSurveyTemplate } from "@/lib/presales/adminActions";
+import { createSurveyTemplate, duplicateSurveyTemplate, deleteSurveyTemplate } from "@/lib/presales/adminActions";
 import { Badge, Card, PageHeader, inputClass, labelClass, buttonPrimaryClass, buttonSecondaryClass } from "../../_components/ui";
 import { SubmitButton } from "../../_components/SubmitButton";
 
@@ -34,6 +34,11 @@ export default async function SurveyTemplatesAdminPage() {
                 <Link href={`/presales/admin/survey-templates/${template.id}`} className={buttonSecondaryClass}>
                   Düzenle
                 </Link>
+                <form action={duplicateSurveyTemplate.bind(null, template.id)}>
+                  <SubmitButton className={buttonSecondaryClass} pendingLabel="Çoğaltılıyor...">
+                    Çoğalt
+                  </SubmitButton>
+                </form>
                 <form action={deleteSurveyTemplate.bind(null, template.id)}>
                   <SubmitButton className={buttonSecondaryClass} pendingLabel="Siliniyor...">
                     Sil

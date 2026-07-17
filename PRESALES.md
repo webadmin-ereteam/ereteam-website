@@ -270,7 +270,13 @@ stage templates — the list page's "Yeni Şablon Oluştur" only asks for a name
 dedicated editor at `survey-templates/[id]` where the actual question editor
 lives. Editing later reopens that same page (`renameSurveyTemplate` for the
 name field, `updateSurveyTemplate` for the question list) — the list page
-itself never shows a question editor inline anymore.
+itself never shows a question editor inline anymore. "Çoğalt"
+(`duplicateSurveyTemplate`) clones a template and all its questions under
+`"<isim> (kopya)"` — same fixed-suffix convention as `duplicateStageTemplate`
+for stage templates, not a counter, so duplicating the same template twice
+stacks `"(kopya) (kopya)"`. Nothing enforces unique template names at the DB
+level; this exists purely so two templates never look identical in the list
+by accident.
 
 **Creating a per-case survey** (`surveys/new`, `createSurveyInstance`): pick a
 stage (only stages with `surveysEnabled` show up) and optionally load a
