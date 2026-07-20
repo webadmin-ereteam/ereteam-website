@@ -982,6 +982,14 @@ export async function setProductActive(id: string, isActive: boolean) {
   revalidatePath("/presales/admin/products");
 }
 
+export async function deleteProduct(id: string) {
+  // Journey.productId -> Product has ON DELETE SET NULL, so any case currently
+  // assigned to this product is simply left unassigned rather than blocking
+  // deletion — mirrors deleteSalesRep.
+  await prisma.product.delete({ where: { id } });
+  revalidatePath("/presales/admin/products");
+}
+
 export async function assignProduct(journeyId: string, formData: FormData) {
   const existing = await prisma.journey.findUnique({ where: { id: journeyId }, select: { productId: true } });
   if (existing?.productId) {

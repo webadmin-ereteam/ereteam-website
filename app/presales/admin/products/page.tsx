@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/presales/db";
-import { setProductActive } from "@/lib/presales/adminActions";
+import { setProductActive, deleteProduct } from "@/lib/presales/adminActions";
 import { Badge, Card, PageHeader, buttonSecondaryClass } from "../../_components/ui";
+import { SubmitButton } from "../../_components/SubmitButton";
 import { NewProductForm } from "./NewProductForm";
 
 export default async function ProductsAdminPage() {
@@ -24,6 +25,11 @@ export default async function ProductsAdminPage() {
               {!product.isActive && <Badge color="gray">pasif</Badge>}
               <form action={setProductActive.bind(null, product.id, !product.isActive)}>
                 <button className={buttonSecondaryClass}>{product.isActive ? "Pasifleştir" : "Aktifleştir"}</button>
+              </form>
+              <form action={deleteProduct.bind(null, product.id)}>
+                <SubmitButton className={buttonSecondaryClass} pendingLabel="Siliniyor...">
+                  Sil
+                </SubmitButton>
               </form>
             </div>
           </Card>
