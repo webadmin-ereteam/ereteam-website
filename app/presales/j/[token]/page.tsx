@@ -159,22 +159,20 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
                 "radial-gradient(circle at 96% 8%, rgba(233,30,140,0.3) 0, transparent 42%), radial-gradient(circle at 6% 100%, rgba(255,255,255,0.08) 0, transparent 35%)",
             }}
           />
-          {/* Ereteam's own mark — a quiet corner badge on the hero itself
-              rather than a separate row competing with it for attention.
-              Same glass-pill treatment as the no-logo company badge below,
-              so it reads as part of the hero's own visual language instead
-              of a bolted-on header bar. Hidden below `sm` — there's no room
-              for it once the hero wraps to two lines on a phone, and it's
-              decorative, not information the customer needs. */}
-          <div className="absolute right-6 top-6 hidden items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 ring-1 ring-inset ring-white/15 backdrop-blur-sm sm:right-10 sm:top-8 sm:flex">
+          {/* Ereteam's own mark — just the logo itself in the corner, no pill,
+              no label, so it reads as a quiet watermark on the hero rather
+              than a second badge competing with the company one below.
+              Hidden below `sm` — there's no room for it once the hero wraps
+              to two lines on a phone, and it's decorative, not information
+              the customer needs. */}
+          <div className="absolute right-6 top-6 hidden sm:right-10 sm:top-8 sm:block">
             <Image
               src="/logos/ereteam-logo.png"
               alt=""
               width={175}
               height={100}
-              className="h-3 w-auto object-contain brightness-0 invert opacity-80"
+              className="h-9 w-auto object-contain brightness-0 invert"
             />
-            <span className="text-[9px] font-medium uppercase tracking-wider text-white/50">Presales</span>
           </div>
           <div className="relative px-6 py-8 text-white sm:px-10 sm:py-14">
             <div className="flex flex-wrap items-center justify-between gap-5">
