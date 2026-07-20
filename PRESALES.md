@@ -62,6 +62,14 @@ documents with real foreign keys), which fits Postgres, not schemaless documents
   position on the customer page — see "Company logo" below.
 - `SalesRep` — internal reps, assignable to a journey; customer sees their contact
   card when assigned.
+- `TechnicalLead` — mirrors `SalesRep` exactly (same CRUD at `/presales/admin/technical-leads`,
+  same optional `technicalLeadId` on `Journey`, reassignable any time from Ayarlar)
+  but is **never shown to the customer**. Its only purpose is a second, silent
+  notification target: when a survey is completed, `notifyTechnicalLead` (in
+  `notify.ts`) emails them the raw answers as an Excel attachment — the same
+  buffer built for the Drive archive in `j/[token]/actions.ts` — instead of the
+  "view journey" link `notifySalesRep` sends, since a technical lead isn't
+  expected to log into the admin tool.
 - `Product` — a product/expertise area (e.g. "Financial Performance & Intelligence"),
   assignable to a journey the same way; customer sees it next to the sales rep.
 - `Journey` — one presales case for one prospect. Holds the no-login `accessToken`,

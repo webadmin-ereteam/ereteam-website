@@ -24,6 +24,7 @@ export async function createProspectAndJourney(formData: FormData) {
   const contactPhone = String(formData.get("contactPhone") ?? "").trim() || null;
   const salesRepId = String(formData.get("salesRepId") ?? "").trim() || null;
   const productId = String(formData.get("productId") ?? "").trim() || null;
+  const technicalLeadId = String(formData.get("technicalLeadId") ?? "").trim() || null;
   const stageTemplateId = String(formData.get("stageTemplateId") ?? "").trim();
 
   if (!companyName || !contactName || !contactEmail) {
@@ -68,7 +69,15 @@ export async function createProspectAndJourney(formData: FormData) {
   const name = `${companyName} - ${product?.name ?? "Ürün atanmadı"} - ${formatJourneyDate(createdAt)}`;
 
   const journey = await prisma.journey.create({
-    data: { prospectId: prospect.id, accessToken: generateAccessToken(), salesRepId, productId, name, createdAt },
+    data: {
+      prospectId: prospect.id,
+      accessToken: generateAccessToken(),
+      salesRepId,
+      productId,
+      technicalLeadId,
+      name,
+      createdAt,
+    },
   });
 
   const journeyStages: { id: string }[] = [];
@@ -987,6 +996,57 @@ export async function deleteSalesRep(id: string) {
   // assigned to this rep is simply left unassigned rather than blocking deletion.
   await prisma.salesRep.delete({ where: { id } });
   revalidatePath("/presales/admin/sales-reps");
+}
+
+// --- Technical leads (mirrors sales reps exactly — see TechnicalLead in
+// schema.prisma for why this is a separate, customer-invisible role) ---
+
+export async function createTechnicalLead(formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim() || null;
+  const title = String(formData.get("title") ?? "").trim() || null;
+
+  if (!name || !email) {
+    throw new Error("Ad ve e-posta zorunludur.");
+  }
+
+  await prisma.technicalLead.create({ data: { name, email, phone, title } });
+  revalidatePath("/presales/admin/technical-leads");
+}
+
+export async function setTechnicalLeadActive(id: string, isActive: boolean) {
+  await prisma.technicalLead.update({ where: { id }, data: { isActive } });
+  revalidatePath("/presales/admin/technical-leads");
+}
+
+export async function updateTechnicalLead(id: string, formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim() || null;
+  const title = String(formData.get("title") ?? "").trim() || null;
+
+  if (!name || !email) {
+    throw new Error("Ad ve e-posta zorunludur.");
+  }
+
+  await prisma.technicalLead.update({ where: { id }, data: { name, email, phone, title } });
+  revalidatePath("/presales/admin/technical-leads");
+  revalidatePath("/presales/admin");
+}
+
+export async function deleteTechnicalLead(id: string) {
+  // Journey.technicalLeadId -> TechnicalLead has ON DELETE SET NULL, same as
+  // deleteSalesRep — any case currently assigned is simply left unassigned.
+  await prisma.technicalLead.delete({ where: { id } });
+  revalidatePath("/presales/admin/technical-leads");
+}
+
+export async function assignTechnicalLead(journeyId: string, formData: FormData) {
+  const technicalLeadId = String(formData.get("technicalLeadId") ?? "").trim() || null;
+  await prisma.journey.update({ where: { id: journeyId }, data: { technicalLeadId } });
+  revalidatePath(`/presales/admin/journeys/${journeyId}`);
+  revalidatePath("/presales/admin");
 }
 
 // --- Products / expertise areas ---

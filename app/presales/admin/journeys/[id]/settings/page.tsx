@@ -3,6 +3,7 @@ import { ExternalLink } from "lucide-react";
 import { prisma } from "@/lib/presales/db";
 import {
   assignSalesRep,
+  assignTechnicalLead,
   assignProduct,
   toggleProposalRequested,
   setJourneyOutcome,
@@ -24,6 +25,7 @@ export default async function JourneySettingsTab({ params }: { params: { id: str
   if (!journey) notFound();
 
   const salesReps = await prisma.salesRep.findMany({ where: { isActive: true }, orderBy: { name: "asc" } });
+  const technicalLeads = await prisma.technicalLead.findMany({ where: { isActive: true }, orderBy: { name: "asc" } });
   const products = await prisma.product.findMany({ where: { isActive: true }, orderBy: { name: "asc" } });
   const linkActive = isJourneyLinkActive(journey!);
   const assignedProduct = journey!.productId
@@ -44,6 +46,27 @@ export default async function JourneySettingsTab({ params }: { params: { id: str
             {salesReps.map((rep) => (
               <option key={rep.id} value={rep.id}>
                 {rep.name}
+              </option>
+            ))}
+          </select>
+          <SubmitButton className={buttonSecondaryClass} pendingLabel="Atanıyor...">
+            Ata
+          </SubmitButton>
+        </form>
+      </Card>
+
+      <Card>
+        <p className="mb-2 text-sm font-medium text-brand-dark">Teknik Sorumlu</p>
+        <p className="mb-3 text-xs text-text-muted">
+          Müşteri sayfasında hiç gösterilmez. Anket tamamlandığında bu kişiye, satışçıya giden bildirimden farklı
+          olarak, cevapların Excel dosyası e-posta eki halinde gider.
+        </p>
+        <form action={assignTechnicalLead.bind(null, journey!.id)} className="flex gap-2">
+          <select name="technicalLeadId" defaultValue={journey!.technicalLeadId ?? ""} className={`${inputClass} flex-1`}>
+            <option value="">— Atanmadı —</option>
+            {technicalLeads.map((lead) => (
+              <option key={lead.id} value={lead.id}>
+                {lead.name}
               </option>
             ))}
           </select>

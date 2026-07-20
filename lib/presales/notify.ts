@@ -67,3 +67,51 @@ export async function notifySalesRep(params: {
     console.error("Sales rep notification failed:", err);
   }
 }
+
+// Technical leads never log into the admin tool, so unlike notifySalesRep
+// there's no "view journey" link here — instead the completed survey's
+// answers are attached directly as an Excel file, the same buffer/filename
+// already built for the Drive archive in j/[token]/actions.ts.
+export async function notifyTechnicalLead(params: {
+  technicalLeadEmail: string;
+  technicalLeadName: string;
+  companyName: string;
+  contactName: string;
+  surveyTitle: string;
+  attachment: { fileName: string; buffer: ArrayBuffer };
+}) {
+  const mailer = getTransport();
+  if (!mailer) {
+    console.warn("GMAIL_USER/GMAIL_APP_PASSWORD not set — skipping technical lead notification.");
+    return;
+  }
+
+  try {
+    await mailer.sendMail({
+      from: process.env.GMAIL_USER?.trim(),
+      to: params.technicalLeadEmail,
+      subject: stripNewlines(`${params.companyName} anketi tamamladı: ${params.surveyTitle}`),
+      html: `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;">
+          <h2 style="color:#1A6FA8;margin-bottom:16px;">Presales anketi tamamlandı</h2>
+          <p>Merhaba ${escapeHtml(params.technicalLeadName)},</p>
+          <p><strong>${escapeHtml(params.companyName)}</strong>, "${escapeHtml(params.surveyTitle)}" anketini tamamladı. Cevapları ekteki Excel dosyasında bulabilirsin.</p>
+          <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+            <tr><td style="padding:8px 0;color:#666;width:100px;">Şirket</td><td style="padding:8px 0;font-weight:600;">${escapeHtml(params.companyName)}</td></tr>
+            <tr><td style="padding:8px 0;color:#666;">Kişi</td><td style="padding:8px 0;">${escapeHtml(params.contactName)}</td></tr>
+          </table>
+        </div>
+      `,
+      attachments: [
+        {
+          filename: params.attachment.fileName,
+          content: Buffer.from(params.attachment.buffer),
+          contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        },
+      ],
+    });
+  } catch (err) {
+    // Notification failures must never break the customer's actual submission.
+    console.error("Technical lead notification failed:", err);
+  }
+}

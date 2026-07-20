@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/presales/db";
 import { uploadFileToDrive } from "@/lib/presales/drive";
-import { notifySalesRep } from "@/lib/presales/notify";
+import { notifySalesRep, notifyTechnicalLead } from "@/lib/presales/notify";
 import { buildSurveyExportBuffer, surveyExportFileName } from "@/lib/presales/surveyExcel";
 import { decodeOptions } from "@/lib/presales/surveyOptions";
 import { isJourneyLinkActive } from "@/lib/presales/journeyLink";
@@ -14,7 +14,7 @@ import { Prisma } from "@/lib/generated/prisma/client";
 type SurveyWithSelections = Prisma.SurveyInstanceGetPayload<{
   include: {
     selections: true;
-    journey: { include: { prospect: true; salesRep: true } };
+    journey: { include: { prospect: true; salesRep: true; technicalLead: true } };
     stage: true;
   };
 }>;
@@ -24,7 +24,7 @@ async function loadPendingSurvey(token: string, surveyInstanceId: string): Promi
     where: { id: surveyInstanceId, status: "sent", journey: { accessToken: token } },
     include: {
       selections: true,
-      journey: { include: { prospect: true, salesRep: true } },
+      journey: { include: { prospect: true, salesRep: true, technicalLead: true } },
       stage: true,
     },
   });
@@ -223,47 +223,59 @@ export async function submitSurveyResponses(
     return { nextStageName: null };
   });
 
-  // Archive the completed survey as an Excel file in the journey's Drive folder,
-  // alongside the manual "Excel İndir" download — best-effort, must never break
-  // the customer's actual submission (e.g. Drive isn't configured yet).
+  // Built once, reused for both the Drive archive and the technical lead's
+  // email attachment below — each best-effort and independent of the other,
+  // since neither may break the customer's actual submission.
+  let exportBuffer: ArrayBuffer | null = null;
+  let exportFileName: string | null = null;
   try {
     const completedSurvey = await prisma.surveyInstance.findUniqueOrThrow({
       where: { id: survey.id },
       include: { selections: { include: { response: true }, orderBy: { order: "asc" } } },
     });
-    const buffer = buildSurveyExportBuffer(completedSurvey);
-    const fileName = surveyExportFileName(completedSurvey.title);
-    const exportFile = new File([buffer], fileName, {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
-
-    const uploaded = await uploadFileToDrive({
-      file: exportFile,
-      fileName,
-      journeyName: survey.journey.name,
-      documentType: "survey_export",
-      existingFolderId: folderId,
-    });
-
-    if (uploaded.folderId !== survey.journey.driveFolderId) {
-      await prisma.journey.update({ where: { id: survey.journeyId }, data: { driveFolderId: uploaded.folderId } });
-    }
-
-    await prisma.document.create({
-      data: {
-        journeyId: survey.journeyId,
-        stageId: survey.stageId,
-        type: "survey_export",
-        title: fileName,
-        driveFileId: uploaded.driveFileId,
-        driveWebViewLink: uploaded.webViewLink,
-        customerVisible: false,
-        source: "system_generated",
-        uploadedBy: "system",
-      },
-    });
+    exportBuffer = buildSurveyExportBuffer(completedSurvey);
+    exportFileName = surveyExportFileName(completedSurvey.title);
   } catch (err) {
-    console.error("Survey Excel export to Drive failed:", err);
+    console.error("Survey Excel export build failed:", err);
+  }
+
+  // Archive the completed survey as an Excel file in the journey's Drive folder,
+  // alongside the manual "Excel İndir" download — best-effort, must never break
+  // the customer's actual submission (e.g. Drive isn't configured yet).
+  if (exportBuffer && exportFileName) {
+    try {
+      const exportFile = new File([exportBuffer], exportFileName, {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const uploaded = await uploadFileToDrive({
+        file: exportFile,
+        fileName: exportFileName,
+        journeyName: survey.journey.name,
+        documentType: "survey_export",
+        existingFolderId: folderId,
+      });
+
+      if (uploaded.folderId !== survey.journey.driveFolderId) {
+        await prisma.journey.update({ where: { id: survey.journeyId }, data: { driveFolderId: uploaded.folderId } });
+      }
+
+      await prisma.document.create({
+        data: {
+          journeyId: survey.journeyId,
+          stageId: survey.stageId,
+          type: "survey_export",
+          title: exportFileName,
+          driveFileId: uploaded.driveFileId,
+          driveWebViewLink: uploaded.webViewLink,
+          customerVisible: false,
+          source: "system_generated",
+          uploadedBy: "system",
+        },
+      });
+    } catch (err) {
+      console.error("Survey Excel export to Drive failed:", err);
+    }
   }
 
   revalidatePath(`/presales/j/${token}`);
@@ -284,6 +296,20 @@ export async function submitSurveyResponses(
       subject: `${survey.journey.prospect.companyName} anketi tamamladı: ${survey.title}`,
       actionSummary,
       journeyId: survey.journeyId,
+    });
+  }
+
+  // Technical lead gets the same completion event as the sales rep, but the
+  // raw Excel answers as an attachment instead of a platform link — they're
+  // not expected to log into the admin tool.
+  if (survey.journey.technicalLead && exportBuffer && exportFileName) {
+    await notifyTechnicalLead({
+      technicalLeadEmail: survey.journey.technicalLead.email,
+      technicalLeadName: survey.journey.technicalLead.name,
+      companyName: survey.journey.prospect.companyName,
+      contactName: survey.journey.prospect.contactName,
+      surveyTitle: survey.title,
+      attachment: { fileName: exportFileName, buffer: exportBuffer },
     });
   }
 }

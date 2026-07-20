@@ -9,6 +9,7 @@ import {
   ListOrdered,
   FileStack,
   Users,
+  UserCog,
   Package,
   KeyRound,
   LogOut,
@@ -24,6 +25,7 @@ const SETTINGS_NAV_ITEMS = [
   { href: "/presales/admin/stages", label: "Aşama Şablonları", icon: ListOrdered },
   { href: "/presales/admin/survey-templates", label: "Anket Şablonları", icon: FileStack },
   { href: "/presales/admin/sales-reps", label: "Satış Ekibi", icon: Users },
+  { href: "/presales/admin/technical-leads", label: "Teknik Ekip", icon: UserCog },
   { href: "/presales/admin/products", label: "Ürünler", icon: Package },
   { href: "/presales/admin/account", label: "Giriş Bilgileri", icon: KeyRound },
 ];

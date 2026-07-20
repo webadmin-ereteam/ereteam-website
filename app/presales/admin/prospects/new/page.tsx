@@ -7,6 +7,7 @@ import { FileSizeInput } from "../../../_components/FileSizeInput";
 
 export default async function NewProspectPage() {
   const salesReps = await prisma.salesRep.findMany({ where: { isActive: true }, orderBy: { name: "asc" } });
+  const technicalLeads = await prisma.technicalLead.findMany({ where: { isActive: true }, orderBy: { name: "asc" } });
   const products = await prisma.product.findMany({ where: { isActive: true }, orderBy: { name: "asc" } });
   const stageTemplates = await prisma.stageTemplate.findMany({ orderBy: [{ isDefault: "desc" }, { name: "asc" }] });
   const defaultStageTemplateId = stageTemplates.find((t) => t.isDefault)?.id ?? stageTemplates[0]?.id ?? "";
@@ -89,6 +90,21 @@ export default async function NewProspectPage() {
                 </option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className={labelClass}>Teknik Sorumlu (opsiyonel)</label>
+            <select name="technicalLeadId" defaultValue="" className={`${inputClass} w-full`}>
+              <option value="">— Atanmadı —</option>
+              {technicalLeads.map((lead) => (
+                <option key={lead.id} value={lead.id}>
+                  {lead.name}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-text-muted">
+              Müşteri sayfasında gösterilmez — sadece anket cevapları tamamlandığında Excel eki olarak bu kişiye
+              de mail gider.
+            </p>
           </div>
           <div>
             <label className={labelClass}>Ürün / Uzmanlık</label>

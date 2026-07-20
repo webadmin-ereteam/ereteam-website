@@ -46,6 +46,24 @@ model SalesRep {
   journeys Journey[]
 }
 
+// Mirrors SalesRep exactly (same CRUD, same optional per-case assignment,
+// reassignable any time from the journey's Ayarlar tab) — but is never shown
+// to the customer. Its only purpose is a second notification target: when a
+// survey is completed, the technical lead gets the raw answers as an Excel
+// attachment (not a platform link — see notifyTechnicalLead), since they're
+// not expected to log into the admin tool themselves.
+model TechnicalLead {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  title     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  journeys Journey[]
+}
+
 // A product / area of expertise a case can be tagged with (e.g. "Financial
 // Performance & Intelligence", "Obserian"). Managed from admin settings like
 // sales reps; shown to the customer alongside their sales rep.
@@ -85,6 +103,10 @@ model Journey {
   salesRep            SalesRep? @relation(fields: [salesRepId], references: [id])
   productId           String?
   product             Product?  @relation(fields: [productId], references: [id])
+  // Optional — set at creation or any time after from Ayarlar, same as
+  // salesRepId. Never surfaced on the customer page.
+  technicalLeadId     String?
+  technicalLead       TechnicalLead? @relation(fields: [technicalLeadId], references: [id])
   createdAt           DateTime  @default(now())
 
   stages          JourneyStage[]
