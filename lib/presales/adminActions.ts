@@ -792,6 +792,36 @@ export async function sendSurveyInstance(surveyInstanceId: string, journeyId: st
   revalidatePath(`/presales/admin/journeys/${journeyId}`);
 }
 
+// Only draft surveys are editable — once sent, a customer may already be
+// looking at (or have answered) the questions, so changing them afterward
+// would silently invalidate their answers. Mirrors updateSurveyTemplate's
+// delete-and-recreate approach; safe here too since a draft survey can't yet
+// have any SurveyResponse rows (those only exist once a customer has seen it).
+export async function updateSurveyInstance(surveyInstanceId: string, journeyId: string, formData: FormData) {
+  const survey = await prisma.surveyInstance.findUniqueOrThrow({ where: { id: surveyInstanceId } });
+  if (survey.status !== "draft") {
+    throw new Error("Sadece taslak durumundaki anketler düzenlenebilir.");
+  }
+
+  const title = String(formData.get("title") ?? "").trim();
+  const questions = parseQuestionSlots(formData);
+
+  if (!title || questions.length === 0) {
+    throw new Error("Başlık ve en az bir soru zorunludur.");
+  }
+
+  await prisma.$transaction([
+    prisma.surveyQuestionSelection.deleteMany({ where: { surveyInstanceId } }),
+    prisma.surveyInstance.update({
+      where: { id: surveyInstanceId },
+      data: { title, selections: { create: questions } },
+    }),
+  ]);
+
+  revalidatePath(`/presales/admin/journeys/${journeyId}/surveys`);
+  redirect(`/presales/admin/journeys/${journeyId}/surveys`);
+}
+
 // --- Documents ---
 
 export async function uploadDocument(formData: FormData) {

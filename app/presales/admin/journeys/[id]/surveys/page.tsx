@@ -45,11 +45,19 @@ export default async function JourneySurveysTab({ params }: { params: { id: stri
             <div className="flex items-center gap-3">
               <Badge color={SURVEY_STATUS_BADGE[survey.status] ?? "gray"}>{survey.status}</Badge>
               {survey.status === "draft" && (
-                <form action={sendSurveyInstance.bind(null, survey.id, journey!.id)}>
-                  <SubmitButton className={buttonPrimaryClass} pendingLabel="Gönderiliyor...">
-                    Gönder
-                  </SubmitButton>
-                </form>
+                <>
+                  <Link
+                    href={`/presales/admin/journeys/${journey!.id}/surveys/${survey.id}/edit`}
+                    className={buttonSecondaryClass}
+                  >
+                    Düzenle
+                  </Link>
+                  <form action={sendSurveyInstance.bind(null, survey.id, journey!.id)}>
+                    <SubmitButton className={buttonPrimaryClass} pendingLabel="Gönderiliyor...">
+                      Gönder
+                    </SubmitButton>
+                  </form>
+                </>
               )}
               {(survey.status === "sent" || survey.status === "completed") && (
                 <Link

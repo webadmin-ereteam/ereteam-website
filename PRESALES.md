@@ -298,6 +298,19 @@ survey's completion never auto-advanced the stage it was actually answering
 associated with it. The "Anket Oluştur" link on Genel Bakış was never
 affected — it always passed `?stageId=${currentStage.id}` explicitly.
 
+**Editing a draft survey** (`surveys/[surveyId]/edit`, `updateSurveyInstance`):
+while a per-case survey is still `status: "draft"` it can be reopened from the
+**Anketler** tab's "Düzenle" button and its title/questions edited freely,
+same `QuestionListEditor` as creation — deletes and recreates the
+`SurveyQuestionSelection` rows, mirroring `updateSurveyTemplate`. The action
+throws if the survey isn't a draft, and the edit page itself redirects a
+`sent`/`completed` survey straight to the read-only results page instead of
+showing a form that would just error on submit — once a survey is sent a
+customer may already be looking at (or have answered) the questions, so this
+is the same "can't change a sent survey's questions" rule as before, just
+now with an actual editor available beforehand instead of only being able to
+delete-and-recreate the whole survey to fix a typo in a draft.
+
 **Survey authoring** (`QuestionListEditor.tsx`, shared by "Anket Şablonları",
 template editing, and the per-case survey builder):
 - Questions can be freely added/removed and **reordered by drag-and-drop**
