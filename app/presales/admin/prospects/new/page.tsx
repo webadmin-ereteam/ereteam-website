@@ -16,13 +16,22 @@ export default async function NewProspectPage() {
     <div>
       <PageHeader title="Yeni Prospect" description="Yeni bir prospect ve journey oluştur." />
 
-      {(salesReps.length === 0 || products.length === 0 || stageTemplates.length === 0) && (
+      {(salesReps.length === 0 || technicalLeads.length === 0 || products.length === 0 || stageTemplates.length === 0) && (
         <Card className="mb-6 border-amber-200 bg-amber-50 text-sm text-amber-800">
-          Satışçı, ürün/uzmanlık ve aşama şablonu seçimi artık zorunlu, ama{" "}
+          Satışçı, teknik sorumlu, ürün/uzmanlık ve aşama şablonu seçimi artık zorunlu, ama{" "}
           {salesReps.length === 0 && (
             <>
               henüz aktif bir satışçı yok —{" "}
               <Link href="/presales/admin/sales-reps" className="font-medium underline">
+                önce buradan ekle
+              </Link>
+              .{" "}
+            </>
+          )}
+          {technicalLeads.length === 0 && (
+            <>
+              henüz aktif bir teknik sorumlu yok —{" "}
+              <Link href="/presales/admin/technical-leads" className="font-medium underline">
                 önce buradan ekle
               </Link>
               .{" "}
@@ -92,9 +101,11 @@ export default async function NewProspectPage() {
             </select>
           </div>
           <div>
-            <label className={labelClass}>Teknik Sorumlu (opsiyonel)</label>
-            <select name="technicalLeadId" defaultValue="" className={`${inputClass} w-full`}>
-              <option value="">— Atanmadı —</option>
+            <label className={labelClass}>Teknik Sorumlu</label>
+            <select name="technicalLeadId" required defaultValue="" className={`${inputClass} w-full`}>
+              <option value="" disabled>
+                — Seçiniz —
+              </option>
               {technicalLeads.map((lead) => (
                 <option key={lead.id} value={lead.id}>
                   {lead.name}

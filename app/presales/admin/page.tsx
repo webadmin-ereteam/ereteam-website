@@ -61,6 +61,7 @@ export default async function AdminDashboardPage({
   searchParams: {
     status?: string;
     salesRepId?: string;
+    technicalLeadId?: string;
     productId?: string;
     q?: string;
     archived?: string;
@@ -70,11 +71,12 @@ export default async function AdminDashboardPage({
     createdDate?: string;
   };
 }) {
-  const [journeys, salesReps, products] = await Promise.all([
+  const [journeys, salesReps, technicalLeads, products] = await Promise.all([
     prisma.journey.findMany({
       include: {
         prospect: true,
         salesRep: true,
+        technicalLead: true,
         product: true,
         stages: { orderBy: { order: "asc" } },
         surveyInstances: { include: { stage: true } },
@@ -82,6 +84,7 @@ export default async function AdminDashboardPage({
       orderBy: { createdAt: "desc" },
     }),
     prisma.salesRep.findMany({ orderBy: { name: "asc" } }),
+    prisma.technicalLead.findMany({ orderBy: { name: "asc" } }),
     prisma.product.findMany({ orderBy: { name: "asc" } }),
   ]);
 
@@ -110,6 +113,7 @@ export default async function AdminDashboardPage({
   const filteredJourneys = journeys.filter((j) => {
     if (searchParams.status && j.status !== searchParams.status) return false;
     if (searchParams.salesRepId && j.salesRepId !== searchParams.salesRepId) return false;
+    if (searchParams.technicalLeadId && j.technicalLeadId !== searchParams.technicalLeadId) return false;
     if (searchParams.productId && j.productId !== searchParams.productId) return false;
     if (archivedFilter === "yes" && !j.archived) return false;
     if (archivedFilter === "no" && j.archived) return false;
@@ -129,6 +133,7 @@ export default async function AdminDashboardPage({
   const hasActiveFilters = !!(
     searchParams.status ||
     searchParams.salesRepId ||
+    searchParams.technicalLeadId ||
     searchParams.productId ||
     searchParams.q ||
     (searchParams.archived && searchParams.archived !== "no") ||
@@ -187,6 +192,17 @@ export default async function AdminDashboardPage({
               {salesReps.map((rep) => (
                 <option key={rep.id} value={rep.id}>
                   {rep.name}
+                </option>
+              ))}
+            </select>
+          </FilterChip>
+
+          <FilterChip label="Teknik Sorumlu">
+            <select name="technicalLeadId" defaultValue={searchParams.technicalLeadId ?? ""} className={filterSelectClass}>
+              <option value="">Tümü</option>
+              {technicalLeads.map((lead) => (
+                <option key={lead.id} value={lead.id}>
+                  {lead.name}
                 </option>
               ))}
             </select>
@@ -286,6 +302,7 @@ export default async function AdminDashboardPage({
             linkActive: isJourneyLinkActive(journey),
             accessToken: journey.accessToken,
             salesRepName: journey.salesRep?.name ?? null,
+            technicalLeadName: journey.technicalLead?.name ?? null,
             productName: journey.product?.name ?? null,
             createdAtLabel: formatDisplayDate(journey.createdAt),
             closeDateLabel: formatDisplayDate(journey.outcomeSetAt),

@@ -30,8 +30,8 @@ export async function createProspectAndJourney(formData: FormData) {
   if (!companyName || !contactName || !contactEmail) {
     throw new Error("Şirket adı, kişi adı ve e-posta zorunludur.");
   }
-  if (!salesRepId || !productId) {
-    throw new Error("Satışçı ve ürün/uzmanlık seçimi zorunludur.");
+  if (!salesRepId || !productId || !technicalLeadId) {
+    throw new Error("Satışçı, teknik sorumlu ve ürün/uzmanlık seçimi zorunludur.");
   }
   if (!stageTemplateId) {
     throw new Error("Hangi aşama şablonuyla başlanacağı zorunludur.");

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarDays, Check, Copy, ExternalLink, FileCheck2, FileSignature, Link2, Package, UserRound, Zap } from "lucide-react";
+import { CalendarDays, Check, Copy, ExternalLink, FileCheck2, FileSignature, Link2, Package, UserCog, UserRound, Zap } from "lucide-react";
 import {
   bulkAssignSalesRep,
   bulkSetJourneyArchived,
@@ -62,6 +62,7 @@ export type JourneyRow = {
   linkActive: boolean;
   accessToken: string;
   salesRepName: string | null;
+  technicalLeadName: string | null;
   productName: string | null;
   createdAtLabel: string;
   closeDateLabel: string;
@@ -322,6 +323,10 @@ export function JourneyListWithSelection({
                 <p className="flex items-center gap-1.5">
                   <Package size={12} className="shrink-0" />
                   <span className="truncate">{journey.productName ?? "Ürün atanmadı"}</span>
+                </p>
+                <p className="flex items-center gap-1.5">
+                  <UserCog size={12} className="shrink-0" />
+                  <span className="truncate">{journey.technicalLeadName ?? "Teknik sorumlu atanmadı"}</span>
                 </p>
                 <p className="flex items-center gap-1.5">
                   <CalendarDays size={12} className="shrink-0" />

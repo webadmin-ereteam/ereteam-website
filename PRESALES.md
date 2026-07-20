@@ -62,14 +62,18 @@ documents with real foreign keys), which fits Postgres, not schemaless documents
   position on the customer page — see "Company logo" below.
 - `SalesRep` — internal reps, assignable to a journey; customer sees their contact
   card when assigned.
-- `TechnicalLead` — mirrors `SalesRep` exactly (same CRUD at `/presales/admin/technical-leads`,
-  same optional `technicalLeadId` on `Journey`, reassignable any time from Ayarlar)
-  but is **never shown to the customer**. Its only purpose is a second, silent
-  notification target: when a survey is completed, `notifyTechnicalLead` (in
-  `notify.ts`) emails them the raw answers as an Excel attachment — the same
-  buffer built for the Drive archive in `j/[token]/actions.ts` — instead of the
-  "view journey" link `notifySalesRep` sends, since a technical lead isn't
-  expected to log into the admin tool.
+- `TechnicalLead` — mirrors `SalesRep` (same CRUD at `/presales/admin/technical-leads`,
+  reassignable any time from Ayarlar) but is **never shown to the customer**.
+  Its only purpose is a second, silent notification target: when a survey is
+  completed, `notifyTechnicalLead` (in `notify.ts`) emails them the raw
+  answers as an Excel attachment — the same buffer built for the Drive
+  archive in `j/[token]/actions.ts` — instead of the "view journey" link
+  `notifySalesRep` sends, since a technical lead isn't expected to log into
+  the admin tool. Unlike `salesRepId`, `technicalLeadId` on `Journey` is
+  required at creation (same as `salesRepId`/`productId` — `createProspectAndJourney`
+  rejects a missing one), even though the column itself stays nullable —
+  it's only optional in the schema so `deleteTechnicalLead`'s `ON DELETE
+  SET NULL` has somewhere to fall back to, not because a new case can skip it.
 - `Product` — a product/expertise area (e.g. "Financial Performance & Intelligence"),
   assignable to a journey the same way; customer sees it next to the sales rep.
 - `Journey` — one presales case for one prospect. Holds the no-login `accessToken`,
@@ -556,7 +560,7 @@ al" appears on the most recently completed stage to undo exactly that step.
 
 **Dashboard: filters, bulk actions, per-case shortcuts** (`app/presales/admin/page.tsx`
 + `JourneyListWithSelection.tsx`): combinable filters — Ara (search), Durum,
-Satışçı, Ürün, Arşiv, Müşteri Linki, Aksiyon (Aksiyon Bizde / Müşteride —
+Satışçı, Teknik Sorumlu, Ürün, Arşiv, Müşteri Linki, Aksiyon (Aksiyon Bizde / Müşteride —
 same "whose turn" logic as the Genel Bakış tab below, computed per journey
 from its survey statuses), and two separate date filters, **Kapanış Tarihi**
 (`Journey.outcomeSetAt`) and **Oluşturma Tarihi** (`Journey.createdAt`). Both
