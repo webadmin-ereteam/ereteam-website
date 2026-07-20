@@ -311,6 +311,21 @@ is the same "can't change a sent survey's questions" rule as before, just
 now with an actual editor available beforehand instead of only being able to
 delete-and-recreate the whole survey to fix a typo in a draft.
 
+**Deleting a sent/completed survey** (`deleteSurveyInstance`): the Anketler
+tab's "Sil" button next to "Sonuçları Gör" removes a `sent` or `completed`
+survey instance and its `SurveyQuestionSelection`/`SurveyResponse` rows
+outright — since the customer page just filters `journey.surveyInstances` by
+status, deleting the row is what makes it disappear from the customer's
+screen too (both paths revalidated). What it deliberately does **not** touch
+is the `survey_export` `Document` row (and the actual Excel file in Drive)
+that gets created when a survey is completed — same "never touch Drive
+automatically" rule as `deleteJourney` — so if the survey had already been
+answered, that Excel snapshot survives the delete even though the
+`SurveyInstance` it came from is gone. `SubmitButton`'s `confirmMessage`
+warns about this distinction before submitting (different wording for
+completed vs. merely sent, since only the former has answers/an export to
+lose).
+
 **Survey authoring** (`QuestionListEditor.tsx`, shared by "Anket Şablonları",
 template editing, and the per-case survey builder):
 - Questions can be freely added/removed and **reordered by drag-and-drop**

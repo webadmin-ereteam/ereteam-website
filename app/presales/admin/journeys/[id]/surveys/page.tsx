@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/presales/db";
-import { sendSurveyInstance } from "@/lib/presales/adminActions";
+import { sendSurveyInstance, deleteSurveyInstance } from "@/lib/presales/adminActions";
 import { Badge, Card, buttonPrimaryClass, buttonSecondaryClass } from "../../../../_components/ui";
 import { SubmitButton } from "../../../../_components/SubmitButton";
 
@@ -60,12 +60,27 @@ export default async function JourneySurveysTab({ params }: { params: { id: stri
                 </>
               )}
               {(survey.status === "sent" || survey.status === "completed") && (
-                <Link
-                  href={`/presales/admin/journeys/${journey!.id}/surveys/${survey.id}`}
-                  className={buttonSecondaryClass}
-                >
-                  Sonuçları Gör
-                </Link>
+                <>
+                  <Link
+                    href={`/presales/admin/journeys/${journey!.id}/surveys/${survey.id}`}
+                    className={buttonSecondaryClass}
+                  >
+                    Sonuçları Gör
+                  </Link>
+                  <form action={deleteSurveyInstance.bind(null, survey.id, journey!.id)}>
+                    <SubmitButton
+                      className={buttonSecondaryClass}
+                      pendingLabel="Siliniyor..."
+                      confirmMessage={
+                        survey.status === "completed"
+                          ? `"${survey.title}" anketini silmek üzeresin. Müşterinin cevapları veritabanından kalıcı olarak silinecek — bu geri alınamaz. Drive'a kaydedilmiş Excel kopyası silinmeyecek. Devam edilsin mi?`
+                          : `"${survey.title}" anketini silmek üzeresin. Bu, müşterinin ekranından da kaldırılacak ve geri alınamaz. Devam edilsin mi?`
+                      }
+                    >
+                      Sil
+                    </SubmitButton>
+                  </form>
+                </>
               )}
             </div>
           </div>

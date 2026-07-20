@@ -822,6 +822,32 @@ export async function updateSurveyInstance(surveyInstanceId: string, journeyId: 
   redirect(`/presales/admin/journeys/${journeyId}/surveys`);
 }
 
+// Deletes a sent or completed survey — e.g. it was sent to the wrong stage,
+// or the customer no longer needs to answer it. This also removes it from
+// the customer's screen (it's just gone from `journey.surveyInstances`, same
+// mechanism the customer page already filters on). If the survey had been
+// answered, the auto-archived Excel snapshot in Drive (`survey_export`
+// Document, created in j/[token]/actions.ts on completion) is deliberately
+// left untouched — same "never touch Drive automatically" rule as
+// deleteJourney — so the answers survive in Drive even after the DB rows
+// (SurveyResponse/SurveyQuestionSelection/SurveyInstance) are gone.
+export async function deleteSurveyInstance(surveyInstanceId: string, journeyId: string) {
+  const survey = await prisma.surveyInstance.findUniqueOrThrow({
+    where: { id: surveyInstanceId },
+    include: { journey: { select: { accessToken: true } } },
+  });
+
+  await prisma.$transaction([
+    prisma.surveyResponse.deleteMany({ where: { surveyQuestionSelection: { surveyInstanceId } } }),
+    prisma.surveyQuestionSelection.deleteMany({ where: { surveyInstanceId } }),
+    prisma.surveyInstance.delete({ where: { id: surveyInstanceId } }),
+  ]);
+
+  revalidatePath(`/presales/admin/journeys/${journeyId}/surveys`);
+  revalidatePath(`/presales/admin/journeys/${journeyId}`);
+  revalidatePath(`/presales/j/${survey.journey.accessToken}`);
+}
+
 // --- Documents ---
 
 export async function uploadDocument(formData: FormData) {
