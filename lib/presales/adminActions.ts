@@ -13,8 +13,11 @@ import { hashPassword } from "@/lib/presales/passwordHash";
 
 // "Firma - Ürün - 06.07.2026" — the fixed format used for both a journey's own
 // `name` and the Drive folder created for it, so the two always match.
+// Pinned to Istanbul time — Vercel's serverless functions run in UTC, so a
+// journey created between 00:00-03:00 Istanbul time would otherwise get
+// stamped with the previous UTC day's date.
 function formatJourneyDate(date: Date) {
-  return date.toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return date.toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Europe/Istanbul" });
 }
 
 export async function createProspectAndJourney(formData: FormData) {

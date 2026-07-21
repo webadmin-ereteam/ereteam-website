@@ -19,7 +19,7 @@ const SURVEY_STATUS_LABEL: Record<string, string> = {
 };
 
 function formatDate(date: Date | null) {
-  return date ? new Date(date).toLocaleDateString("tr-TR") : null;
+  return date ? new Date(date).toLocaleDateString("tr-TR", { timeZone: "Europe/Istanbul" }) : null;
 }
 
 function AnswerPreview({
@@ -274,7 +274,7 @@ export default async function JourneyOverviewTab({ params }: { params: { id: str
                   <span className="text-xs text-text-muted">· {survey.stageName}</span>
                 </span>
                 <Badge color="amber">
-                  {survey.sentAt ? new Date(survey.sentAt).toLocaleDateString("tr-TR") : "—"} tarihinde gönderildi
+                  {survey.sentAt ? new Date(survey.sentAt).toLocaleDateString("tr-TR", { timeZone: "Europe/Istanbul" }) : "—"} tarihinde gönderildi
                 </Badge>
               </div>
             ))}
