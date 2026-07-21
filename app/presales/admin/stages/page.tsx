@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/presales/db";
-import { createStageTemplate, setDefaultStageTemplate, duplicateStageTemplate, deleteStageTemplate } from "@/lib/presales/adminActions";
+import { createStageTemplate, duplicateStageTemplate, deleteStageTemplate } from "@/lib/presales/adminActions";
 import { Badge, Card, PageHeader, inputClass, labelClass, buttonPrimaryClass, buttonSecondaryClass } from "../../_components/ui";
 import { SubmitButton } from "../../_components/SubmitButton";
 
@@ -27,7 +27,6 @@ export default async function StageTemplatesAdminPage() {
                 {template.name}
               </Link>
               <Badge color="blue">{template._count.stages} aşama</Badge>
-              {template.isDefault && <Badge color="green">Varsayılan</Badge>}
             </div>
             <div className="flex items-center gap-2">
               <Link href={`/presales/admin/stages/${template.id}`} className={buttonSecondaryClass}>
@@ -38,20 +37,11 @@ export default async function StageTemplatesAdminPage() {
                   Çoğalt
                 </SubmitButton>
               </form>
-              {!template.isDefault && (
-                <form action={setDefaultStageTemplate.bind(null, template.id)}>
-                  <SubmitButton className={buttonSecondaryClass} pendingLabel="Ayarlanıyor...">
-                    Varsayılan yap
-                  </SubmitButton>
-                </form>
-              )}
-              {!template.isDefault && (
-                <form action={deleteStageTemplate.bind(null, template.id)}>
-                  <SubmitButton className={buttonSecondaryClass} pendingLabel="Siliniyor...">
-                    Sil
-                  </SubmitButton>
-                </form>
-              )}
+              <form action={deleteStageTemplate.bind(null, template.id)}>
+                <SubmitButton className={buttonSecondaryClass} pendingLabel="Siliniyor...">
+                  Sil
+                </SubmitButton>
+              </form>
             </div>
           </Card>
         ))}

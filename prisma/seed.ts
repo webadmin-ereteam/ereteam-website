@@ -96,9 +96,9 @@ const surveyTemplates = [
 async function main() {
   const stageRecords: Record<string, string> = {};
 
-  let defaultTemplate = await prisma.stageTemplate.findFirst({ where: { isDefault: true } });
+  let defaultTemplate = await prisma.stageTemplate.findFirst({ where: { name: "Varsayılan" } });
   if (!defaultTemplate) {
-    defaultTemplate = await prisma.stageTemplate.create({ data: { name: "Varsayılan", isDefault: true } });
+    defaultTemplate = await prisma.stageTemplate.create({ data: { name: "Varsayılan" } });
   }
   const stageTemplateId = defaultTemplate.id;
 

@@ -97,11 +97,15 @@ documents with real foreign keys), which fits Postgres, not schemaless documents
   desync them). A journey can be deleted outright (`deleteJourney`, Ayarlar
   tab "Tehlikeli Bölge") — see "Deleting a journey" below.
 - `StageTemplate` — a named, reusable stage flow (e.g. "Varsayılan", "Enterprise
-  Süreç"). Picked once on "Yeni Prospect"; its `StageDefinition` rows are copied
-  into that journey's own `JourneyStage` rows and never referenced again. Exactly
-  one template is flagged `isDefault` (pre-selected on the create form). A template
-  can be duplicated (handy for starting a variant from an existing flow) but not
-  deleted while it's the default or the last one remaining.
+  Süreç"). Picked explicitly every time on "Yeni Prospect" — no default is
+  pre-selected, so it's always a deliberate choice; its `StageDefinition` rows
+  are copied into that journey's own `JourneyStage` rows and never referenced
+  again. There used to be an `isDefault` flag (one template pre-selected on
+  the create form) — removed after it caused confusion (a renamed/no-longer-
+  intended-default template kept showing as default on "Yeni Prospect" due to
+  a caching bug, see below), so now every case starts by explicitly picking a
+  template. A template can be duplicated (handy for starting a variant from an
+  existing flow) but not deleted while it's the last one remaining.
 - `StageDefinition` — one stage within a `StageTemplate` (name, customer-facing
   fields, estimated duration, position). Editing a template never changes
   journeys that already copied from it. The schema still has an internal-only
@@ -270,11 +274,12 @@ lib/services/llmService.ts        generateChatResponse() takes an optional {mode
 ## Key flows
 
 **Creating a case**: admin → "Yeni Prospect" → fills company/contact, and must
-pick a sales rep, a product/expertise, and a stage template right there (all
-three required — the stage template selector defaults to whichever one is
-flagged as default) → that template's active `StageDefinition` rows are copied
-into `JourneyStage` rows for this journey → customer link (`/presales/j/[token]`)
-is generated immediately.
+pick a sales rep, a technical lead, a product/expertise, and a stage template
+right there (all four required, none pre-selected — every "Seçiniz" dropdown
+starts blank, deliberately, after the old stage-template-default confusion)
+→ that template's active `StageDefinition` rows are copied into `JourneyStage`
+rows for this journey → customer link (`/presales/j/[token]`) is generated
+immediately.
 
 **Creating a survey template** ("Anket Şablonları"): same two-step shape as
 stage templates — the list page's "Yeni Şablon Oluştur" only asks for a name
@@ -409,16 +414,19 @@ next pending stage auto-activates — the customer's "current stage" marker
 follows automatically since it's derived, not stored.
 
 **Managing stage templates**: "Aşama Şablonları" lists all named `StageTemplate`s
-(stage counts, which one is default). "Düzenle" opens `/presales/admin/stages/[id]`
-— the actual per-template stage editor (add/edit/reorder/hide stages, same
-`DragReorderList` UI as before, just scoped to one template now). "Çoğalt" clones
-a template (all its stages) under a new name — the fastest way to start a variant
-flow. "Varsayılan yap" switches which template pre-selects on "Yeni Prospect".
-"Sil" (`deleteStageTemplate`) removes a template outright — only shown for
-non-default templates, and the action itself also refuses to delete the
-default one or the last remaining template (so there's always at least one to
-pick from on "Yeni Prospect"). With only the seeded "Varsayılan" template
-existing, "Sil" never shows at all — that's expected, not a missing feature.
+(stage counts). "Düzenle" opens `/presales/admin/stages/[id]` — the actual
+per-template stage editor (add/edit/reorder/hide stages, same `DragReorderList`
+UI as before, just scoped to one template now). "Çoğalt" clones a template
+(all its stages) under a new name — the fastest way to start a variant flow.
+"Sil" (`deleteStageTemplate`) removes a template outright — the action refuses
+to delete the last remaining template (so there's always at least one to pick
+from on "Yeni Prospect"), no other restriction. Every create/rename/duplicate/
+delete here also revalidates `/presales/admin/prospects/new`, not just
+`/presales/admin/stages` — that page reads the same table independently, and
+missing this revalidation used to be exactly why a newly created template
+didn't show up there without an unrelated page load happening to refresh it
+first. Same fix applied to sales reps/technical leads/products, which had the
+same gap.
 
 **Company logo** (`uploadCompanyLogo`/`removeCompanyLogo` in
 `lib/presales/adminActions.ts`, `uploadLogoToDrive()`/`trashDriveFile()` in

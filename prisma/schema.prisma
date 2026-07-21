@@ -120,7 +120,6 @@ model Journey {
 model StageTemplate {
   id        String   @id @default(cuid())
   name      String
-  isDefault Boolean  @default(false)
   createdAt DateTime @default(now())
 
   stages StageDefinition[]

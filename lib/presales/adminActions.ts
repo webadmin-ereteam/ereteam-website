@@ -308,6 +308,11 @@ export async function bulkSetJourneyArchived(journeyIds: string[], archived: boo
 
 // --- Stage templates (named, reusable stage flows a journey can start from) ---
 
+// Every stage-template mutation also revalidates /presales/admin/prospects/new
+// — that page reads the same `stageTemplate` table independently, and without
+// this it kept showing a stale list (a newly created template wouldn't appear
+// there until something else happened to revalidate that specific route).
+
 export async function createStageTemplate(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   if (!name) {
@@ -315,6 +320,7 @@ export async function createStageTemplate(formData: FormData) {
   }
   const template = await prisma.stageTemplate.create({ data: { name } });
   revalidatePath("/presales/admin/stages");
+  revalidatePath("/presales/admin/prospects/new");
   redirect(`/presales/admin/stages/${template.id}`);
 }
 
@@ -326,14 +332,7 @@ export async function renameStageTemplate(id: string, formData: FormData) {
   await prisma.stageTemplate.update({ where: { id }, data: { name } });
   revalidatePath("/presales/admin/stages");
   revalidatePath(`/presales/admin/stages/${id}`);
-}
-
-export async function setDefaultStageTemplate(id: string) {
-  await prisma.$transaction([
-    prisma.stageTemplate.updateMany({ data: { isDefault: false }, where: { NOT: { id } } }),
-    prisma.stageTemplate.update({ where: { id }, data: { isDefault: true } }),
-  ]);
-  revalidatePath("/presales/admin/stages");
+  revalidatePath("/presales/admin/prospects/new");
 }
 
 export async function duplicateStageTemplate(id: string) {
@@ -361,23 +360,19 @@ export async function duplicateStageTemplate(id: string) {
   });
 
   revalidatePath("/presales/admin/stages");
+  revalidatePath("/presales/admin/prospects/new");
 }
 
 export async function deleteStageTemplate(id: string) {
-  const [template, templateCount] = await Promise.all([
-    prisma.stageTemplate.findUniqueOrThrow({ where: { id } }),
-    prisma.stageTemplate.count(),
-  ]);
+  const templateCount = await prisma.stageTemplate.count();
 
   if (templateCount <= 1) {
     throw new Error("Son kalan şablon silinemez — en az bir şablon olmalı.");
   }
-  if (template.isDefault) {
-    throw new Error("Varsayılan şablon silinemez — önce başka bir şablonu varsayılan yap.");
-  }
 
   await prisma.stageTemplate.delete({ where: { id } });
   revalidatePath("/presales/admin/stages");
+  revalidatePath("/presales/admin/prospects/new");
 }
 
 export async function upsertStageDefinition(stageTemplateId: string, formData: FormData) {
@@ -969,11 +964,13 @@ export async function createSalesRep(formData: FormData) {
 
   await prisma.salesRep.create({ data: { name, email, phone, title } });
   revalidatePath("/presales/admin/sales-reps");
+  revalidatePath("/presales/admin/prospects/new");
 }
 
 export async function setSalesRepActive(id: string, isActive: boolean) {
   await prisma.salesRep.update({ where: { id }, data: { isActive } });
   revalidatePath("/presales/admin/sales-reps");
+  revalidatePath("/presales/admin/prospects/new");
 }
 
 export async function updateSalesRep(id: string, formData: FormData) {
@@ -988,6 +985,7 @@ export async function updateSalesRep(id: string, formData: FormData) {
 
   await prisma.salesRep.update({ where: { id }, data: { name, email, phone, title } });
   revalidatePath("/presales/admin/sales-reps");
+  revalidatePath("/presales/admin/prospects/new");
   revalidatePath("/presales/admin");
 }
 
@@ -996,6 +994,7 @@ export async function deleteSalesRep(id: string) {
   // assigned to this rep is simply left unassigned rather than blocking deletion.
   await prisma.salesRep.delete({ where: { id } });
   revalidatePath("/presales/admin/sales-reps");
+  revalidatePath("/presales/admin/prospects/new");
 }
 
 // --- Technical leads (mirrors sales reps exactly — see TechnicalLead in
@@ -1013,11 +1012,13 @@ export async function createTechnicalLead(formData: FormData) {
 
   await prisma.technicalLead.create({ data: { name, email, phone, title } });
   revalidatePath("/presales/admin/technical-leads");
+  revalidatePath("/presales/admin/prospects/new");
 }
 
 export async function setTechnicalLeadActive(id: string, isActive: boolean) {
   await prisma.technicalLead.update({ where: { id }, data: { isActive } });
   revalidatePath("/presales/admin/technical-leads");
+  revalidatePath("/presales/admin/prospects/new");
 }
 
 export async function updateTechnicalLead(id: string, formData: FormData) {
@@ -1032,6 +1033,7 @@ export async function updateTechnicalLead(id: string, formData: FormData) {
 
   await prisma.technicalLead.update({ where: { id }, data: { name, email, phone, title } });
   revalidatePath("/presales/admin/technical-leads");
+  revalidatePath("/presales/admin/prospects/new");
   revalidatePath("/presales/admin");
 }
 
@@ -1040,6 +1042,7 @@ export async function deleteTechnicalLead(id: string) {
   // deleteSalesRep — any case currently assigned is simply left unassigned.
   await prisma.technicalLead.delete({ where: { id } });
   revalidatePath("/presales/admin/technical-leads");
+  revalidatePath("/presales/admin/prospects/new");
 }
 
 export async function assignTechnicalLead(journeyId: string, formData: FormData) {
@@ -1061,11 +1064,13 @@ export async function createProduct(formData: FormData) {
 
   await prisma.product.create({ data: { name, description } });
   revalidatePath("/presales/admin/products");
+  revalidatePath("/presales/admin/prospects/new");
 }
 
 export async function setProductActive(id: string, isActive: boolean) {
   await prisma.product.update({ where: { id }, data: { isActive } });
   revalidatePath("/presales/admin/products");
+  revalidatePath("/presales/admin/prospects/new");
 }
 
 export async function deleteProduct(id: string) {
@@ -1074,6 +1079,7 @@ export async function deleteProduct(id: string) {
   // deletion — mirrors deleteSalesRep.
   await prisma.product.delete({ where: { id } });
   revalidatePath("/presales/admin/products");
+  revalidatePath("/presales/admin/prospects/new");
 }
 
 export async function assignProduct(journeyId: string, formData: FormData) {

@@ -9,8 +9,7 @@ export default async function NewProspectPage() {
   const salesReps = await prisma.salesRep.findMany({ where: { isActive: true }, orderBy: { name: "asc" } });
   const technicalLeads = await prisma.technicalLead.findMany({ where: { isActive: true }, orderBy: { name: "asc" } });
   const products = await prisma.product.findMany({ where: { isActive: true }, orderBy: { name: "asc" } });
-  const stageTemplates = await prisma.stageTemplate.findMany({ orderBy: [{ isDefault: "desc" }, { name: "asc" }] });
-  const defaultStageTemplateId = stageTemplates.find((t) => t.isDefault)?.id ?? stageTemplates[0]?.id ?? "";
+  const stageTemplates = await prisma.stageTemplate.findMany({ orderBy: { name: "asc" } });
 
   return (
     <div>
@@ -132,19 +131,13 @@ export default async function NewProspectPage() {
           </div>
           <div>
             <label className={labelClass}>Aşama Şablonu</label>
-            <select
-              name="stageTemplateId"
-              required
-              defaultValue={defaultStageTemplateId}
-              className={`${inputClass} w-full`}
-            >
+            <select name="stageTemplateId" required defaultValue="" className={`${inputClass} w-full`}>
               <option value="" disabled>
                 — Seçiniz —
               </option>
               {stageTemplates.map((template) => (
                 <option key={template.id} value={template.id}>
                   {template.name}
-                  {template.isDefault ? " (varsayılan)" : ""}
                 </option>
               ))}
             </select>
