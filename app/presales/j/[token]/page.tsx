@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import {
   Check,
@@ -21,6 +22,7 @@ import {
 import { prisma } from "@/lib/presales/db";
 import { findCurrentStage } from "@/lib/presales/stageProgress";
 import { isJourneyLinkActive } from "@/lib/presales/journeyLink";
+import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/presales/session";
 import { saveSurveyDraft, submitSurveyResponses } from "./actions";
 import { SurveyAnswerForm } from "./SurveyAnswerForm";
 import { SubmitButton } from "../../_components/SubmitButton";
@@ -116,6 +118,28 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
         </div>
       </div>
     );
+  }
+
+  // No login exists on this page, so this is the only "did the customer
+  // actually open it" signal an admin gets — best-effort, must never break
+  // the customer's actual page load if the write fails for some reason.
+  // Skipped when the request carries a valid admin session cookie, so an
+  // admin previewing the link (the "Müşteri sayfasını aç" button, or just
+  // opening it themselves to check) never counts as a customer view.
+  const isAdminPreview = await verifySessionToken(cookies().get(SESSION_COOKIE_NAME)?.value);
+  if (!isAdminPreview) {
+    try {
+      await prisma.journey.update({
+        where: { id: journey.id },
+        data: {
+          firstViewedAt: journey.firstViewedAt ?? new Date(),
+          lastViewedAt: new Date(),
+          viewCount: { increment: 1 },
+        },
+      });
+    } catch (err) {
+      console.error("Failed to record journey view:", err);
+    }
   }
 
   const visibleStages = journey!.stages.filter((s) => s.customerVisible && s.isActive);

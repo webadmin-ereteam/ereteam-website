@@ -4,7 +4,7 @@ import { prisma } from "@/lib/presales/db";
 import { Badge } from "../../../_components/ui";
 import { isJourneyLinkActive } from "@/lib/presales/journeyLink";
 import { JOURNEY_STATUS_LABELS } from "@/lib/presales/journeyStatus";
-import { formatDisplayDate } from "@/lib/presales/formatDate";
+import { formatDisplayDate, formatDisplayDateTime } from "@/lib/presales/formatDate";
 import JourneyTabs from "./JourneyTabs";
 import { CustomerLinkActions } from "./CustomerLinkActions";
 
@@ -69,6 +69,15 @@ export default async function JourneyLayout({
             <code className="text-xs text-brand-primary">/presales/j/{journey!.accessToken}</code>
             <CustomerLinkActions accessToken={journey!.accessToken} />
           </div>
+          <p className="mt-1.5 text-[11px] text-text-muted">
+            {journey!.lastViewedAt ? (
+              <>
+                {journey!.viewCount} kez görüntülendi · son: {formatDisplayDateTime(journey!.lastViewedAt)}
+              </>
+            ) : (
+              "Müşteri henüz linki açmadı"
+            )}
+          </p>
         </div>
       </div>
 

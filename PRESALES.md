@@ -609,6 +609,20 @@ set). The "Müşteri Linki" box (top-right) has copy + open-in-new-tab
 buttons next to the link code (`CustomerLinkActions.tsx`, a small client
 component — everything else on this layout is a Server Component, so copying
 to the clipboard is the one thing that needs to be pulled out client-side).
+Underneath it: "N kez görüntülendi · son: ..." or "Müşteri henüz linki açmadı".
+
+**Customer view tracking** (`Journey.firstViewedAt`/`lastViewedAt`/`viewCount`,
+recorded directly in `app/presales/j/[token]/page.tsx`): the only "did the
+customer actually open it" signal available, since the customer page has no
+login. Recorded on every page load that passes the active-link check —
+`viewCount` incremented, `lastViewedAt` overwritten, `firstViewedAt` set only
+once. **Skipped whenever the request carries a valid admin session cookie**
+(`verifySessionToken` against `SESSION_COOKIE_NAME`, checked directly in the
+page) — otherwise an admin previewing the link (the dashboard's "Müşteri
+sayfasını aç" button, or just pasting the link into their own browser while
+logged in) would inflate the count and make it look like the customer had
+opened it. The write is wrapped in try/catch and never blocks the page
+itself if it fails.
 
 **Journey tabs — "Genel Bakış" is the default landing tab, not "Aşamalar"**
 (`JourneyTabs.tsx`): opening a journey used to drop you straight into the

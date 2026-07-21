@@ -108,6 +108,12 @@ model Journey {
   technicalLeadId     String?
   technicalLead       TechnicalLead? @relation(fields: [technicalLeadId], references: [id])
   createdAt           DateTime  @default(now())
+  // Recorded on every customer page load where the link is active — no
+  // login exists, so this is the only "did they actually open it" signal
+  // an admin has. Never set for a load that hits the inactive-link screen.
+  firstViewedAt       DateTime?
+  lastViewedAt        DateTime?
+  viewCount           Int       @default(0)
 
   stages          JourneyStage[]
   surveyInstances SurveyInstance[]
