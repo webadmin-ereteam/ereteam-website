@@ -622,7 +622,10 @@ page) — otherwise an admin previewing the link (the dashboard's "Müşteri
 sayfasını aç" button, or just pasting the link into their own browser while
 logged in) would inflate the count and make it look like the customer had
 opened it. The write is wrapped in try/catch and never blocks the page
-itself if it fails.
+itself if it fails. Shown in two places: the journey header (as described
+above) and each dashboard card (`JourneyListWithSelection.tsx`, next to the
+Açılış/Kapanış line) — same "N kez görüntülendi · son: ..." / "Müşteri henüz
+linki açmadı" text in both.
 
 **Journey tabs — "Genel Bakış" is the default landing tab, not "Aşamalar"**
 (`JourneyTabs.tsx`): opening a journey used to drop you straight into the

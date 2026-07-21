@@ -5,7 +5,7 @@ import { findCurrentStage } from "@/lib/presales/stageProgress";
 import { isJourneyLinkActive } from "@/lib/presales/journeyLink";
 import { JOURNEY_STATUSES, JOURNEY_STATUS_LABELS } from "@/lib/presales/journeyStatus";
 import { DATE_RANGE_PRESETS, resolveDateRangePreset } from "@/lib/presales/dateRangePresets";
-import { formatDisplayDate } from "@/lib/presales/formatDate";
+import { formatDisplayDate, formatDisplayDateTime } from "@/lib/presales/formatDate";
 import { Card, PageHeader, buttonPrimaryClass, buttonSecondaryClass } from "../_components/ui";
 import { JourneyListWithSelection, type JourneyRow } from "./JourneyListWithSelection";
 
@@ -307,6 +307,8 @@ export default async function AdminDashboardPage({
             createdAtLabel: formatDisplayDate(journey.createdAt),
             closeDateLabel: formatDisplayDate(journey.outcomeSetAt),
             currentStageName: findCurrentStage(journey.stages)?.name ?? null,
+            viewCount: journey.viewCount,
+            lastViewedLabel: journey.lastViewedAt ? formatDisplayDateTime(journey.lastViewedAt) : null,
             pendingSurveys: pendingOnCustomer(journey),
             ourTurnSurveys: ballInOurCourt(journey),
             proposalRequested: journey.proposalRequested,

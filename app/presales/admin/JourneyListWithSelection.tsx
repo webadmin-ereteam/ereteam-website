@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarDays, Check, Copy, ExternalLink, FileCheck2, FileSignature, Link2, Package, UserCog, UserRound, Zap } from "lucide-react";
+import { CalendarDays, Check, Copy, ExternalLink, Eye, FileCheck2, FileSignature, Link2, Package, UserCog, UserRound, Zap } from "lucide-react";
 import {
   bulkAssignSalesRep,
   bulkSetJourneyArchived,
@@ -67,6 +67,8 @@ export type JourneyRow = {
   createdAtLabel: string;
   closeDateLabel: string;
   currentStageName: string | null;
+  viewCount: number;
+  lastViewedLabel: string | null;
   pendingSurveys: number;
   ourTurnSurveys: number;
   proposalRequested: boolean;
@@ -331,6 +333,16 @@ export function JourneyListWithSelection({
                 <p className="flex items-center gap-1.5">
                   <CalendarDays size={12} className="shrink-0" />
                   Açılış: {journey.createdAtLabel} · Kapanış: {journey.closeDateLabel}
+                </p>
+                <p className="flex items-center gap-1.5">
+                  <Eye size={12} className="shrink-0" />
+                  {journey.lastViewedLabel ? (
+                    <span className="truncate">
+                      {journey.viewCount} kez görüntülendi · son: {journey.lastViewedLabel}
+                    </span>
+                  ) : (
+                    "Müşteri henüz linki açmadı"
+                  )}
                 </p>
               </div>
 
