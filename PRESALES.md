@@ -579,7 +579,11 @@ moved past could still be answered later and re-trigger that old stage's own
 auto-advance check in `submitSurveyResponses` — which would then hunt for
 "the next pending stage after this one" and find the wrong one, since
 force-advancing already activated the real next stage out of band. The
-confirm prompt says the survey will be deleted before submitting.
+confirm prompt says the survey will be deleted before submitting. Available
+in both places a normal advance is: the "Aşamalar" tab (`JourneyStagesList.tsx`,
+per-stage card) and Genel Bakış (`journeys/[id]/page.tsx`, the "Şu anki aşama"
+card) — same button, same confirm wording, same action, since Genel Bakış is
+where admins actually work day to day.
 
 **Dashboard: filters, bulk actions, per-case shortcuts** (`app/presales/admin/page.tsx`
 + `JourneyListWithSelection.tsx`): combinable filters — Ara (search), Durum,

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Zap, Clock, CheckCircle2, Circle, ArrowRight, FileText, Send, ListChecks, FileSignature } from "lucide-react";
 import { prisma } from "@/lib/presales/db";
 import { findCurrentStage } from "@/lib/presales/stageProgress";
-import { completeCurrentStage } from "@/lib/presales/adminActions";
+import { completeCurrentStage, forceCompleteCurrentStage } from "@/lib/presales/adminActions";
 import { Badge, Card, buttonPrimaryClass, buttonSecondaryClass } from "../../../_components/ui";
 import { SubmitButton } from "../../../_components/SubmitButton";
 
@@ -219,8 +219,25 @@ export default async function JourneyOverviewTab({ params }: { params: { id: str
                   <Send size={14} className="mr-1.5" /> Anket Oluştur
                 </Link>
               )}
+              {currentStagePendingSurveys > 0 && (
+                <form action={forceCompleteCurrentStage.bind(null, journey!.id)}>
+                  <SubmitButton
+                    className={buttonSecondaryClass}
+                    pendingLabel="İlerletiliyor..."
+                    confirmMessage={`Bu aşamada ${currentStagePendingSurveys} cevaplanmamış anket var. Yine de ilerletirsen bu anket(ler) silinecek — müşteri cevabı telefon/e-posta gibi başka bir yoldan geldiyse ve tool'a ayrıca not düşmek istiyorsan önce onu yap. Devam edilsin mi?`}
+                  >
+                    Yine de ilerlet
+                  </SubmitButton>
+                </form>
+              )}
             </div>
           </div>
+          {currentStagePendingSurveys > 0 && (
+            <p className="mb-2 text-xs text-amber-600">
+              Müşteride {currentStagePendingSurveys} tamamlanmamış anket var — bu aşama normalde ancak
+              o(nlar) cevaplanınca ilerler.
+            </p>
+          )}
           {currentStage.customerDescription && (
             <p className="text-sm text-text-muted">{currentStage.customerDescription}</p>
           )}
