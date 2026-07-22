@@ -6,6 +6,7 @@ import {
   setJourneyStageActive,
   reorderJourneyStages,
   completeCurrentStage,
+  forceCompleteCurrentStage,
   reopenLastCompletedStage,
   deleteJourneyStage,
 } from "@/lib/presales/adminActions";
@@ -132,10 +133,20 @@ export function JourneyStagesList({ journeyId, stages }: { journeyId: string; st
                   </button>
                 )}
                 {isCurrent && pendingSurveyCount > 0 && (
-                  <span className="text-xs text-amber-600">
-                    Müşteride {pendingSurveyCount} tamamlanmamış anket var — bu aşama ancak o(nlar)
-                    cevaplanınca ilerleyebilir.
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-amber-600">
+                      Müşteride {pendingSurveyCount} tamamlanmamış anket var — bu aşama normalde ancak
+                      o(nlar) cevaplanınca ilerler.
+                    </span>
+                    <SubmitButton
+                      formAction={forceCompleteCurrentStage.bind(null, journeyId)}
+                      className={buttonSecondaryClass}
+                      pendingLabel="İlerletiliyor..."
+                      confirmMessage={`Bu aşamada ${pendingSurveyCount} cevaplanmamış anket var. Yine de ilerletirsen bu anket(ler) silinecek — müşteri cevabı telefon/e-posta gibi başka bir yoldan geldiyse ve tool'a ayrıca not düşmek istiyorsan önce onu yap. Devam edilsin mi?`}
+                    >
+                      Yine de ilerlet
+                    </SubmitButton>
+                  </div>
                 )}
                 {isCompleted && stage.id === reopenableStageId && (
                   <button

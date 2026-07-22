@@ -110,10 +110,11 @@ export async function createProspectAndJourney(formData: FormData) {
 
 // Stages always proceed strictly in order — there is no free-form status picker.
 // Only the single derived "current" stage (lib/presales/stageProgress.ts) can be
-// advanced, and only once any survey already sent for it has been answered. A
-// case that genuinely needs a different flow should be built that way directly
-// (reorder/hide stages), not by jumping a later stage ahead while earlier ones
-// are still open.
+// advanced. Normally that requires any survey already sent for it to have been
+// answered first (completeCurrentStage); forceCompleteCurrentStage below is the
+// escape hatch for when the answer came in some other way. A case that genuinely
+// needs a different flow should be built that way directly (reorder/hide
+// stages), not by jumping a later stage ahead while earlier ones are still open.
 
 export async function completeCurrentStage(journeyId: string) {
   const stages = await prisma.journeyStage.findMany({
@@ -154,6 +155,57 @@ export async function completeCurrentStage(journeyId: string) {
 
   revalidatePath(`/presales/admin/journeys/${journeyId}`);
   revalidatePath(`/presales/admin/journeys/${journeyId}/stages`);
+}
+
+// Same as completeCurrentStage but for when the customer answered outside the
+// tool (phone, email) and the admin wants to move on without waiting on a
+// sent-but-unanswered survey. Any such surveys on the current stage are
+// deleted outright rather than left dangling: the customer page lists every
+// "sent" survey regardless of which stage it's attached to, so leaving one
+// pending on a stage the journey has already moved past would let the
+// customer answer it later and re-trigger that stage's own auto-advance
+// logic (`submitSurveyResponses` in j/[token]/actions.ts) against a "next
+// pending stage" that's no longer the right one, since this already
+// activated it out of band.
+export async function forceCompleteCurrentStage(journeyId: string) {
+  const [stages, journey] = await Promise.all([
+    prisma.journeyStage.findMany({ where: { journeyId, isActive: true }, orderBy: { order: "asc" } }),
+    prisma.journey.findUniqueOrThrow({ where: { id: journeyId }, select: { accessToken: true } }),
+  ]);
+
+  const current = findCurrentStage(stages);
+  if (!current) {
+    throw new Error("Tamamlanacak bir aşama kalmadı.");
+  }
+
+  const next = stages.find((s) => s.order > current.order);
+
+  await prisma.$transaction([
+    prisma.surveyResponse.deleteMany({
+      where: { surveyQuestionSelection: { surveyInstance: { stageId: current.id, status: "sent" } } },
+    }),
+    prisma.surveyQuestionSelection.deleteMany({
+      where: { surveyInstance: { stageId: current.id, status: "sent" } },
+    }),
+    prisma.surveyInstance.deleteMany({ where: { stageId: current.id, status: "sent" } }),
+    prisma.journeyStage.update({
+      where: { id: current.id },
+      data: { status: "completed", completedAt: new Date() },
+    }),
+    ...(next
+      ? [
+          prisma.journeyStage.update({
+            where: { id: next.id },
+            data: { status: "active", enteredAt: new Date() },
+          }),
+        ]
+      : []),
+  ]);
+
+  revalidatePath(`/presales/admin/journeys/${journeyId}`);
+  revalidatePath(`/presales/admin/journeys/${journeyId}/stages`);
+  revalidatePath(`/presales/admin/journeys/${journeyId}/surveys`);
+  revalidatePath(`/presales/j/${journey.accessToken}`);
 }
 
 export async function reopenLastCompletedStage(journeyId: string) {

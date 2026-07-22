@@ -566,6 +566,21 @@ only when it has no unanswered sent survey — clicking it marks that stage
 completed and activates the next one. If you complete a stage by mistake, "Geri
 al" appears on the most recently completed stage to undo exactly that step.
 
+**Force-advancing a stage that still has a pending survey**
+(`forceCompleteCurrentStage`): when the current stage *does* have an
+unanswered sent survey, the button above is replaced by a warning plus a
+"Yine de ilerlet" button — for when the answer actually came in some other
+way (phone call, email) and the admin doesn't want to wait on the tool. Unlike
+`completeCurrentStage`, this deletes the stage's still-`sent` survey
+instance(s) (and their empty selections) rather than leaving them dangling:
+the customer page lists every `sent` survey regardless of which stage it
+belongs to, so an orphaned one sitting on a stage the journey has already
+moved past could still be answered later and re-trigger that old stage's own
+auto-advance check in `submitSurveyResponses` — which would then hunt for
+"the next pending stage after this one" and find the wrong one, since
+force-advancing already activated the real next stage out of band. The
+confirm prompt says the survey will be deleted before submitting.
+
 **Dashboard: filters, bulk actions, per-case shortcuts** (`app/presales/admin/page.tsx`
 + `JourneyListWithSelection.tsx`): combinable filters — Ara (search), Durum,
 Satışçı, Teknik Sorumlu, Ürün, Arşiv, Müşteri Linki, Aksiyon (Aksiyon Bizde / Müşteride —
