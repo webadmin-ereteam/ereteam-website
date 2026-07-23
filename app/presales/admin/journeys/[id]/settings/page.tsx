@@ -10,7 +10,6 @@ import {
   setJourneyLinkDisabled,
   setJourneyArchived,
   uploadCompanyLogo,
-  uploadCompanyLogoFromUrl,
   removeCompanyLogo,
   setProspectLogoAlign,
   deleteJourney,
@@ -20,6 +19,7 @@ import { JOURNEY_STATUSES, JOURNEY_STATUS_LABELS } from "@/lib/presales/journeyS
 import { Badge, Card, inputClass, buttonPrimaryClass, buttonSecondaryClass } from "../../../../_components/ui";
 import { SubmitButton } from "../../../../_components/SubmitButton";
 import { FileSizeInput } from "../../../../_components/FileSizeInput";
+import { LogoUrlForm } from "./LogoUrlForm";
 
 export default async function JourneySettingsTab({ params }: { params: { id: string } }) {
   const journey = await prisma.journey.findUnique({ where: { id: params.id }, include: { prospect: true } });
@@ -168,18 +168,7 @@ export default async function JourneySettingsTab({ params }: { params: { id: str
             </SubmitButton>
           )}
         </form>
-        <form action={uploadCompanyLogoFromUrl.bind(null, journey!.id)} className="mt-2 flex gap-2">
-          <input
-            name="logoUrl"
-            type="url"
-            required
-            placeholder="veya link ile: https://firma.com/logo.png"
-            className={`${inputClass} flex-1`}
-          />
-          <SubmitButton className={buttonSecondaryClass} pendingLabel="Alınıyor...">
-            {journey!.prospect.logoUrl ? "Değiştir" : "Al"}
-          </SubmitButton>
-        </form>
+        <LogoUrlForm journeyId={journey!.id} hasExistingLogo={!!journey!.prospect.logoUrl} />
       </Card>
 
       <Card>

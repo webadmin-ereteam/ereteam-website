@@ -446,7 +446,30 @@ way an upload is (`MAX_UPLOAD_BYTES`), rejects non-`image/*` responses and any
 non-http(s) protocol, and neither upload path trashes a *previous* logo file
 before replacing it — an existing gap, not something the link path made worse,
 since the old file was already left as an orphan in `_Logolar` on a plain
-"Değiştir" through the file input too. Stored in its own top-level Drive folder,
+"Değiştir" through the file input too.
+
+A raw `fetch()` failure (bad host, DNS failure, connection timeout — a real
+first-week-in-production case: an admin's link pointed at a domain that just
+never responded) throws a bare `TypeError: fetch failed`, not something a user
+should see directly, so `uploadLogoFromUrl()` wraps the call
+(`AbortSignal.timeout(10_000)` so a non-responding host doesn't hang the
+request either) and re-throws a clean, specific message instead. That message
+only actually reaches the user on the Ayarlar tab's link form
+(`LogoUrlForm.tsx`): it's the one action in this whole codebase that uses
+`useFormState` instead of a plain throw + `<form action={fn}>` — everything
+else here throws and lets the error propagate, which is fine when the throw
+site is a DB write (practically never fails) or a validation check already
+backstopped by the form's own `required`/`type` attributes, but a fetch to an
+arbitrary third-party URL is neither, and letting an admin's typo in a URL
+crash the whole page felt wrong for something this recoverable. The error
+shows inline under the input instead. **The "Yeni Prospect" intake form's
+`logoUrl` field does not get this treatment** — same underlying fetch failure
+there instead falls through to the `error.tsx` boundary below (which
+Next.js's own error masking makes generic rather than the actual message);
+converting that whole multi-field create form to `useFormState` was judged a
+bigger change than the actual problem warranted, but it's a known asymmetry,
+not an oversight — worth revisiting if it turns out to be hit often in
+practice. Stored in its own top-level Drive folder,
 `_Logolar` — deliberately **not** inside any journey's own folder, since a
 logo is a small website asset, not a business document, and shouldn't clutter
 a journey's real deliverables. `_Logolar` gets its own "anyone can view"
@@ -898,7 +921,7 @@ the "link an existing Drive file" feature to keep working); and turning the
 KVKK note into a properly reviewed aydınlatma metni with an actual, decided
 retention period (a business/legal decision, not a coding one).
 
-## Deployment notes (two production-only bugs hit going live)
+## Deployment notes (production-only bugs hit going live)
 
 Both confirmed via live Vercel deployment/log inspection — neither reproduced
 in local dev or a local production build (`next start`), which is exactly why
@@ -921,6 +944,27 @@ they're worth writing down:
   (`lib/presales/notify.ts`) — this fixes it in code regardless of whatever
   whitespace ends up stored in the hosting provider's env var UI, no need to
   also re-edit the value there.
+- **No `error.tsx` boundary existed anywhere in the app — every uncaught
+  Server Action throw crashed to Next's bare "Application error: a
+  server-side exception has occurred (see the server logs for more
+  information)"**, with a digest and nothing else. Hit for real when an
+  admin's logo link pointed at an unreachable host (see "Company logo"
+  above) — `fetch()` threw, nothing caught it, page crash. Added
+  `app/presales/error.tsx`: same visual language as the rest of the tool,
+  shows `error.message` (Next masks Server Action error messages to a
+  generic sentence in production regardless — this is still a real
+  improvement over the bare default screen, just not a way to surface a
+  *specific* message; see "Company logo" for the one form that gets a
+  specific inline message instead, via `useFormState`) plus a "Tekrar dene"
+  button. This is also exactly why plain `curl` was the wrong tool to verify
+  it: a raw multipart POST (no JS) exercises Next's no-JS form fallback path,
+  which renders a completely different, older-style error page than what a
+  real browser sees — the App Router's `error.tsx` boundary only intercepts
+  errors from the client-side, JS-dispatched Server Action call a real
+  browser makes. Confirmed correctly with a real headless-Chrome session
+  (via the DevTools Protocol) against a local production build
+  (`next build && next start` — `next dev` doesn't reproduce Next's
+  production error-masking behavior either), not curl.
 
 ## Known limitation: concurrent editing
 

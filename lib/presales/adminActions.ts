@@ -1181,23 +1181,40 @@ export async function uploadCompanyLogo(journeyId: string, formData: FormData) {
   revalidatePath(`/presales/j/${journey.accessToken}`);
 }
 
-export async function uploadCompanyLogoFromUrl(journeyId: string, formData: FormData) {
+// Unlike every other action here, this one returns its error instead of
+// throwing — paired with useFormState on the client (LogoUrlForm.tsx) so a
+// failed fetch (bad URL, unreachable host, timeout, not actually an image)
+// shows inline under the input instead of crashing the whole page into the
+// error.tsx boundary. Worth the deviation from the rest of the codebase's
+// plain-throw convention specifically here because this is the one action
+// that depends on a third-party server responding — every other throw site
+// is either a DB write (practically never fails) or a validation check
+// already backstopped by the form's own `required`/`type` attributes.
+export async function uploadCompanyLogoFromUrl(
+  journeyId: string,
+  _prevState: { error: string | null },
+  formData: FormData
+): Promise<{ error: string | null }> {
   const sourceUrl = String(formData.get("logoUrl") ?? "").trim();
   if (!sourceUrl) {
-    throw new Error("Bir link girmelisin.");
+    return { error: "Bir link girmelisin." };
   }
 
-  const journey = await prisma.journey.findUniqueOrThrow({ where: { id: journeyId } });
+  try {
+    const journey = await prisma.journey.findUniqueOrThrow({ where: { id: journeyId } });
+    const { driveFileId, thumbnailUrl } = await uploadLogoFromUrl({ sourceUrl, maxBytes: MAX_UPLOAD_BYTES });
 
-  const { driveFileId, thumbnailUrl } = await uploadLogoFromUrl({ sourceUrl, maxBytes: MAX_UPLOAD_BYTES });
+    await prisma.prospect.update({
+      where: { id: journey.prospectId },
+      data: { logoDriveFileId: driveFileId, logoUrl: thumbnailUrl },
+    });
 
-  await prisma.prospect.update({
-    where: { id: journey.prospectId },
-    data: { logoDriveFileId: driveFileId, logoUrl: thumbnailUrl },
-  });
-
-  revalidatePath(`/presales/admin/journeys/${journeyId}/settings`);
-  revalidatePath(`/presales/j/${journey.accessToken}`);
+    revalidatePath(`/presales/admin/journeys/${journeyId}/settings`);
+    revalidatePath(`/presales/j/${journey.accessToken}`);
+    return { error: null };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Beklenmedik bir hata oluştu." };
+  }
 }
 
 export async function removeCompanyLogo(journeyId: string) {

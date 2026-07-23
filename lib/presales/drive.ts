@@ -280,7 +280,24 @@ export async function uploadLogoFromUrl(params: {
     throw new Error("Sadece http(s) linkleri desteklenir.");
   }
 
-  const res = await fetch(parsed.toString());
+  // A raw fetch() failure (DNS lookup failed, connection refused, TLS error,
+  // timeout — anything network-level) throws a bare `TypeError: fetch
+  // failed`, not a clean Error a user should ever see directly: left
+  // uncaught, it crashes the whole Server Action into Next's generic
+  // "Application error" screen instead of a message that says what actually
+  // went wrong. AbortSignal.timeout so a server that never responds doesn't
+  // hang the request indefinitely either.
+  let res: Response;
+  try {
+    res = await fetch(parsed.toString(), { signal: AbortSignal.timeout(10_000) });
+  } catch (err) {
+    const timedOut = err instanceof Error && err.name === "TimeoutError";
+    throw new Error(
+      timedOut
+        ? "Link zaman aşımına uğradı — sunucu yanıt vermedi. Dosya olarak yüklemeyi deneyebilirsin."
+        : "Link'ten görsel alınamadı — adresi kontrol et ya da dosya olarak yükle."
+    );
+  }
   if (!res.ok) {
     throw new Error(`Link'ten dosya alınamadı (HTTP ${res.status}).`);
   }
