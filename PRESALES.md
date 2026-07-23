@@ -434,7 +434,19 @@ same gap.
 Prospect" alongside the rest of the intake info, or later from a journey's
 Ayarlar tab, where "Kaldır" removes it again (clears `Prospect.logoDriveFileId`/
 `logoUrl` and trashes the Drive file — best-effort, doesn't block the DB
-update if the Drive call fails). Stored in its own top-level Drive folder,
+update if the Drive call fails). Both places also take a straight link instead
+of a file (`uploadCompanyLogoFromUrl` in adminActions, `uploadLogoFromUrl()` in
+drive.ts) — handy for grabbing a logo straight off the company's own website
+instead of downloading-then-reuploading. It's still archived into our own
+Drive rather than hotlinked directly, same as an uploaded file, so it survives
+the source URL later changing or disappearing and "Kaldır" always has one
+consistent place to clean up; both paths funnel into the same
+`uploadLogoBufferToDrive()` internal helper. The link fetch is capped the same
+way an upload is (`MAX_UPLOAD_BYTES`), rejects non-`image/*` responses and any
+non-http(s) protocol, and neither upload path trashes a *previous* logo file
+before replacing it — an existing gap, not something the link path made worse,
+since the old file was already left as an orphan in `_Logolar` on a plain
+"Değiştir" through the file input too. Stored in its own top-level Drive folder,
 `_Logolar` — deliberately **not** inside any journey's own folder, since a
 logo is a small website asset, not a business document, and shouldn't clutter
 a journey's real deliverables. `_Logolar` gets its own "anyone can view"

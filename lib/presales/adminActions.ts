@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/presales/db";
 import { Prisma } from "@/lib/generated/prisma/client";
 import { generateAccessToken } from "@/lib/presales/tokens";
-import { uploadFileToDrive, copyExistingDriveFile, extractDriveFileId, uploadLogoToDrive, trashDriveFile } from "@/lib/presales/drive";
+import { uploadFileToDrive, copyExistingDriveFile, extractDriveFileId, uploadLogoToDrive, uploadLogoFromUrl, trashDriveFile } from "@/lib/presales/drive";
 import { findCurrentStage } from "@/lib/presales/stageProgress";
 import { encodeOtherOption } from "@/lib/presales/surveyOptions";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/presales/fileUpload";
@@ -40,9 +40,11 @@ export async function createProspectAndJourney(formData: FormData) {
     throw new Error("Hangi aşama şablonuyla başlanacağı zorunludur.");
   }
 
-  // Logo is optional here — admin may not have the file on hand yet and can
-  // always add it later from the journey's Ayarlar tab.
+  // Logo is optional here — admin may not have it on hand yet and can always
+  // add it later from the journey's Ayarlar tab. Either a file upload or a
+  // link works; the file wins if somehow both are given.
   const logoFile = formData.get("logo") as File | null;
+  const logoSourceUrl = String(formData.get("logoUrl") ?? "").trim();
   let logoDriveFileId: string | null = null;
   let logoUrl: string | null = null;
   if (logoFile && logoFile.size > 0) {
@@ -53,6 +55,10 @@ export async function createProspectAndJourney(formData: FormData) {
       throw new Error("Logo bir resim dosyası olmalı (PNG, JPG, SVG vb.).");
     }
     const uploaded = await uploadLogoToDrive({ file: logoFile, fileName: logoFile.name });
+    logoDriveFileId = uploaded.driveFileId;
+    logoUrl = uploaded.thumbnailUrl;
+  } else if (logoSourceUrl) {
+    const uploaded = await uploadLogoFromUrl({ sourceUrl: logoSourceUrl, maxBytes: MAX_UPLOAD_BYTES });
     logoDriveFileId = uploaded.driveFileId;
     logoUrl = uploaded.thumbnailUrl;
   }
@@ -1165,6 +1171,25 @@ export async function uploadCompanyLogo(journeyId: string, formData: FormData) {
   const journey = await prisma.journey.findUniqueOrThrow({ where: { id: journeyId } });
 
   const { driveFileId, thumbnailUrl } = await uploadLogoToDrive({ file, fileName: file.name });
+
+  await prisma.prospect.update({
+    where: { id: journey.prospectId },
+    data: { logoDriveFileId: driveFileId, logoUrl: thumbnailUrl },
+  });
+
+  revalidatePath(`/presales/admin/journeys/${journeyId}/settings`);
+  revalidatePath(`/presales/j/${journey.accessToken}`);
+}
+
+export async function uploadCompanyLogoFromUrl(journeyId: string, formData: FormData) {
+  const sourceUrl = String(formData.get("logoUrl") ?? "").trim();
+  if (!sourceUrl) {
+    throw new Error("Bir link girmelisin.");
+  }
+
+  const journey = await prisma.journey.findUniqueOrThrow({ where: { id: journeyId } });
+
+  const { driveFileId, thumbnailUrl } = await uploadLogoFromUrl({ sourceUrl, maxBytes: MAX_UPLOAD_BYTES });
 
   await prisma.prospect.update({
     where: { id: journey.prospectId },

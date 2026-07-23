@@ -206,18 +206,16 @@ export async function uploadFileToDrive(params: {
   };
 }
 
-// Company logos live in their own top-level "_Logolar" folder — not inside
-// any journey's folder — since they're a small, separate concern (a website
-// asset, not a business document) that a company's actual journey folder
-// shouldn't be cluttered with.
-export async function uploadLogoToDrive(params: {
-  file: File;
+// Shared by both uploadLogoToDrive (browser file upload) and
+// uploadLogoFromUrl (fetched from a link) — everything past "here's a
+// buffer and a mime type" is identical either way.
+async function uploadLogoBufferToDrive(params: {
+  buffer: Buffer;
+  mimeType: string;
   fileName: string;
 }): Promise<{ driveFileId: string; thumbnailUrl: string }> {
   const drive = getDriveClient();
   const logosFolderId = await getOrCreateSubfolder(drive, getRootFolderId(), "_Logolar", true);
-
-  const buffer = Buffer.from(await params.file.arrayBuffer());
 
   // Same two-step create-then-update as uploadFileToDrive, to avoid the
   // multipart charset issue that mangles non-ASCII file names.
@@ -233,8 +231,8 @@ export async function uploadLogoToDrive(params: {
   await drive.files.update({
     fileId: created.data.id!,
     media: {
-      mimeType: params.file.type || "application/octet-stream",
-      body: Readable.from(buffer),
+      mimeType: params.mimeType || "application/octet-stream",
+      body: Readable.from(params.buffer),
     },
     supportsAllDrives: true,
   });
@@ -247,6 +245,63 @@ export async function uploadLogoToDrive(params: {
     // unlike webViewLink which opens Drive's own viewer page.
     thumbnailUrl: `https://drive.google.com/thumbnail?id=${driveFileId}&sz=w400`,
   };
+}
+
+// Company logos live in their own top-level "_Logolar" folder — not inside
+// any journey's folder — since they're a small, separate concern (a website
+// asset, not a business document) that a company's actual journey folder
+// shouldn't be cluttered with.
+export async function uploadLogoToDrive(params: {
+  file: File;
+  fileName: string;
+}): Promise<{ driveFileId: string; thumbnailUrl: string }> {
+  const buffer = Buffer.from(await params.file.arrayBuffer());
+  return uploadLogoBufferToDrive({ buffer, mimeType: params.file.type, fileName: params.fileName });
+}
+
+// Fetches an image from an admin-supplied URL (e.g. straight off the
+// company's own website) and archives it into our own Drive the same way an
+// uploaded file would be — so it survives the source URL later changing or
+// disappearing, and "Kaldır" always has one consistent place to clean up.
+// http(s)-only and a Content-Type/size check, same as a direct upload gets —
+// this is an admin-only, login-gated form, not public input, but there's no
+// reason to skip the same sanity checks a file upload already has to pass.
+export async function uploadLogoFromUrl(params: {
+  sourceUrl: string;
+  maxBytes: number;
+}): Promise<{ driveFileId: string; thumbnailUrl: string }> {
+  let parsed: URL;
+  try {
+    parsed = new URL(params.sourceUrl);
+  } catch {
+    throw new Error("Geçerli bir link değil.");
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("Sadece http(s) linkleri desteklenir.");
+  }
+
+  const res = await fetch(parsed.toString());
+  if (!res.ok) {
+    throw new Error(`Link'ten dosya alınamadı (HTTP ${res.status}).`);
+  }
+
+  const contentType = res.headers.get("content-type") ?? "";
+  if (!contentType.startsWith("image/")) {
+    throw new Error("Bu link bir görsele işaret etmiyor.");
+  }
+
+  const contentLength = Number(res.headers.get("content-length") ?? "0");
+  if (contentLength > params.maxBytes) {
+    throw new Error("Görsel çok büyük.");
+  }
+
+  const buffer = Buffer.from(await res.arrayBuffer());
+  if (buffer.byteLength > params.maxBytes) {
+    throw new Error("Görsel çok büyük.");
+  }
+
+  const fileName = decodeURIComponent(parsed.pathname.split("/").pop() || "logo") || "logo";
+  return uploadLogoBufferToDrive({ buffer, mimeType: contentType, fileName });
 }
 
 // Moves a file to Drive's trash (recoverable there, not a hard delete) — used

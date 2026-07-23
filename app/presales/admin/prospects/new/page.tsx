@@ -82,6 +82,13 @@ export default async function NewProspectPage() {
               accept="image/*"
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-brand-primary/10 file:px-3 file:py-1.5 file:text-brand-primary"
             />
+            <p className="mb-1.5 mt-1.5 text-xs text-text-muted">veya link ile ekle:</p>
+            <input
+              name="logoUrl"
+              type="url"
+              placeholder="https://firma.com/logo.png"
+              className={`${inputClass} w-full`}
+            />
             <p className="mt-1 text-xs text-text-muted">
               Şimdi eklemesen de olur — daha sonra journeyin Ayarlar sekmesinden ekleyebilirsin.
             </p>

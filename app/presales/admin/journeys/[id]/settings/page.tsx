@@ -10,6 +10,7 @@ import {
   setJourneyLinkDisabled,
   setJourneyArchived,
   uploadCompanyLogo,
+  uploadCompanyLogoFromUrl,
   removeCompanyLogo,
   setProspectLogoAlign,
   deleteJourney,
@@ -166,6 +167,18 @@ export default async function JourneySettingsTab({ params }: { params: { id: str
               Kaldır
             </SubmitButton>
           )}
+        </form>
+        <form action={uploadCompanyLogoFromUrl.bind(null, journey!.id)} className="mt-2 flex gap-2">
+          <input
+            name="logoUrl"
+            type="url"
+            required
+            placeholder="veya link ile: https://firma.com/logo.png"
+            className={`${inputClass} flex-1`}
+          />
+          <SubmitButton className={buttonSecondaryClass} pendingLabel="Alınıyor...">
+            {journey!.prospect.logoUrl ? "Değiştir" : "Al"}
+          </SubmitButton>
         </form>
       </Card>
 
