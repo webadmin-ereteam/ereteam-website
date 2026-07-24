@@ -35,3 +35,12 @@ export async function verifyAdminPassword(username: string, password: string): P
   if (!envUser || !envPass) return false;
   return username === envUser && (await verifyPassword(password, envPass));
 }
+
+// The value new session tokens embed and the admin layout checks incoming
+// ones against (see session.ts). No `AdminCredential` row means the env-var
+// fallback is in use, which has no revocation store at all — 0 there just
+// means "no epoch check applies," not a real timestamp.
+export async function getCurrentSessionEpoch(): Promise<number> {
+  const row = await loadCredentialRow();
+  return row ? row.sessionEpoch.getTime() : 0;
+}

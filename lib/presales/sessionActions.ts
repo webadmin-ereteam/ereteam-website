@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { verifyAdminPassword } from "./auth";
+import { verifyAdminPassword, getCurrentSessionEpoch } from "./auth";
 import { checkLoginLock, recordLoginResult } from "./loginRateLimit";
 import { createSessionToken, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from "./session";
 
@@ -25,7 +25,7 @@ export async function loginAdmin(formData: FormData) {
     redirect(`/presales/login?error=1&next=${encodeURIComponent(next)}`);
   }
 
-  const token = await createSessionToken();
+  const token = await createSessionToken(await getCurrentSessionEpoch());
   cookies().set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

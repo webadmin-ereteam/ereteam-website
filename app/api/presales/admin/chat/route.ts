@@ -42,8 +42,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ content: text });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("Admin chat API error:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    // Logged in full server-side; the client only ever gets a generic
+    // message — the raw error can carry internal details (a Prisma error,
+    // a Groq API error body) that shouldn't leave the server.
+    console.error("Admin chat API error:", err instanceof Error ? err.message : String(err));
+    return NextResponse.json({ error: "Asistan şu anda yanıt veremiyor." }, { status: 500 });
   }
 }

@@ -8,6 +8,7 @@ import { buildSurveyExportBuffer, surveyExportFileName } from "@/lib/presales/su
 import { decodeOptions } from "@/lib/presales/surveyOptions";
 import { isJourneyLinkActive } from "@/lib/presales/journeyLink";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL, ALLOWED_UPLOAD_MIME_TYPES, ALLOWED_UPLOAD_LABEL } from "@/lib/presales/fileUpload";
+import { fileContentMatchesDeclaredType } from "@/lib/presales/fileSignature";
 import { escapeHtml } from "@/lib/presales/escapeHtml";
 import { Prisma } from "@/lib/generated/prisma/client";
 
@@ -53,6 +54,15 @@ async function uploadNewFileAnswers(survey: SurveyWithSelections, formData: Form
     if (file && file.size > 0 && !ALLOWED_UPLOAD_MIME_TYPES.includes(file.type)) {
       throw new Error(
         `"${selection.text}" için desteklenmeyen dosya türü — izin verilenler: ${ALLOWED_UPLOAD_LABEL}.`
+      );
+    }
+    // file.type is a client-supplied label, not a guarantee — this reads the
+    // file's actual leading bytes and checks them against what a real file
+    // of the claimed type starts with, so the MIME check above can't be
+    // defeated by simply relabeling an arbitrary file.
+    if (file && file.size > 0 && !(await fileContentMatchesDeclaredType(file))) {
+      throw new Error(
+        `"${selection.text}" için yüklenen dosyanın içeriği, seçtiğin dosya türüyle uyuşmuyor.`
       );
     }
   }

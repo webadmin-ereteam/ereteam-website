@@ -1,6 +1,7 @@
 import { google } from "googleapis";
 import { Readable } from "node:stream";
 import { DOCUMENT_TYPE_FOLDER } from "./documentTypes";
+import { ssrfSafeFetch } from "./ssrfGuard";
 
 function getDriveClient() {
   const rawKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
@@ -263,9 +264,14 @@ export async function uploadLogoToDrive(params: {
 // company's own website) and archives it into our own Drive the same way an
 // uploaded file would be — so it survives the source URL later changing or
 // disappearing, and "Kaldır" always has one consistent place to clean up.
-// http(s)-only and a Content-Type/size check, same as a direct upload gets —
-// this is an admin-only, login-gated form, not public input, but there's no
-// reason to skip the same sanity checks a file upload already has to pass.
+// http(s)-only, a Content-Type/size check same as a direct upload gets, and
+// — since this fetch target is a full URL an admin types in, not a fixed
+// address — routed through ssrfSafeFetch so it can't be pointed at
+// loopback/private/link-local addresses (including cloud metadata
+// endpoints). This is admin-only, login-gated input, but the login is one
+// credential shared across the whole sales team, not a single vetted
+// engineer, so it's treated as a real (if authenticated) attack surface
+// rather than fully trusted.
 export async function uploadLogoFromUrl(params: {
   sourceUrl: string;
   maxBytes: number;
@@ -289,8 +295,11 @@ export async function uploadLogoFromUrl(params: {
   // hang the request indefinitely either.
   let res: Response;
   try {
-    res = await fetch(parsed.toString(), { signal: AbortSignal.timeout(10_000) });
+    res = await ssrfSafeFetch(parsed, { signal: AbortSignal.timeout(10_000) });
   } catch (err) {
+    if (err instanceof Error && (err.message === "Bu adrese erişilemiyor." || err.message === "Adres çözümlenemedi.")) {
+      throw err;
+    }
     const timedOut = err instanceof Error && err.name === "TimeoutError";
     throw new Error(
       timedOut

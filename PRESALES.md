@@ -921,6 +921,102 @@ the "link an existing Drive file" feature to keep working); and turning the
 KVKK note into a properly reviewed aydınlatma metni with an actual, decided
 retention period (a business/legal decision, not a coding one).
 
+## Security hardening, round 2 (full re-audit, 2026-07)
+
+A second full manual pass (not a diff review — the whole `app/presales/`,
+`app/api/presales/`, `lib/presales/` tree) found one High, one Medium, and
+four Low findings. All fixed:
+
+- **SSRF via the logo-link feature, High** (`lib/presales/drive.ts`,
+  `uploadLogoFromUrl`): the admin-supplied URL was fetched with no check on
+  the target *host* — only protocol (http/https) and, after the fact, the
+  response's `Content-Type`. Nothing stopped it pointing at `localhost`,
+  an RFC1918 address, or a cloud metadata endpoint
+  (`169.254.169.254`), and the failure reason (timeout vs. HTTP status vs.
+  "not an image") was distinguishable enough to work as a blind internal-
+  network probe. Fixed with a new `lib/presales/ssrfGuard.ts`:
+  `ssrfSafeFetch()` resolves the hostname via DNS and rejects if *any*
+  resolved address is loopback/private/link-local/CGNAT/multicast (checked
+  for both IPv4 and IPv6, including the IPv4-mapped-IPv6 form), then follows
+  redirects manually (`redirect: "manual"`, up to 5 hops) re-validating the
+  *target* of each hop the same way — so a public URL that 302s to an
+  internal address doesn't slip through either. Verified against
+  `127.0.0.1`, `169.254.169.254`, `localhost`, `10.0.0.5`, `192.168.1.1`,
+  and `::1` (all rejected) and a real external image URL (still works).
+  **Known residual gap, accepted as reasonable for an admin-only, login-gated
+  feature**: no protection against DNS rebinding — the address is validated
+  at check-time, but `fetch()` re-resolves the hostname itself when it
+  actually connects, leaving a narrow TOCTOU window. Closing that fully
+  would mean pinning the validated IP for the actual TCP connection via a
+  custom `undici` dispatcher, judged more complexity than this surface
+  currently warrants.
+- **Unrestricted file upload (MIME spoofing), Medium**
+  (`app/presales/j/[token]/actions.ts`, customer survey file answers): the
+  MIME allowlist checked `file.type`, which is client-supplied and
+  trivially spoofable. New `lib/presales/fileSignature.ts` checks the
+  file's actual leading bytes against the signature a real file of the
+  claimed type starts with (PNG/JPEG/GIF/WEBP, PDF, the OOXML formats via
+  their shared ZIP signature, legacy Office via the OLE2 signature) — wired
+  into the same validation pass in `uploadNewFileAnswers`, and into both
+  logo-upload paths (`uploadCompanyLogo`, and the file branch of
+  `createProspectAndJourney`) for consistency, since the helper already
+  existed. Formats with no reliable magic number (`text/plain`, `text/csv`)
+  are intentionally left unchecked, same as before.
+- **Raw error messages from the admin chat API, Low**
+  (`app/api/presales/admin/chat/route.ts`): `catch` returned
+  `err.message` straight to the client — any unhandled exception (a Prisma
+  error, a Groq API error body) went out verbatim. Now logged server-side
+  only; the client gets a fixed generic message.
+- **No server-side session revocation, Low** (`lib/presales/session.ts`,
+  `AdminCredential.sessionEpoch`): the session token was a bare
+  `{exp}` HMAC payload with no reference to anything revocable — a stolen
+  token stayed valid for its full 7-day life regardless of logout, and
+  changing the admin password didn't invalidate sessions already issued
+  under it either (the account page used to say exactly that, as a known
+  limitation). Added `AdminCredential.sessionEpoch` (bumped by a credential
+  change in `updateAdminCredentials`, or explicitly via the new
+  `revokeAllSessions` action / "Tüm Cihazlardan Çıkış Yap" button on the
+  account page); every token now embeds the epoch active when it was
+  issued. `middleware.ts` is untouched and still does its fast, DB-free
+  signature+expiry check in the Edge Runtime (`verifySessionToken` — this
+  is also *why* the epoch can't be checked there: Prisma's `pg` adapter
+  needs a raw TCP socket, unavailable in Edge). The epoch check instead
+  runs once per request in `app/presales/admin/layout.tsx` (Node runtime,
+  already the entry point for every admin page), via the new
+  `getSessionPayload()` in session.ts — a stale token gets redirected to
+  `/presales/login` (the stale cookie itself can't be cleared from a
+  Server Component render, only a Server Action/Route Handler can call
+  `cookies().delete()` — it's just left inert, harmless, overwritten by
+  the next real login). Verified end-to-end: login → normal access works →
+  "Tüm Cihazlardan Çıkış Yap" → the *same* still-unexpired cookie now
+  bounces to login → a fresh login works again.
+- **No CSP `script-src`, Low** (`next.config.mjs`, `/presales/:path*`):
+  added as `Content-Security-Policy-Report-Only`, not enforcing —
+  `/presales/*` inherits the root layout's CookieYes + HubSpot embeds
+  (confirmed: `app/presales` has no layout.tsx of its own), and those load
+  additional sub-resources from hosts not fully enumerated here; flipping
+  this to enforcing without confirming nothing else breaks risks silently
+  taking down cookie consent or the chat widget. Includes `'unsafe-inline'`
+  because the App Router streams hydration data via inline
+  `<script>self.__next_f.push(...)</script>` tags with no nonce wired up —
+  so this doesn't stop inline-script injection, only a `<script src="...">`
+  pointing outside `'self'`/the two allowlisted hosts, which is still the
+  more common injection shape. Check the browser console for report-only
+  violations for a few days before ever making this the enforcing header.
+
+**Reviewed and found already correct, not just skipped**: no SQL injection
+anywhere (Prisma-only, no `$queryRawUnsafe`); no XSS sink (no
+`dangerouslySetInnerHTML` anywhere in the codebase, all outbound email HTML
+escaped, React auto-escapes everything else); no open redirect on login's
+`next` param (`sessionActions.ts` validates `startsWith("/presales/admin")`
+before using it); IDOR-safe customer/export routes (every query scoped by
+the requester's own access token, never a bare record ID); no path
+traversal (all file storage goes through the Drive API by file ID, never a
+filesystem path built from user input). The global (not per-actor) login
+lockout and the fact that `GROQ_API_KEY`/Drive credentials are server-only
+(never `NEXT_PUBLIC_`) were also reviewed and are fine as-is — no change
+made there.
+
 ## Deployment notes (production-only bugs hit going live)
 
 Both confirmed via live Vercel deployment/log inspection — neither reproduced

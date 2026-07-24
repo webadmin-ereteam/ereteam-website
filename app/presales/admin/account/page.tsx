@@ -1,6 +1,6 @@
 import { getAdminUsername } from "@/lib/presales/auth";
-import { updateAdminCredentials } from "@/lib/presales/adminActions";
-import { Card, PageHeader, inputClass, labelClass, buttonPrimaryClass } from "../../_components/ui";
+import { updateAdminCredentials, revokeAllSessions } from "@/lib/presales/adminActions";
+import { Card, PageHeader, inputClass, labelClass, buttonPrimaryClass, buttonSecondaryClass } from "../../_components/ui";
 import { SubmitButton } from "../../_components/SubmitButton";
 
 export default async function AdminAccountPage() {
@@ -33,11 +33,28 @@ export default async function AdminAccountPage() {
             </p>
           </div>
           <p className="text-xs text-text-muted">
-            Kaydettikten sonra yeni şifreyle tekrar giriş yapman gerekir — ama halihazırda açık
-            oturumlar (kendi tarayıcın dahil) otomatik olarak kapanmaz, 7 gün sonra kendi kendine
-            sona erer.
+            Kaydettikten sonra herkesin yeni şifreyle tekrar giriş yapması gerekir — halihazırda
+            açık olan tüm oturumlar (kendi tarayıcın dahil) bu kayıtla birlikte otomatik kapanır.
           </p>
           <SubmitButton className={buttonPrimaryClass}>Kaydet</SubmitButton>
+        </form>
+      </Card>
+
+      <Card className="mt-6 max-w-md">
+        <p className="mb-2 text-sm font-medium text-brand-dark">Tüm Oturumları Kapat</p>
+        <p className="mb-3 text-xs text-text-muted">
+          Şifreyi değiştirmeden, sadece açık olan tüm oturumları (kendi tarayıcın dahil, ekipteki
+          herkes) kapatır — kayıp/çalıntı bir cihaz ya da paylaşılan bir bilgisayardan sonra
+          kullanışlı. Herkesin tekrar giriş yapması gerekir.
+        </p>
+        <form action={revokeAllSessions}>
+          <SubmitButton
+            className={buttonSecondaryClass}
+            pendingLabel="Kapatılıyor..."
+            confirmMessage="Bu, kendi tarayıcın dahil ekipteki herkesin oturumunu kapatacak — herkesin tekrar giriş yapması gerekecek. Devam edilsin mi?"
+          >
+            Tüm Cihazlardan Çıkış Yap
+          </SubmitButton>
         </form>
       </Card>
     </div>

@@ -9,6 +9,7 @@ import { uploadFileToDrive, copyExistingDriveFile, extractDriveFileId, uploadLog
 import { findCurrentStage } from "@/lib/presales/stageProgress";
 import { encodeOtherOption } from "@/lib/presales/surveyOptions";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/presales/fileUpload";
+import { fileContentMatchesDeclaredType } from "@/lib/presales/fileSignature";
 import { hashPassword } from "@/lib/presales/passwordHash";
 
 // "Firma - Ürün - 06.07.2026" — the fixed format used for both a journey's own
@@ -53,6 +54,9 @@ export async function createProspectAndJourney(formData: FormData) {
     }
     if (!logoFile.type.startsWith("image/")) {
       throw new Error("Logo bir resim dosyası olmalı (PNG, JPG, SVG vb.).");
+    }
+    if (!(await fileContentMatchesDeclaredType(logoFile))) {
+      throw new Error("Dosyanın içeriği, seçtiğin dosya türüyle uyuşmuyor.");
     }
     const uploaded = await uploadLogoToDrive({ file: logoFile, fileName: logoFile.name });
     logoDriveFileId = uploaded.driveFileId;
@@ -1167,6 +1171,9 @@ export async function uploadCompanyLogo(journeyId: string, formData: FormData) {
   if (!file.type.startsWith("image/")) {
     throw new Error("Logo bir resim dosyası olmalı (PNG, JPG, SVG vb.).");
   }
+  if (!(await fileContentMatchesDeclaredType(file))) {
+    throw new Error("Dosyanın içeriği, seçtiğin dosya türüyle uyuşmuyor.");
+  }
 
   const journey = await prisma.journey.findUniqueOrThrow({ where: { id: journeyId } });
 
@@ -1270,9 +1277,16 @@ export async function updateAdminCredentials(formData: FormData) {
   const existing = await prisma.adminCredential.findFirst();
 
   if (existing) {
+    // Changing the username/password should also invalidate any session
+    // token already issued under the old credentials — otherwise a device
+    // that's still logged in stays logged in regardless of the change.
     await prisma.adminCredential.update({
       where: { id: existing.id },
-      data: { username, ...(password ? { password: await hashPassword(password) } : {}) },
+      data: {
+        username,
+        ...(password ? { password: await hashPassword(password) } : {}),
+        sessionEpoch: new Date(),
+      },
     });
   } else {
     if (!password) {
@@ -1281,5 +1295,18 @@ export async function updateAdminCredentials(formData: FormData) {
     await prisma.adminCredential.create({ data: { username, password: await hashPassword(password) } });
   }
 
+  revalidatePath("/presales/admin/account");
+}
+
+// Invalidates every session token issued so far, on every device — the only
+// way to actually revoke a session, since tokens themselves are stateless
+// and normal logout just clears the one browser's cookie. Bumping the same
+// `sessionEpoch` a credential change already bumps.
+export async function revokeAllSessions() {
+  const existing = await prisma.adminCredential.findFirst();
+  if (!existing) {
+    throw new Error("Henüz kayıtlı bir giriş bilgisi yok.");
+  }
+  await prisma.adminCredential.update({ where: { id: existing.id }, data: { sessionEpoch: new Date() } });
   revalidatePath("/presales/admin/account");
 }

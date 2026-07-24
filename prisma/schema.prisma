@@ -292,6 +292,14 @@ model AdminCredential {
   username  String
   password  String
   updatedAt DateTime @updatedAt
+  // Bumped on password change and on an explicit "Tüm cihazlardan çıkış
+  // yap" — every session token embeds the epoch value active when it was
+  // issued (lib/presales/session.ts), and the admin layout rejects any
+  // token whose embedded epoch is older than this. Session verification
+  // itself (middleware.ts, Edge Runtime) stays DB-free; this check runs
+  // once per admin page load instead, where a DB round-trip already
+  // happens anyway.
+  sessionEpoch DateTime @default(now())
 }
 
 // Singleton row tracking failed admin login attempts, for basic brute-force
