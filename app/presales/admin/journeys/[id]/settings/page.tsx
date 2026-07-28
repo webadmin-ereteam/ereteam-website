@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Image from "next/image";
 import { ExternalLink } from "lucide-react";
 import { prisma } from "@/lib/presales/db";
 import {
@@ -127,9 +128,11 @@ export default async function JourneySettingsTab({ params }: { params: { id: str
                 : "justify-start"
             }`}
           >
-            <img
+            <Image
               src={journey!.prospect.logoUrl}
               alt={journey!.prospect.companyName}
+              width={320}
+              height={112}
               className="max-h-14 max-w-full object-contain"
             />
           </div>

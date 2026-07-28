@@ -14,6 +14,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://ereteam.com"),
   title: {
     template: "%s | Ereteam",
     default: "Ereteam | Where Data Comes Alive",

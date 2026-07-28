@@ -205,10 +205,9 @@ export default function HeroSection() {
       style={{ background: "#07111f" }}
     >
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        <img 
-          src="/images/ai/hero_bg.png" 
-          alt="Ereteam Hero Background" 
-          className="w-full h-full object-cover opacity-20"
+        <div
+          className="h-full w-full bg-cover bg-center opacity-20"
+          style={{ backgroundImage: "url('/images/ai/hero_bg.png')" }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-[#0B0F19]/40 via-[#0B0F19]/80 to-[#0B0F19]"></div>
         

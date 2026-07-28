@@ -216,9 +216,11 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
                   }
                 >
                   {journey!.prospect.logoUrl ? (
-                    <img
+                    <Image
                       src={journey!.prospect.logoUrl}
                       alt={journey!.prospect.companyName}
+                      width={440}
+                      height={112}
                       className="mb-3 h-11 max-w-[220px] object-contain sm:h-14"
                     />
                   ) : (
