@@ -92,11 +92,20 @@ export default async function AdminDashboardPage({
   const wonCount = journeys.filter((j) => j.status === "won").length;
   const lostCount = journeys.filter((j) => j.status === "lost").length;
 
-  const pendingOnCustomer = (j: (typeof journeys)[number]) =>
-    j.surveyInstances.filter((s) => s.status === "sent").length;
+  // Action ownership is derived from the *current* stage, not from whether a
+  // completed survey happens to exist. An open case is with the customer only
+  // while that stage has a sent survey; otherwise the next step (meeting,
+  // demo, sending a survey, or manually completing the stage) is ours.
+  const pendingOnCustomer = (j: (typeof journeys)[number]) => {
+    const currentStage = findCurrentStage(j.stages);
+    if (!currentStage) return 0;
+    return j.surveyInstances.filter((s) => s.stageId === currentStage.id && s.status === "sent").length;
+  };
 
-  const ballInOurCourt = (j: (typeof journeys)[number]) =>
-    j.surveyInstances.filter((s) => s.status === "completed" && s.stage.status !== "completed").length;
+  const ballInOurCourt = (j: (typeof journeys)[number]) => {
+    if (j.status !== "active" || j.archived || !findCurrentStage(j.stages)) return 0;
+    return pendingOnCustomer(j) === 0 ? 1 : 0;
+  };
 
   const pendingSurveyCount = journeys.reduce((sum, j) => sum + pendingOnCustomer(j), 0);
   const ballInOurCourtCount = journeys.reduce((sum, j) => sum + ballInOurCourt(j), 0);
