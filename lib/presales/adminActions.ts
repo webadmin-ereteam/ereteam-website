@@ -1164,9 +1164,13 @@ export async function assignProduct(journeyId: string, formData: FormData) {
 export async function updateProspectDetails(journeyId: string, formData: FormData) {
   const companyName = String(formData.get("companyName") ?? "").trim();
   const contactName = String(formData.get("contactName") ?? "").trim();
+  const contactEmail = String(formData.get("contactEmail") ?? "").trim();
 
-  if (!companyName || !contactName) {
-    throw new Error("Firma adı ve yetkili kişi adı zorunludur.");
+  if (!companyName || !contactName || !contactEmail) {
+    throw new Error("Firma adı, yetkili kişi adı ve e-posta zorunludur.");
+  }
+  if (!/^\S+@\S+\.\S+$/.test(contactEmail)) {
+    throw new Error("Geçerli bir e-posta adresi girmelisin.");
   }
 
   const journey = await prisma.journey.findUniqueOrThrow({
@@ -1181,7 +1185,7 @@ export async function updateProspectDetails(journeyId: string, formData: FormDat
 
   await prisma.prospect.update({
     where: { id: journey.prospectId },
-    data: { companyName, contactName },
+    data: { companyName, contactName, contactEmail },
   });
 
   revalidatePath("/presales/admin");

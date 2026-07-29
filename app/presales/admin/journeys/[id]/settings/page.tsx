@@ -68,6 +68,19 @@ export default async function JourneySettingsTab({ params }: { params: { id: str
               className={`${inputClass} w-full`}
             />
           </div>
+          <div>
+            <label htmlFor="contactEmail" className="mb-1 block text-xs text-text-muted">
+              E-posta adresi
+            </label>
+            <input
+              id="contactEmail"
+              name="contactEmail"
+              type="email"
+              required
+              defaultValue={journey!.prospect.contactEmail}
+              className={`${inputClass} w-full`}
+            />
+          </div>
           <SubmitButton className={buttonPrimaryClass} pendingLabel="Kaydediliyor...">
             Bilgileri kaydet
           </SubmitButton>
