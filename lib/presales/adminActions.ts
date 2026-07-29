@@ -1157,6 +1157,41 @@ export async function assignProduct(journeyId: string, formData: FormData) {
   revalidatePath(`/presales/admin/journeys/${journeyId}`);
 }
 
+// The prospect belongs to the company/contact record, while Journey.name and
+// its matching Drive folder deliberately remain immutable snapshots of how the
+// case was created. Renaming the prospect therefore never desynchronizes an
+// existing folder from its journey.
+export async function updateProspectDetails(journeyId: string, formData: FormData) {
+  const companyName = String(formData.get("companyName") ?? "").trim();
+  const contactName = String(formData.get("contactName") ?? "").trim();
+
+  if (!companyName || !contactName) {
+    throw new Error("Firma adı ve yetkili kişi adı zorunludur.");
+  }
+
+  const journey = await prisma.journey.findUniqueOrThrow({
+    where: { id: journeyId },
+    select: { prospectId: true },
+  });
+
+  const relatedJourneys = await prisma.journey.findMany({
+    where: { prospectId: journey.prospectId },
+    select: { id: true, accessToken: true },
+  });
+
+  await prisma.prospect.update({
+    where: { id: journey.prospectId },
+    data: { companyName, contactName },
+  });
+
+  revalidatePath("/presales/admin");
+  for (const relatedJourney of relatedJourneys) {
+    revalidatePath(`/presales/admin/journeys/${relatedJourney.id}`);
+    revalidatePath(`/presales/admin/journeys/${relatedJourney.id}/settings`);
+    revalidatePath(`/presales/j/${relatedJourney.accessToken}`);
+  }
+}
+
 // Company logo — belongs to the Prospect (the company), not the journey, but
 // is uploaded from a journey's Ayarlar tab since that's the only place an
 // admin is looking at one specific company at a time.

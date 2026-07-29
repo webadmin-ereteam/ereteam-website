@@ -13,6 +13,7 @@ import {
   uploadCompanyLogo,
   removeCompanyLogo,
   setProspectLogoAlign,
+  updateProspectDetails,
   deleteJourney,
 } from "@/lib/presales/adminActions";
 import { isJourneyLinkActive } from "@/lib/presales/journeyLink";
@@ -36,6 +37,43 @@ export default async function JourneySettingsTab({ params }: { params: { id: str
 
   return (
     <div className="grid grid-cols-2 gap-6">
+      <Card>
+        <p className="mb-2 text-sm font-medium text-brand-dark">Prospect Bilgileri</p>
+        <p className="mb-3 text-xs text-text-muted">
+          Müşteri sayfasında ve yönetim panelinde gösterilen firma ile yetkili kişi bilgileri.
+          Journey adı ve Drive klasörü bu değişiklikten etkilenmez.
+        </p>
+        <form action={updateProspectDetails.bind(null, journey!.id)} className="space-y-2">
+          <div>
+            <label htmlFor="companyName" className="mb-1 block text-xs text-text-muted">
+              Firma adı
+            </label>
+            <input
+              id="companyName"
+              name="companyName"
+              required
+              defaultValue={journey!.prospect.companyName}
+              className={`${inputClass} w-full`}
+            />
+          </div>
+          <div>
+            <label htmlFor="contactName" className="mb-1 block text-xs text-text-muted">
+              Yetkili kişi adı
+            </label>
+            <input
+              id="contactName"
+              name="contactName"
+              required
+              defaultValue={journey!.prospect.contactName}
+              className={`${inputClass} w-full`}
+            />
+          </div>
+          <SubmitButton className={buttonPrimaryClass} pendingLabel="Kaydediliyor...">
+            Bilgileri kaydet
+          </SubmitButton>
+        </form>
+      </Card>
+
       <Card>
         <p className="mb-2 text-sm font-medium text-brand-dark">Satışçı</p>
         <p className="mb-3 text-xs text-text-muted">
