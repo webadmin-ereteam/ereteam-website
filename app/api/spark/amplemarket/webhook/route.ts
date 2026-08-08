@@ -21,15 +21,17 @@ export async function POST(request: NextRequest) {
   const emailMessage = object(payload.email_message);
   const stage = object(payload.sequence_stage);
   const sequence = object(payload.sequence);
-  const dynamic = object(payload.dynamic_fields ?? payload.lead);
+  const dynamic = Object.keys(object(payload.dynamic_fields ?? payload.lead)).length
+    ? object(payload.dynamic_fields ?? payload.lead)
+    : payload;
   const tags = Array.isArray(emailMessage.tag) ? emailMessage.tag.map(String) : [];
   const normalizedTags = tags.map((tag: string) => tag.toLowerCase());
   const activityType = string(stage.type)?.toLowerCase();
   const rawType = string(payload.event_type)?.toLowerCase();
-  const positive = normalizedTags.includes("interested");
+  const positive = normalizedTags.includes("interested") || rawType === "positive" || rawType === "interested";
   const meeting = rawType?.includes("meeting") || normalizedTags.some((tag: string) => tag.includes("meeting"));
   const isMessage = ["email", "linkedin_message", "linkedin_voice_message", "linkedin_video_message"].includes(activityType || "");
-  const eventType = meeting ? "meeting" : positive ? "positive" : payload.is_reply === true ? "reply" : isMessage ? "sent" : "activity";
+  const eventType = meeting ? "meeting" : positive ? "positive" : rawType === "reply" || payload.is_reply === true ? "reply" : isMessage ? "sent" : "activity";
   const occurredValue = string(payload.date) || string(emailMessage.date) || string(stage.sending_date) || new Date().toISOString();
   const occurredAt = new Date(occurredValue);
   if (!Number.isFinite(occurredAt.getTime())) return NextResponse.json({ error: "Invalid event date" }, { status: 400 });
@@ -45,9 +47,9 @@ export async function POST(request: NextRequest) {
     update: {},
     create: {
       externalId, eventType, sequenceKind, sequenceName,
-      ownerEmail: string(object(payload.user).email),
+      ownerEmail: string(object(payload.user).email) || string(payload.owner_email),
       personName: [firstName, lastName].filter(Boolean).join(" ") || string(dynamic.name),
-      companyName: string(dynamic.company_name), occurredAt,
+      companyName: string(dynamic.company_name) || string(dynamic.account_name), occurredAt,
       payload: JSON.parse(JSON.stringify(payload)) as Prisma.InputJsonValue,
     },
   });
