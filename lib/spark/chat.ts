@@ -90,11 +90,16 @@ function enrichRows(
   ownerMap: Map<string, string>,
   stageMap?: Map<string, { label: string; probability: number }>,
 ) {
+  const compactValue = (value: string) => value.length > 500 ? `${value.slice(0, 500)}…` : value;
   return rows.map((row) => ({
     id: row.id,
     url: recordUrl(type, row.id),
     properties: {
-      ...Object.fromEntries(Object.entries(row.properties).filter(([, value]) => value !== undefined && value !== "")),
+      ...Object.fromEntries(
+        Object.entries(row.properties)
+          .filter(([, value]) => value !== undefined && value !== "")
+          .map(([key, value]) => [key, compactValue(value || "")]),
+      ),
       ...(row.properties.hubspot_owner_id ? { _owner_name: ownerMap.get(row.properties.hubspot_owner_id) } : {}),
       ...(stageMap && row.properties[type === "deals" ? "dealstage" : "hs_pipeline_stage"]
         ? { _stage_label: stageMap.get(row.properties[type === "deals" ? "dealstage" : "hs_pipeline_stage"] || "")?.label }
@@ -157,7 +162,21 @@ export async function buildSparkChatContext(question: string, apiKey: string) {
   return {
     queriedAt: new Date().toISOString(),
     plan,
-    snapshot: snapshot.data,
+    snapshot: {
+      generatedAt: snapshot.data.generatedAt,
+      reportDate: snapshot.data.reportDate,
+      periodStart: snapshot.data.periodStart,
+      periodEnd: snapshot.data.periodEnd,
+      target: snapshot.data.target,
+      ytdInvoice: snapshot.data.ytdInvoice,
+      monthInvoice: snapshot.data.monthInvoice,
+      openOrders: snapshot.data.openOrders,
+      monthExpected: snapshot.data.monthExpected,
+      pipeline: snapshot.data.pipeline,
+      weightedForecast: snapshot.data.weightedForecast,
+      activeDeals: snapshot.data.activeDeals,
+      weeklyNewPipeline: snapshot.data.weeklyNewPipeline,
+    },
     propertyLabels: labels,
     liveHubSpotRecords: records,
   };
