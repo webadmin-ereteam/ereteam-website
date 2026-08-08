@@ -470,51 +470,70 @@ export default function Dashboard({
             <h3>Faturalama özeti</h3>
             <small>{currentMonth} 2026</small>
           </div>
-          <div className={styles.flowFour}>
-            <div className={styles.clickableMetric}>
-              <small>Bu ay faturalandı</small>
-              <b>{shortMoney(data.monthInvoice)}</b>
-              <button
-                className={styles.recordCta}
-                aria-expanded={billingPanel === "invoice"}
-                onClick={() =>
-                  setBillingPanel(billingPanel === "invoice" ? null : "invoice")
-                }
+          <div className={styles.billingLayout}>
+            <div className={styles.billingPrimary}>
+              <div
+                className={`${styles.billingMetric} ${styles.billingActual}`}
               >
-                <span>{data.monthInvoices.length} fatura</span>
-                <span>
-                  {billingPanel === "invoice"
-                    ? "Listeyi kapat ↑"
-                    : "Kayıtları gör →"}
-                </span>
-              </button>
-            </div>
-            <div className={styles.clickableMetric}>
-              <small>Bu ay beklenen fatura</small>
-              <b>{shortMoney(data.monthExpected)}</b>
-              <button
-                className={styles.recordCta}
-                aria-expanded={billingPanel === "order"}
-                onClick={() =>
-                  setBillingPanel(billingPanel === "order" ? null : "order")
-                }
+                <div className={styles.billingMetricHead}>
+                  <small>Bu ay faturalandı</small>
+                  <span>Gerçekleşen</span>
+                </div>
+                <b>{shortMoney(data.monthInvoice)}</b>
+                <em>{exactMoney(data.monthInvoice)}</em>
+                <button
+                  className={styles.recordCta}
+                  aria-expanded={billingPanel === "invoice"}
+                  onClick={() =>
+                    setBillingPanel(
+                      billingPanel === "invoice" ? null : "invoice",
+                    )
+                  }
+                >
+                  <span>{data.monthInvoices.length} fatura</span>
+                  <span>
+                    {billingPanel === "invoice"
+                      ? "Listeyi kapat ↑"
+                      : "Listeyi aç →"}
+                  </span>
+                </button>
+              </div>
+              <div
+                className={`${styles.billingMetric} ${styles.billingExpected}`}
               >
-                <span>{data.monthOrders.length} order</span>
-                <span>
-                  {billingPanel === "order"
-                    ? "Listeyi kapat ↑"
-                    : "Kayıtları gör →"}
-                </span>
-              </button>
+                <div className={styles.billingMetricHead}>
+                  <small>Bu ay beklenen fatura</small>
+                  <span>Planlanan</span>
+                </div>
+                <b>{shortMoney(data.monthExpected)}</b>
+                <em>{exactMoney(data.monthExpected)}</em>
+                <button
+                  className={styles.recordCta}
+                  aria-expanded={billingPanel === "order"}
+                  onClick={() =>
+                    setBillingPanel(billingPanel === "order" ? null : "order")
+                  }
+                >
+                  <span>{data.monthOrders.length} order</span>
+                  <span>
+                    {billingPanel === "order"
+                      ? "Listeyi kapat ↑"
+                      : "Listeyi aç →"}
+                  </span>
+                </button>
+              </div>
             </div>
-            <div>
-              <small>YTD içindeki payı</small>
-              <b>%{pct(data.monthInvoice, data.ytdInvoice).toFixed(2)}</b>
-            </div>
-            <div>
-              <small>Yıl hedefindeki payı</small>
-              <b>%{pct(data.monthInvoice, data.target).toFixed(2)}</b>
-            </div>
+            <aside className={styles.billingRatios}>
+              <small>Bu ayın payı</small>
+              <div>
+                <span>YTD fatura içinde</span>
+                <b>%{pct(data.monthInvoice, data.ytdInvoice).toFixed(2)}</b>
+              </div>
+              <div>
+                <span>Yıllık hedef içinde</span>
+                <b>%{pct(data.monthInvoice, data.target).toFixed(2)}</b>
+              </div>
+            </aside>
           </div>
           <div className={styles.insight}>
             <b>AI Insight:</b> {currentMonth} tarihli {data.monthOrders.length}{" "}
