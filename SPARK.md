@@ -9,6 +9,7 @@ this file; do not use `PRESALES.md` as Spark documentation.
 - `/spark` — latest password-protected dashboard
 - `/spark/login` — shared internal login
 - `/api/cron/spark` — Vercel Cron endpoint
+- `/api/spark/refresh` — Spark-session-protected manual refresh with a ten-minute cooldown
 - `/api/spark/amplemarket/webhook` — authenticated Amplemarket event receiver
 
 ## Schedule and reporting window
@@ -29,6 +30,9 @@ reach a new deployment, so redeploy after changing a secret.
 
 The dashboard does not include an admin screen or historical archive. Data is
 cached and refreshed daily; source health is shown separately.
+The header also shows the exact Istanbul update time. Authenticated users can
+request a quiet manual refresh; requests made within ten minutes of the latest
+generated report reuse the current snapshot instead of calling the sources.
 
 The former manually entered weekly focus/priorities section is intentionally
 excluded. The executive summary is generated only from current numerical

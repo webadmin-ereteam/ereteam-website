@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type {
   SparkData,
@@ -30,6 +31,17 @@ const date = (value?: string) =>
         day: "numeric",
         month: "short",
         year: "numeric",
+        timeZone: "Europe/Istanbul",
+      }).format(new Date(value))
+    : "-";
+const dateTime = (value?: string) =>
+  value
+    ? new Intl.DateTimeFormat("tr-TR", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
         timeZone: "Europe/Istanbul",
       }).format(new Date(value))
     : "-";
@@ -112,6 +124,7 @@ export default function Dashboard({
   data: SparkData;
   sources: SparkSourceState;
 }) {
+  const router = useRouter();
   const [dealPanel, setDealPanel] = useState<"new" | "won" | "lost" | null>(
     null,
   );
@@ -127,6 +140,8 @@ export default function Dashboard({
     | null
   >(null);
   const [monthListOpen, setMonthListOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshMessage, setRefreshMessage] = useState("");
   const coverage = data.ytdInvoice + data.openOrders;
   const coveragePct = pct(coverage, data.target);
   const invoicePct = pct(data.ytdInvoice, data.target);
@@ -188,6 +203,25 @@ export default function Dashboard({
     ? newBusinessLists[newBusinessPanel]
     : null;
 
+  const refreshDashboard = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    setRefreshMessage("");
+    try {
+      const response = await fetch("/api/spark/refresh", { method: "POST" });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Yenileme başarısız.");
+      setRefreshMessage(
+        result.refreshed ? "Güncellendi" : result.message || "Zaten güncel",
+      );
+      router.refresh();
+    } catch {
+      setRefreshMessage("Şu anda yenilenemedi");
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <main className={styles.page}>
       <header className={styles.hero}>
@@ -208,8 +242,23 @@ export default function Dashboard({
             görünümü
           </div>
         </div>
-        <div className={styles.status}>
-          <span /> Veriler güncel · {date(data.generatedAt)}
+        <div className={styles.refreshArea}>
+          <div className={styles.status}>
+            <span /> Son güncelleme · {dateTime(data.generatedAt)}
+          </div>
+          <button
+            className={styles.refreshButton}
+            type="button"
+            onClick={refreshDashboard}
+            disabled={refreshing}
+          >
+            {refreshing ? "Yenileniyor…" : "Şimdi yenile"}
+          </button>
+          {refreshMessage ? (
+            <small className={styles.refreshMessage} aria-live="polite">
+              {refreshMessage}
+            </small>
+          ) : null}
         </div>
       </header>
 

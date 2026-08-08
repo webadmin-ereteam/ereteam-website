@@ -150,6 +150,41 @@
   border-radius: 50%;
   box-shadow: 0 0 0 5px rgba(84, 216, 166, 0.13);
 }
+.refreshArea {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  justify-items: end;
+  gap: 7px;
+}
+.refreshButton {
+  border: 0;
+  background: transparent;
+  color: #9fc4d8;
+  padding: 2px 4px;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgba(159, 196, 216, 0.35);
+  text-underline-offset: 3px;
+}
+.refreshButton:hover,
+.refreshButton:focus-visible {
+  color: #fff;
+  outline: 2px solid rgba(255, 255, 255, 0.18);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.refreshButton:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+.refreshMessage {
+  color: #9fc4d8;
+  font-size: 9px;
+}
 .sectionTitle {
   display: flex;
   align-items: end;
@@ -835,6 +870,11 @@
     grid-column: 2;
     justify-self: start;
   }
+  .refreshArea {
+    grid-column: 2;
+    justify-self: start;
+    justify-items: start;
+  }
   .kpis {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -878,6 +918,9 @@
   .status {
     grid-column: 1/-1;
     font-size: 11px;
+  }
+  .refreshArea {
+    grid-column: 1/-1;
   }
   .kpis,
   .summary {
