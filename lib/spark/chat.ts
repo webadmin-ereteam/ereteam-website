@@ -167,7 +167,13 @@ function matches(record: FlatRecord, filter: z.infer<typeof filterSchema>) {
 }
 
 function labelMap(catalog: HubSpotProperty[]) {
-  return new Map([...catalog.map((property) => [property.name, property.label] as const), ["_owner_name", "Owner"], ["_stage_label", "Stage"]]);
+  const labels = new Map([...catalog.map((property) => [property.name, property.label] as const), ["_owner_name", "Owner"], ["_stage_label", "Stage"]]);
+  labels.set("hs_processed_date", "Tarih");
+  labels.set("hs_invoice_date", "Fatura tarihi");
+  labels.set("hs_homecurrency_amount", "Tutar (USD)");
+  labels.set("hs_amount_billed_in_company_currency", "Tutar (USD)");
+  labels.set("amount_in_home_currency", "Tutar (USD)");
+  return labels;
 }
 
 function coreFields(type: ObjectType) {
