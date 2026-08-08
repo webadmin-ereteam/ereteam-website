@@ -23,7 +23,7 @@ export async function fetchAmplemarket(periodStart: Date, periodEnd: Date): Prom
     sent: sent.length,
     bulk: sent.filter((event) => event.sequenceKind === "bulk").length,
     duo: sent.filter((event) => event.sequenceKind === "duo").length,
-    replies: count("reply") + count("positive"),
+    replies: count("reply"),
     positive: count("positive"),
     meetings: events.filter((event) => event.eventType === "meeting").map((event) => ({
       person: event.personName || "İsim belirtilmemiş",
