@@ -9,6 +9,7 @@ import type {
   SparkSourceState,
 } from "@/lib/spark/types";
 import styles from "./spark.module.css";
+import SparkChatWidget from "./SparkChatWidget";
 
 const exactMoney = (n: number) =>
   new Intl.NumberFormat("en-US", {
@@ -928,6 +929,7 @@ export default function Dashboard({
         Ereteam · Revenue &amp; Growth · Spark Dashboard ·{" "}
         {date(data.generatedAt)}
       </footer>
+      <SparkChatWidget />
     </main>
   );
 }

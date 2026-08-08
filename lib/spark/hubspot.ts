@@ -1,6 +1,7 @@
 import type { SparkRecord } from "./types";
 
 export type HubSpotObject = { id: string; properties: Record<string, string | undefined> };
+export type HubSpotProperty = { name: string; label: string; type?: string; fieldType?: string };
 export type StageMap = Map<string, { label: string; probability: number }>;
 
 const PORTAL_ID = "147286586";
@@ -25,7 +26,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-async function allObjects(objectType: string, properties: string[]) {
+export async function fetchHubSpotObjects(objectType: string, properties: string[]) {
   const rows: HubSpotObject[] = [];
   let after: string | undefined;
   do {
@@ -40,7 +41,14 @@ async function allObjects(objectType: string, properties: string[]) {
   return rows;
 }
 
-async function stages(objectType: "deals" | "orders") {
+export async function fetchHubSpotPropertyCatalog(objectType: string) {
+  const result = await request<{ results: HubSpotProperty[] }>(
+    `/crm/v3/properties/${objectType}?archived=false`,
+  );
+  return result.results;
+}
+
+export async function fetchHubSpotStages(objectType: "deals" | "orders") {
   const result = await request<{ results: Array<{ stages: Array<{ id: string; label: string; metadata?: { probability?: string } }> }> }>(
     `/crm/v3/pipelines/${objectType}`
   );
@@ -53,14 +61,14 @@ async function stages(objectType: "deals" | "orders") {
   return map;
 }
 
-async function owners() {
+export async function fetchHubSpotOwners() {
   const result = await request<{ results: Array<{ id: string; firstName?: string; lastName?: string; email?: string }> }>(
     "/crm/v3/owners?limit=500&archived=false"
   );
   return new Map(result.results.map((owner) => [owner.id, `${owner.firstName ?? ""} ${owner.lastName ?? ""}`.trim() || owner.email || owner.id]));
 }
 
-async function associations(from: "invoices" | "orders", ids: string[]) {
+export async function fetchHubSpotAssociations(from: "invoices" | "orders", ids: string[]) {
   const map = new Map<string, string[]>();
   for (let index = 0; index < ids.length; index += 100) {
     const inputs = ids.slice(index, index + 100).map((id) => ({ id }));
@@ -78,16 +86,16 @@ const lower = (value?: string) => (value ?? "").trim().toLowerCase();
 
 export async function fetchHubSpotData() {
   const [deals, invoices, orders, dealStages, orderStages, ownerMap] = await Promise.all([
-    allObjects("deals", ["dealname", "dealstage", "createdate", "closedate", "amount_in_home_currency", "hs_deal_stage_probability", "hs_is_closed_won", "dealtype", "hubspot_owner_id"]),
-    allObjects("invoices", ["hs_number", "invoice_name", "hs_invoice_latest_company_name", "hs_invoice_date", "hs_amount_billed_in_company_currency", "hubspot_owner_id"]),
-    allObjects("orders", ["hs_order_name", "hs_pipeline_stage", "hs_processed_date", "hs_homecurrency_amount", "hubspot_owner_id"]),
-    stages("deals"),
-    stages("orders"),
-    owners(),
+    fetchHubSpotObjects("deals", ["dealname", "dealstage", "createdate", "closedate", "amount_in_home_currency", "hs_deal_stage_probability", "hs_is_closed_won", "dealtype", "hubspot_owner_id"]),
+    fetchHubSpotObjects("invoices", ["hs_number", "invoice_name", "hs_invoice_latest_company_name", "hs_invoice_date", "hs_amount_billed_in_company_currency", "hubspot_owner_id"]),
+    fetchHubSpotObjects("orders", ["hs_order_name", "hs_pipeline_stage", "hs_processed_date", "hs_homecurrency_amount", "hubspot_owner_id"]),
+    fetchHubSpotStages("deals"),
+    fetchHubSpotStages("orders"),
+    fetchHubSpotOwners(),
   ]);
   const [invoiceDeals, orderDeals] = await Promise.all([
-    associations("invoices", invoices.map((row) => row.id)),
-    associations("orders", orders.map((row) => row.id)),
+    fetchHubSpotAssociations("invoices", invoices.map((row) => row.id)),
+    fetchHubSpotAssociations("orders", orders.map((row) => row.id)),
   ]);
   return { deals, invoices, orders, dealStages, orderStages, ownerMap, invoiceDeals, orderDeals };
 }

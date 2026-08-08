@@ -10,6 +10,7 @@ this file; do not use `PRESALES.md` as Spark documentation.
 - `/spark/login` — shared internal login
 - `/api/cron/spark` — Vercel Cron endpoint
 - `/api/spark/refresh` — Spark-session-protected manual refresh with a ten-minute cooldown
+- `/api/spark/chat` — Spark-session-protected, salt-okunur canlı HubSpot veri asistanı
 - `/api/spark/amplemarket/webhook` — authenticated Amplemarket event receiver
 
 ## Schedule and reporting window
@@ -33,6 +34,13 @@ cached and refreshed daily; source health is shown separately.
 The header also shows the exact Istanbul update time. Authenticated users can
 request a quiet manual refresh; requests made within ten minutes of the latest
 generated report reuse the current snapshot instead of calling the sources.
+
+The dashboard includes a password-protected Revenue Data Assistant. It uses the
+latest shared Spark snapshot for report context, then queries HubSpot live through
+the server-side API for the deal, invoice, order and property data required by the
+question. It is read-only, never exposes the HubSpot token to the browser, rate
+limits requests, and only works with a valid `spark_session`. Answers must use the
+approved USD fields and include HubSpot record links when relevant.
 
 The former manually entered weekly focus/priorities section is intentionally
 excluded. The executive summary is generated only from current numerical
