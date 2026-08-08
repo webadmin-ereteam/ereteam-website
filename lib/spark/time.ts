@@ -15,7 +15,9 @@ export function reportDateKey(date: Date) {
 }
 
 export function rollingPeriod(end: Date) {
-  return { start: new Date(end.getTime() - 7 * 24 * 60 * 60 * 1000), end };
+  const { year, month, day } = istanbulParts(end);
+  const currentDayStartUtc = Date.UTC(year, month - 1, day) - ISTANBUL_OFFSET_MS;
+  return { start: new Date(currentDayStartUtc - 7 * 24 * 60 * 60 * 1000), end };
 }
 
 export function isBetween(value: string | undefined, start: Date, end: Date) {

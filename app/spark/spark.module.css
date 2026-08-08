@@ -389,8 +389,52 @@
   cursor: pointer;
   white-space: nowrap;
 }
-.lightButton:hover,.lightButton:focus-visible{background:#e9f3f8;outline:2px solid rgba(48,134,184,.22);outline-offset:2px}
-.inlinePanel{margin-top:16px}
+.lightButton:hover,
+.lightButton:focus-visible {
+  background: #e9f3f8;
+  outline: 2px solid rgba(48, 134, 184, 0.22);
+  outline-offset: 2px;
+}
+.inlinePanel {
+  margin-top: 16px;
+}
+.clickableMetric {
+  box-shadow: inset 0 0 0 1px rgba(48, 134, 184, 0.05);
+}
+.recordCta,
+.nbRecordButton {
+  width: 100%;
+  min-height: 38px;
+  margin-top: 13px;
+  border: 1px solid #9cc6dc;
+  background: linear-gradient(100deg, #e8f4fa, #f5fbfd);
+  color: #176d9f;
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+.recordCta:hover,
+.recordCta:focus-visible,
+.nbRecordButton:hover,
+.nbRecordButton:focus-visible,
+.recordCta[aria-expanded="true"],
+.nbRecordButton[aria-expanded="true"] {
+  border-color: var(--blue);
+  box-shadow: 0 7px 18px rgba(48, 134, 184, 0.15);
+  outline: none;
+  transform: translateY(-1px);
+}
 .metricLine button:hover,
 .metricLine button:focus-visible {
   background: rgba(255, 255, 255, 0.16);
@@ -676,6 +720,18 @@
   color: #718397;
   font-size: 9px;
   font-style: normal;
+}
+.nbRecordButton {
+  margin-top: 12px;
+  border-color: color-mix(in srgb, var(--group-accent) 45%, #d6e4ec);
+  color: var(--group-accent);
+  background: color-mix(in srgb, var(--group-accent) 8%, #fff);
+}
+.nbInlinePanel {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: #f8fbfd;
 }
 .chart {
   height: 190px;

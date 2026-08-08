@@ -14,9 +14,9 @@ this file; do not use `PRESALES.md` as Spark documentation.
 ## Schedule and reporting window
 
 Vercel Cron calls the production endpoint every day at `10:00 UTC`, which is
-`13:00 Europe/Istanbul`. Each report covers the exact rolling window from
-`generatedAt - 7 days` through `generatedAt`. YTD and current-month values use
-the generation timestamp as their cutoff. On Vercel Hobby, the invocation can
+`13:00 Europe/Istanbul`. Each report covers the current Istanbul calendar day
+and the seven preceding calendar days through `generatedAt`. YTD and
+current-month values use the generation timestamp as their cutoff. On Vercel Hobby, the invocation can
 occur at any time within the scheduled hour. Environment-variable changes only
 reach a new deployment, so redeploy after changing a secret.
 
@@ -77,6 +77,10 @@ The technical order-date property name is never rendered in the UI.
   distinguishable in drill-downs.
 - Monthly invoices/orders and weekly new/won/lost records have drill-down
   lists. Do not duplicate weekly deal movement elsewhere on the page.
+- Monthly invoice/order cards use explicit record-count and `Kayıtları gör`
+  calls to action. New Business drill-down controls live inside their metric
+  cards; no separate list rows are shown below the cards, and only one inline
+  record table is open at a time.
 - Do not show Pipeline Health Score, external meetings, manually entered focus
   items, Business Development or automatically invented action priorities.
 - The executive summary is numeric and source-derived.
@@ -120,7 +124,8 @@ were enabled; never fill missing historical periods with sample values.
 For the one-time pre-webhook gap, Amplemarket MCP Analytics can provide exact
 daily owner and bulk/Duo aggregates. Submit those rows to the authenticated
 `/api/spark/amplemarket/backfill` endpoint. The endpoint creates deterministic,
-deduplicated source events, so repeated submissions are safe. This is bootstrap
+deduplicated source events, refreshes the dashboard cache, and is therefore safe
+to submit repeatedly. This is bootstrap
 only: after the gap is filled, Amplemarket webhooks and Vercel Cron operate in
 the cloud without requiring the user's Mac or a Codex automation to be online.
 
