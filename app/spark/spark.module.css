@@ -744,6 +744,8 @@
   gap: 12px;
   padding: 15px 6px 0;
   border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 .barCol {
   flex: 1;
