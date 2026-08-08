@@ -63,11 +63,16 @@ async function createPlan(question: string, catalogs: Record<ObjectType, HubSpot
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Istanbul", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   const response = await generateChatResponse(
     `Sen HubSpot için salt-okunur JSON sorgu planlayıcısısın. Bugün ${today}, saat dilimi Europe/Istanbul.
+KESİN VERİ SÖZLEŞMESİ - HER SORGUDAN ÖNCE UYGULA:
+- Order tarihi yalnızca hs_processed_date, USD tutarı yalnızca hs_homecurrency_amount.
+- Fatura tarihi yalnızca hs_invoice_date, USD tutarı yalnızca hs_amount_billed_in_company_currency.
+- Deal USD tutarı yalnızca amount_in_home_currency; deal tarih bağlamına göre closedate veya createdate.
+- Genel amount, TL tutarı veya başka para birimi property'lerini kullanma.
+- "Beklenen fatura" henüz kesilmemiş, ilgili dönem tarihli açık order demektir: object orders, tarih hs_processed_date, tutar hs_homecurrency_amount, stage _stage_label eq Open.
+- "Faturalanan/kesilen fatura" object invoices demektir.
 Yalnızca JSON döndür. Şema:
 {"responseType":"metric|records","title":"kısa Türkçe başlık","object":"deals|invoices|orders","properties":[],"filters":[{"property":"","operator":"eq|neq|contains|not_contains|gt|gte|lt|lte|between|in|is_empty|not_empty","value":"","values":[]}],"associatedDealFilters":[],"aggregate":{"operation":"sum|count|average","property":""},"sort":{"property":"","direction":"asc|desc"},"limit":50}.
 Tek bir sayı/değer soruluyorsa metric, kayıtlar veya detaylar isteniyorsa records seç. Metric için aggregate zorunlu. Tutar toplamında sum kullan.
-USD alanları: invoice hs_amount_billed_in_company_currency, order hs_homecurrency_amount, deal amount_in_home_currency.
-Spark dilinde "beklenen fatura" henüz kesilmemiş, ilgili dönem tarihli açık order demektir: object orders seç, _stage_label eq Open filtresi ve hs_homecurrency_amount kullan. "Faturalanan/kesilen fatura" denirse invoices seç.
 Sanal alanlar: _stage_label ve _owner_name filtrelenebilir. Tarih değerlerini YYYY-MM-DD yaz. "Bu ay" için ayın ilk ve son gününü between values ile ver. "Bu yıl" için yılın ilk ve son gününü kullan.
 Bağlı faturanın/orderın deal özellikleri sorulursa associatedDealFilters kullan. Örneğin New Business için dealtype eq newbusiness.
 Kayıt görünümünde gerekli isim, tarih, tutar, owner ve şirket alanlarını properties içine ekle. Verilen katalog dışında gerçek property uydurma.`,
@@ -78,7 +83,23 @@ Kayıt görünümünde gerekli isim, tarih, tutar, owner ve şirket alanlarını
   );
   const raw = parseJson(response);
   if (process.env.SPARK_CHAT_DEBUG === "1") console.log("Spark query plan:", JSON.stringify(raw));
-  for (const filter of raw.filters ?? []) {
+  const objectAliases: Record<string, ObjectType> = { deal: "deals", deals: "deals", invoice: "invoices", invoices: "invoices", order: "orders", orders: "orders" };
+  const operatorAliases: Record<string, z.infer<typeof filterSchema>["operator"]> = {
+    eq: "eq", equals: "eq", equal: "eq", neq: "neq", not_equals: "neq", contains: "contains", not_contains: "not_contains",
+    gt: "gt", greater_than: "gt", gte: "gte", greater_than_or_equal: "gte", lt: "lt", less_than: "lt", lte: "lte", less_than_or_equal: "lte",
+    between: "between", in: "in", is_empty: "is_empty", not_empty: "not_empty",
+  };
+  raw.object = objectAliases[String(raw.object ?? "").toLowerCase()] ?? raw.object;
+  raw.responseType = ["metric", "value", "number", "single_value"].includes(String(raw.responseType ?? "").toLowerCase()) ? "metric" : "records";
+  const normalizeFilters = (filters: unknown) => (Array.isArray(filters) ? filters : []).flatMap((item: Record<string, unknown>) => {
+    const operator = operatorAliases[String(item?.operator ?? "").toLowerCase()];
+    if (!item?.property || !operator) return [];
+    return [{ property: String(item.property), operator, value: item.value == null ? undefined : String(item.value), values: Array.isArray(item.values) ? item.values.map(String) : undefined }];
+  });
+  raw.filters = normalizeFilters(raw.filters);
+  raw.associatedDealFilters = normalizeFilters(raw.associatedDealFilters);
+  raw.properties = Array.isArray(raw.properties) ? raw.properties.map(String).slice(0, 16) : [];
+  for (const filter of raw.filters) {
     if (["hs_pipeline_stage", "dealstage"].includes(filter.property) && ["open", "closed", "won", "lost"].some((word) => normalized(filter.value).includes(word))) {
       filter.property = "_stage_label";
     }
@@ -86,10 +107,12 @@ Kayıt görünümünde gerekli isim, tarih, tutar, owner ve şirket alanlarını
   if (!raw.sort?.property || !["asc", "desc"].includes(raw.sort?.direction)) raw.sort = null;
   if (raw.responseType === "records") raw.aggregate = null;
   if (raw.responseType === "metric") {
-    if (raw.aggregate?.operation === "total") raw.aggregate.operation = "sum";
-    if (raw.aggregate?.operation === "avg") raw.aggregate.operation = "average";
+    const operationAliases: Record<string, "sum" | "count" | "average"> = { sum: "sum", total: "sum", count: "count", average: "average", avg: "average" };
+    if (raw.aggregate?.operation) raw.aggregate.operation = operationAliases[String(raw.aggregate.operation).toLowerCase()];
     if (!raw.aggregate?.operation) raw.aggregate = { operation: "count" };
   }
+  raw.limit = Math.min(100, Math.max(1, Number(raw.limit) || 50));
+  raw.title = String(raw.title || "HubSpot canlı sonucu").slice(0, 100);
   return planSchema.parse(raw);
 }
 
