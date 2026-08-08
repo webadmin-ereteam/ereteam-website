@@ -53,7 +53,16 @@ export async function POST(request: NextRequest) {
     );
     return NextResponse.json({ content, queriedAt: context.queriedAt, source: "live_hubspot" });
   } catch (error) {
-    console.error("Spark chat error:", error instanceof Error ? error.message : String(error));
-    return NextResponse.json({ error: "Asistan şu anda canlı veriyi sorgulayamıyor." }, { status: 500 });
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Spark chat error:", message);
+    const hubspotStatus = message.match(/^HubSpot [^:]+: (\d{3})$/)?.[1];
+    const publicError = hubspotStatus
+      ? `HubSpot canlı sorgusu tamamlanamadı (HTTP ${hubspotStatus}).`
+      : error instanceof z.ZodError || error instanceof SyntaxError
+        ? "Canlı sorgu planı oluşturulamadı."
+        : message.toLowerCase().includes("llm") || message.toLowerCase().includes("groq")
+          ? "Yanıt motoru şu anda sorguyu tamamlayamadı."
+          : "Asistan şu anda canlı veriyi sorgulayamıyor.";
+    return NextResponse.json({ error: publicError }, { status: 500 });
   }
 }
