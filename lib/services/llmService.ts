@@ -8,9 +8,9 @@ export async function generateChatResponse(
   messages: ChatMessage[],
   apiKey: string,
   pageContext: string = "",
-  options: { model?: string; temperature?: number; maxTokens?: number } = {}
+  options: { model?: string; temperature?: number; maxTokens?: number; jsonMode?: boolean } = {}
 ): Promise<string> {
-  const { model = "llama-3.1-8b-instant", temperature = 0.7, maxTokens = 600 } = options;
+  const { model = "llama-3.1-8b-instant", temperature = 0.7, maxTokens = 600, jsonMode = false } = options;
 
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -26,6 +26,7 @@ export async function generateChatResponse(
       ],
       max_tokens: maxTokens,
       temperature,
+      ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
     }),
   });
 

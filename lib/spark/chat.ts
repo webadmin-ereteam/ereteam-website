@@ -28,8 +28,8 @@ const objectTypes: ObjectType[] = ["deals", "invoices", "orders"];
 const filterSchema = z.object({
   property: z.string(),
   operator: z.enum(["eq", "neq", "contains", "not_contains", "gt", "gte", "lt", "lte", "between", "in", "is_empty", "not_empty"]),
-  value: z.string().optional(),
-  values: z.array(z.string()).max(20).optional(),
+  value: z.string().nullish(),
+  values: z.array(z.string()).max(20).nullish(),
 });
 const planSchema = z.object({
   responseType: z.enum(["metric", "records"]),
@@ -38,8 +38,8 @@ const planSchema = z.object({
   properties: z.array(z.string()).max(16).default([]),
   filters: z.array(filterSchema).max(10).default([]),
   associatedDealFilters: z.array(filterSchema).max(8).default([]),
-  aggregate: z.object({ operation: z.enum(["sum", "count", "average"]), property: z.string().optional() }).optional(),
-  sort: z.object({ property: z.string(), direction: z.enum(["asc", "desc"]) }).optional(),
+  aggregate: z.object({ operation: z.enum(["sum", "count", "average"]), property: z.string().nullish() }).nullish(),
+  sort: z.object({ property: z.string(), direction: z.enum(["asc", "desc"]) }).nullish(),
   limit: z.number().int().min(1).max(100).default(50),
 });
 const requiredProperties: Record<ObjectType, string[]> = {
@@ -67,15 +67,30 @@ Yalnızca JSON döndür. Şema:
 {"responseType":"metric|records","title":"kısa Türkçe başlık","object":"deals|invoices|orders","properties":[],"filters":[{"property":"","operator":"eq|neq|contains|not_contains|gt|gte|lt|lte|between|in|is_empty|not_empty","value":"","values":[]}],"associatedDealFilters":[],"aggregate":{"operation":"sum|count|average","property":""},"sort":{"property":"","direction":"asc|desc"},"limit":50}.
 Tek bir sayı/değer soruluyorsa metric, kayıtlar veya detaylar isteniyorsa records seç. Metric için aggregate zorunlu. Tutar toplamında sum kullan.
 USD alanları: invoice hs_amount_billed_in_company_currency, order hs_homecurrency_amount, deal amount_in_home_currency.
+Spark dilinde "beklenen fatura" henüz kesilmemiş, ilgili dönem tarihli açık order demektir: object orders seç, _stage_label eq Open filtresi ve hs_homecurrency_amount kullan. "Faturalanan/kesilen fatura" denirse invoices seç.
 Sanal alanlar: _stage_label ve _owner_name filtrelenebilir. Tarih değerlerini YYYY-MM-DD yaz. "Bu ay" için ayın ilk ve son gününü between values ile ver. "Bu yıl" için yılın ilk ve son gününü kullan.
 Bağlı faturanın/orderın deal özellikleri sorulursa associatedDealFilters kullan. Örneğin New Business için dealtype eq newbusiness.
 Kayıt görünümünde gerekli isim, tarih, tutar, owner ve şirket alanlarını properties içine ekle. Verilen katalog dışında gerçek property uydurma.`,
     [{ role: "user", content: `SORU:\n${question}\n\nPROPERTY KATALOĞU:\n${catalogText(catalogs)}` }],
     apiKey,
     "",
-    { model: "llama-3.3-70b-versatile", temperature: 0, maxTokens: 900 },
+    { model: "llama-3.3-70b-versatile", temperature: 0, maxTokens: 900, jsonMode: true },
   );
-  return planSchema.parse(parseJson(response));
+  const raw = parseJson(response);
+  if (process.env.SPARK_CHAT_DEBUG === "1") console.log("Spark query plan:", JSON.stringify(raw));
+  for (const filter of raw.filters ?? []) {
+    if (["hs_pipeline_stage", "dealstage"].includes(filter.property) && ["open", "closed", "won", "lost"].some((word) => normalized(filter.value).includes(word))) {
+      filter.property = "_stage_label";
+    }
+  }
+  if (!raw.sort?.property || !["asc", "desc"].includes(raw.sort?.direction)) raw.sort = null;
+  if (raw.responseType === "records") raw.aggregate = null;
+  if (raw.responseType === "metric") {
+    if (raw.aggregate?.operation === "total") raw.aggregate.operation = "sum";
+    if (raw.aggregate?.operation === "avg") raw.aggregate.operation = "average";
+    if (!raw.aggregate?.operation) raw.aggregate = { operation: "count" };
+  }
+  return planSchema.parse(raw);
 }
 
 function recordUrl(type: ObjectType, id: string) {
@@ -97,8 +112,9 @@ function flatten(type: ObjectType, row: HubSpotObject, owners: Map<string, strin
   };
 }
 
-const normalized = (value = "") => value.trim().toLocaleLowerCase("tr-TR");
-function comparable(value = "") {
+const normalized = (value?: string | null) => (value ?? "").trim().toLocaleLowerCase("tr-TR");
+function comparable(value?: string | null) {
+  value = value ?? "";
   const number = Number(value);
   if (value !== "" && Number.isFinite(number)) return number;
   const date = Date.parse(value);
@@ -137,7 +153,7 @@ function coreFields(type: ObjectType) {
   return ["hs_order_name", "hs_processed_date", "hs_homecurrency_amount", "_owner_name", "_stage_label"];
 }
 
-function formatMetric(value: number, property?: string) {
+function formatMetric(value: number, property?: string | null) {
   const isMoney = Boolean(property?.includes("amount"));
   return isMoney
     ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
@@ -190,7 +206,8 @@ export async function executeSparkChatQuery(question: string, apiKey: string) {
   }
 
   const labels = labelMap(catalogs[plan.object]);
-  const fields = Array.from(new Set([...coreFields(plan.object), ...plan.properties])).filter((property) => valid.has(property) || property.startsWith("_"));
+  const internalDisplayFields = new Set(["hubspot_owner_id", "dealstage", "hs_pipeline_stage"]);
+  const fields = Array.from(new Set([...coreFields(plan.object), ...plan.properties])).filter((property) => !internalDisplayFields.has(property) && (valid.has(property) || property.startsWith("_")));
   const shown = filtered.slice(0, plan.limit);
   return {
     kind: "records" as const,
