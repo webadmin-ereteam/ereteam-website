@@ -30,7 +30,7 @@ async function stage<T>(name: string, task: () => Promise<T>) {
 const objectTypes: ObjectType[] = ["deals", "invoices", "orders"];
 const planSchema = z.object({
   objects: z.array(z.enum(objectTypes)).min(1).max(3),
-  properties: z.record(z.string(), z.array(z.string()).max(24)).default({}),
+  properties: z.record(z.string(), z.array(z.string()).max(16)).default({}),
   needsAssociations: z.boolean().default(false),
 });
 
@@ -91,7 +91,7 @@ function enrichRows(
   stageMap?: Map<string, { label: string; probability: number }>,
   question = "",
 ) {
-  const compactValue = (value: string) => value.length > 180 ? `${value.slice(0, 180)}…` : value;
+  const compactValue = (value: string) => value.length > 140 ? `${value.slice(0, 140)}…` : value;
   const ignored = new Set(["olan", "için", "hangi", "göster", "listele", "detay", "detayları", "fatura", "faturaların", "order", "deal", "deallar", "this", "with"]);
   const terms = question.toLocaleLowerCase("tr-TR").split(/[^a-zA-Z0-9çğıöşüÇĞİÖŞÜ]+/).filter((term) => term.length >= 3 && !ignored.has(term));
   const dateProperty = type === "invoices" ? "hs_invoice_date" : type === "orders" ? "hs_processed_date" : "closedate";
@@ -101,7 +101,7 @@ function enrichRows(
     const timestamp = Date.parse(row.properties[dateProperty] || row.properties.createdate || "") || 0;
     return { row, score, timestamp };
   }).sort((a, b) => b.score - a.score || b.timestamp - a.timestamp);
-  const selectedRows = ranked.slice(0, 60).map(({ row }) => row);
+  const selectedRows = ranked.slice(0, 30).map(({ row }) => row);
   const records = selectedRows.map((row) => ({
     id: row.id,
     url: recordUrl(type, row.id),
@@ -158,8 +158,8 @@ export async function buildSparkChatContext(question: string, apiKey: string) {
   }
 
   if (plan.needsAssociations) {
-    const invoiceRows = rawRows.invoices ?? await fetchHubSpotObjects("invoices", requiredProperties.invoices);
-    const orderRows = rawRows.orders ?? await fetchHubSpotObjects("orders", requiredProperties.orders);
+    const invoiceRows = rawRows.invoices?.slice(0, 30) ?? [];
+    const orderRows = rawRows.orders?.slice(0, 30) ?? [];
     const [invoiceDeals, orderDeals] = await stage("associations", () => Promise.all([
       fetchHubSpotAssociations("invoices", invoiceRows.map((row) => row.id)),
       fetchHubSpotAssociations("orders", orderRows.map((row) => row.id)),
