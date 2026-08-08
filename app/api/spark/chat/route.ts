@@ -24,7 +24,8 @@ Kurallar:
 5. İlgili kaydın url alanını cevapta tıklanabilir düz URL olarak ekle.
 6. Canlı kayıtlarda cevap yoksa açıkça "Bu bilgi canlı HubSpot verisinde bulunamadı." de.
 7. Teknik property adını yalnızca kullanıcı özellikle property sorarsa göster. Order tarih property adını kendiliğinden yazma.
-8. Toplam hesaplıyorsan kullanılan kayıt sayısını belirt.`;
+8. Toplam hesaplıyorsan kullanılan kayıt sayısını belirt.
+9. providedRecords totalRecords değerinden düşükse yalnızca sunulan en ilgili kayıtlarla cevap verdiğini belirt; sunulmayan kayıtlar için toplam veya kesin sonuç uydurma.`;
 
 export async function POST(request: NextRequest) {
   const session = request.cookies.get("spark_session")?.value;

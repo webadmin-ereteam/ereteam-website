@@ -89,9 +89,20 @@ function enrichRows(
   rows: HubSpotObject[],
   ownerMap: Map<string, string>,
   stageMap?: Map<string, { label: string; probability: number }>,
+  question = "",
 ) {
-  const compactValue = (value: string) => value.length > 500 ? `${value.slice(0, 500)}…` : value;
-  return rows.map((row) => ({
+  const compactValue = (value: string) => value.length > 180 ? `${value.slice(0, 180)}…` : value;
+  const ignored = new Set(["olan", "için", "hangi", "göster", "listele", "detay", "detayları", "fatura", "faturaların", "order", "deal", "deallar", "this", "with"]);
+  const terms = question.toLocaleLowerCase("tr-TR").split(/[^a-zA-Z0-9çğıöşüÇĞİÖŞÜ]+/).filter((term) => term.length >= 3 && !ignored.has(term));
+  const dateProperty = type === "invoices" ? "hs_invoice_date" : type === "orders" ? "hs_processed_date" : "closedate";
+  const ranked = rows.map((row) => {
+    const haystack = Object.values(row.properties).join(" ").toLocaleLowerCase("tr-TR");
+    const score = terms.reduce((total, term) => total + (haystack.includes(term) ? 1 : 0), 0);
+    const timestamp = Date.parse(row.properties[dateProperty] || row.properties.createdate || "") || 0;
+    return { row, score, timestamp };
+  }).sort((a, b) => b.score - a.score || b.timestamp - a.timestamp);
+  const selectedRows = ranked.slice(0, 60).map(({ row }) => row);
+  const records = selectedRows.map((row) => ({
     id: row.id,
     url: recordUrl(type, row.id),
     properties: {
@@ -106,6 +117,7 @@ function enrichRows(
         : {}),
     },
   }));
+  return { totalRecords: rows.length, providedRecords: records.length, records };
 }
 
 export async function buildSparkChatContext(question: string, apiKey: string) {
@@ -136,7 +148,13 @@ export async function buildSparkChatContext(question: string, apiKey: string) {
   const rawRows = Object.fromEntries(plan.objects.map((type, index) => [type, rowSets[index]])) as Partial<Record<ObjectType, HubSpotObject[]>>;
   const records: Record<string, unknown> = {};
   for (const type of plan.objects) {
-    records[objectLabel[type]] = enrichRows(type, rawRows[type] ?? [], ownerMap, type === "deals" ? dealStages : type === "orders" ? orderStages : undefined);
+    records[objectLabel[type]] = enrichRows(
+      type,
+      rawRows[type] ?? [],
+      ownerMap,
+      type === "deals" ? dealStages : type === "orders" ? orderStages : undefined,
+      question,
+    );
   }
 
   if (plan.needsAssociations) {
