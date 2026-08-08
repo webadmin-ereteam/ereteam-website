@@ -1,27 +1,32 @@
 # Spark Revenue Dashboard
 
-Spark is an internal, password-protected revenue dashboard mounted at
-`/spark`. It is intentionally separate from the presales portal and its
-documentation.
+Spark is an internal, password-protected revenue dashboard mounted at `/spark`.
+It is intentionally separate from the Presales portal. Spark changes belong in
+this file; do not use `PRESALES.md` as Spark documentation.
 
 ## Routes
 
 - `/spark` — latest password-protected dashboard
 - `/spark/login` — shared internal login
 - `/api/cron/spark` — Vercel Cron endpoint
+- `/api/spark/amplemarket/webhook` — authenticated Amplemarket event receiver
 
 ## Schedule and reporting window
 
 Vercel Cron calls the production endpoint every day at `10:00 UTC`, which is
 `13:00 Europe/Istanbul`. Each report covers the exact rolling window from
 `generatedAt - 7 days` through `generatedAt`. YTD and current-month values use
-the generation timestamp as their cutoff.
+the generation timestamp as their cutoff. On Vercel Hobby, the invocation can
+occur at any time within the scheduled hour. Environment-variable changes only
+reach a new deployment, so redeploy after changing a secret.
 
 ## Sources
 
 - HubSpot API: deals, invoices, orders, associations, owners and drill-down links
-- Google Sheets: `Sales` workbook, `Bütçe_Hedef` tab, `Lisans + Servis`
-- Amplemarket: lead-generation metrics when a server-side analytics endpoint is configured
+- Vercel environment: reporting-year `Lisans + Servis` annual target
+- Amplemarket: webhook events stored in `SparkAmplemarketEvent`; the API key is
+  validated through `/account-info`
+
 The dashboard does not include an admin screen or historical archive. Data is
 cached and refreshed daily; source health is shown separately.
 
@@ -35,16 +40,19 @@ seven-day deal movement.
 ```text
 HUBSPOT_ACCESS_TOKEN=
 SPARK_PASSWORD=
-SPARK_SHEET_ID=1Yc-CO6QHlgOhVyvuuAp_2Oh4Ywm3kYKkfjFyZevfhyU
-SPARK_CRON_SECRET=
+SPARK_LICENSE_TARGET_2026=1846145
+SPARK_SERVICE_TARGET_2026=4029926
+CRON_SECRET=
 AMPLEMARKET_API_KEY=
 AMPLEMARKET_WEBHOOK_SECRET=
 ```
 
-The existing `GOOGLE_SERVICE_ACCOUNT_KEY` and `ADMIN_SESSION_SECRET` variables
-are reused. Spark has its own `SPARK_PASSWORD` and session cookie; Presales
-credentials do not grant Spark access. Spark has no admin functionality.
-Secrets must only be stored in Vercel environment variables.
+The existing `DATABASE_URL` and `ADMIN_SESSION_SECRET` variables are reused.
+`NODE_ENV` is supplied by Vercel.
+Spark has its own `SPARK_PASSWORD` and `spark_session` cookie; Presales
+credentials do not grant Spark access. Secrets must only be stored in Vercel.
+`CRON_SECRET` is the standard name Vercel uses to attach the cron Authorization
+header. `SPARK_CRON_SECRET` is legacy and can be removed.
 
 ## HubSpot field contract
 
@@ -52,17 +60,45 @@ Secrets must only be stored in Vercel environment variables.
 - Order amount/date: `hs_homecurrency_amount`, `hs_processed_date` (internal only)
 - Deal amount: `amount_in_home_currency`
 - New Business: `dealtype = newbusiness` and Closed Won
-- Annual target: reporting-year rows in `Bütçe_Hedef`, `Lisans + Servis`
+- Annual target: `SPARK_LICENSE_TARGET_<year>` + `SPARK_SERVICE_TARGET_<year>`
 
 The technical order-date property name is never rendered in the UI.
 
+## Reporting rules
+
+- Target coverage is YTD invoices plus reporting-year open orders, divided by
+  the annual `Lisans + Servis` target. Changing either target variable requires
+  a redeploy before it affects Spark.
+- Invoice, order and deal values must use the company/home-currency USD fields
+  above. Never substitute example or remembered totals.
+- New Business has two populations: all reporting-year invoices/open orders
+  linked to any Closed Won New Business deal, and the subset linked to New
+  Business deals closed in the reporting year. Carry-over rows are visually
+  distinguishable in drill-downs.
+- Monthly invoices/orders and weekly new/won/lost records have drill-down
+  lists. Do not duplicate weekly deal movement elsewhere on the page.
+- Do not show Pipeline Health Score, external meetings, manually entered focus
+  items, Business Development or automatically invented action priorities.
+- The executive summary is numeric and source-derived.
+
 ## Amplemarket webhook
 
-Configure Amplemarket JSON Data and interested-reply workflows to send events
-to `/api/spark/amplemarket/webhook?key=<AMPLEMARKET_WEBHOOK_SECRET>`. Spark
-stores source events only for rolling aggregation; it does not create report
-archives. The REST API key is validated against Amplemarket's `/account-info`.
-If a dedicated webhook secret is omitted, `SPARK_CRON_SECRET` is used.
+Use `/api/spark/amplemarket/webhook?key=<AMPLEMARKET_WEBHOOK_SECRET>` for all
+three active feeds:
+
+1. JSON Data: Email and LinkedIn activity on, `All new contacts`; this supplies
+   sends and all replies.
+2. Interested workflow: `event_type: positive`; this supplies the positive
+   subset.
+3. Meeting Booked workflow: `event_type: meeting`; this supplies meetings and
+   their person/company details.
+
+The separate All Replies workflow must remain paused because JSON Data already
+supplies replies. `replies` counts only `reply` events; positive events are not
+added again. Call, generic task, SMS/iMessage and WhatsApp JSON Data feeds are
+off. Workflow headers remain empty because authentication uses the URL key.
+Spark stores source events for rolling aggregation, not dashboard archives.
+Remove dummy `John Doe`/`Jane Doe` events after testing.
 
 ## Commands
 
@@ -72,3 +108,5 @@ npm run build
 
 After deployment, verify `/spark/login`, `/spark` and one
 authorized call to `/api/cron/spark` before considering the installation live.
+Run `npm run build` and `git diff --check`; preserve unrelated worktree changes,
+especially user-owned changes in `PRESALES.md`.

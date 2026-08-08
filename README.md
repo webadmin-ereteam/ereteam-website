@@ -1,5 +1,12 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Project work areas
+
+- Spark revenue dashboard: read `SPARK.md` before making changes.
+- Presales portal: read `PRESALES.md` before making changes.
+- Keep Spark and Presales documentation, authentication and feature changes
+  separate. Preserve unrelated worktree changes.
+
 ## Getting Started
 
 First, run the development server:
