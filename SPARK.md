@@ -35,12 +35,14 @@ The header also shows the exact Istanbul update time. Authenticated users can
 request a quiet manual refresh; requests made within ten minutes of the latest
 generated report reuse the current snapshot instead of calling the sources.
 
-The dashboard includes a password-protected Revenue Data Assistant. It uses the
-latest shared Spark snapshot for report context, then queries HubSpot live through
-the server-side API for the deal, invoice, order and property data required by the
-question. It is read-only, never exposes the HubSpot token to the browser, rate
-limits requests, and only works with a valid `spark_session`. Answers must use the
-approved USD fields and include HubSpot record links when relevant.
+The dashboard includes a password-protected Revenue Data Assistant. Groq is used
+only to translate the natural-language question into a constrained query plan.
+The server then queries HubSpot live and renders the result deterministically:
+single-value questions return a metric card, while record/detail questions return
+a table with HubSpot links. HubSpot result rows are not sent back to Groq for answer
+generation. The assistant is read-only, never exposes tokens to the browser, rate
+limits requests, and only works with a valid `spark_session`. Calculations use the
+approved USD fields.
 
 The former manually entered weekly focus/priorities section is intentionally
 excluded. The executive summary is generated only from current numerical
