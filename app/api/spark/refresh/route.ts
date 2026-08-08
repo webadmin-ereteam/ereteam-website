@@ -1,8 +1,6 @@
-import { revalidateTag } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { verifySessionToken } from "@/lib/presales/session";
-import { getSparkData } from "@/lib/spark/cache";
-import { collectSparkData } from "@/lib/spark/collector";
+import { getSparkData, refreshSparkData } from "@/lib/spark/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +8,7 @@ const SPARK_SESSION_COOKIE = "spark_session";
 const REFRESH_COOLDOWN_MS = 10 * 60 * 1000;
 
 let refreshInFlight: Promise<
-  Awaited<ReturnType<typeof collectSparkData>>
+  Awaited<ReturnType<typeof refreshSparkData>>
 > | null = null;
 
 export async function POST(request: NextRequest) {
@@ -31,11 +29,10 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    refreshInFlight ??= collectSparkData().finally(() => {
+    refreshInFlight ??= refreshSparkData().finally(() => {
       refreshInFlight = null;
     });
     const result = await refreshInFlight;
-    revalidateTag("spark-current-dashboard");
     return NextResponse.json({
       ok: true,
       refreshed: true,

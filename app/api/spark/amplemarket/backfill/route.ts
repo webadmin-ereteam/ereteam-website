@@ -1,9 +1,8 @@
 import { timingSafeEqual } from "node:crypto";
-import { revalidateTag } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/presales/db";
-import { collectSparkData } from "@/lib/spark/collector";
+import { refreshSparkData } from "@/lib/spark/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -55,8 +54,7 @@ export async function POST(request: NextRequest) {
   }
 
   const result = records.length ? await prisma.sparkAmplemarketEvent.createMany({ data: records, skipDuplicates: true }) : { count: 0 };
-  const dashboard = await collectSparkData();
-  revalidateTag("spark-current-dashboard");
+  const dashboard = await refreshSparkData();
   return NextResponse.json({
     ok: true,
     inserted: result.count,
