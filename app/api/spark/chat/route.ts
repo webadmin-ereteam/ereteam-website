@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { verifySessionToken } from "@/lib/presales/session";
 import { getClientIp, rateLimit } from "@/lib/rateLimit";
-import { buildSparkChatContext } from "@/lib/spark/chat";
+import { buildSparkChatContext, SparkChatStageError } from "@/lib/spark/chat";
 import { generateChatResponse, type ChatMessage } from "@/lib/services/llmService";
 
 export const dynamic = "force-dynamic";
@@ -44,19 +44,26 @@ export async function POST(request: NextRequest) {
     const question = parsed.data.messages.at(-1)?.content ?? "";
     const context = await buildSparkChatContext(question, apiKey);
     const messages: ChatMessage[] = parsed.data.messages.slice(-8);
-    const content = await generateChatResponse(
-      SYSTEM_PROMPT,
-      messages,
-      apiKey,
-      `\n\nSPARK VE HUBSPOT VERİLERİ:\n${JSON.stringify(context)}`,
-      { model: "llama-3.3-70b-versatile", temperature: 0.1, maxTokens: 1_100 },
-    );
+    let content: string;
+    try {
+      content = await generateChatResponse(
+        SYSTEM_PROMPT,
+        messages,
+        apiKey,
+        `\n\nSPARK VE HUBSPOT VERİLERİ:\n${JSON.stringify(context)}`,
+        { model: "llama-3.3-70b-versatile", temperature: 0.1, maxTokens: 1_100 },
+      );
+    } catch (error) {
+      throw new SparkChatStageError("answer", error);
+    }
     return NextResponse.json({ content, queriedAt: context.queriedAt, source: "live_hubspot" });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("Spark chat error:", message);
     const hubspotStatus = message.match(/^HubSpot [^:]+: (\d{3})$/)?.[1];
-    const publicError = hubspotStatus
+    const publicError = error instanceof SparkChatStageError
+      ? `Canlı sorgu ${error.stage} aşamasında tamamlanamadı.`
+      : hubspotStatus
       ? `HubSpot canlı sorgusu tamamlanamadı (HTTP ${hubspotStatus}).`
       : error instanceof z.ZodError || error instanceof SyntaxError
         ? "Canlı sorgu planı oluşturulamadı."

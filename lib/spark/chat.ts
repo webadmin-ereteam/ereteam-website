@@ -12,6 +12,20 @@ import {
 import { generateChatResponse } from "@/lib/services/llmService";
 
 type ObjectType = "deals" | "invoices" | "orders";
+export class SparkChatStageError extends Error {
+  constructor(public readonly stage: string, cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause));
+    this.name = "SparkChatStageError";
+  }
+}
+
+async function stage<T>(name: string, task: () => Promise<T>) {
+  try {
+    return await task();
+  } catch (error) {
+    throw new SparkChatStageError(name, error);
+  }
+}
 
 const objectTypes: ObjectType[] = ["deals", "invoices", "orders"];
 const planSchema = z.object({
@@ -90,30 +104,30 @@ function enrichRows(
 }
 
 export async function buildSparkChatContext(question: string, apiKey: string) {
-  const [snapshot, dealCatalog, invoiceCatalog, orderCatalog] = await Promise.all([
-    getSparkData(),
-    fetchHubSpotPropertyCatalog("deals"),
-    fetchHubSpotPropertyCatalog("invoices"),
-    fetchHubSpotPropertyCatalog("orders"),
-  ]);
+  const snapshot = await stage("snapshot", () => getSparkData());
+  const [dealCatalog, invoiceCatalog, orderCatalog] = await stage("catalog", () => Promise.all([
+      fetchHubSpotPropertyCatalog("deals"),
+      fetchHubSpotPropertyCatalog("invoices"),
+      fetchHubSpotPropertyCatalog("orders"),
+    ]));
   const catalogs: Record<ObjectType, HubSpotProperty[]> = {
     deals: dealCatalog,
     invoices: invoiceCatalog,
     orders: orderCatalog,
   };
-  const plan = await createPlan(question, catalogs, apiKey);
+  const plan = await stage("planner", () => createPlan(question, catalogs, apiKey));
   const selected = Object.fromEntries(plan.objects.map((type) => {
     const valid = new Set(catalogs[type].map((property) => property.name));
     const planned = (plan.properties[type] ?? []).filter((property) => valid.has(property));
     return [type, Array.from(new Set([...requiredProperties[type], ...planned]))];
   })) as Partial<Record<ObjectType, string[]>>;
 
-  const [ownerMap, dealStages, orderStages, ...rowSets] = await Promise.all([
+  const [ownerMap, dealStages, orderStages, ...rowSets] = await stage("records", () => Promise.all([
     fetchHubSpotOwners(),
     fetchHubSpotStages("deals"),
     fetchHubSpotStages("orders"),
     ...plan.objects.map((type) => fetchHubSpotObjects(type, selected[type] ?? requiredProperties[type])),
-  ]);
+  ]));
   const rawRows = Object.fromEntries(plan.objects.map((type, index) => [type, rowSets[index]])) as Partial<Record<ObjectType, HubSpotObject[]>>;
   const records: Record<string, unknown> = {};
   for (const type of plan.objects) {
@@ -123,10 +137,10 @@ export async function buildSparkChatContext(question: string, apiKey: string) {
   if (plan.needsAssociations) {
     const invoiceRows = rawRows.invoices ?? await fetchHubSpotObjects("invoices", requiredProperties.invoices);
     const orderRows = rawRows.orders ?? await fetchHubSpotObjects("orders", requiredProperties.orders);
-    const [invoiceDeals, orderDeals] = await Promise.all([
+    const [invoiceDeals, orderDeals] = await stage("associations", () => Promise.all([
       fetchHubSpotAssociations("invoices", invoiceRows.map((row) => row.id)),
       fetchHubSpotAssociations("orders", orderRows.map((row) => row.id)),
-    ]);
+    ]));
     records.Baglantilar = {
       invoice_to_deals: Object.fromEntries(invoiceDeals),
       order_to_deals: Object.fromEntries(orderDeals),
