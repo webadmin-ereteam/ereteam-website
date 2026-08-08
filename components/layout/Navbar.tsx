@@ -102,7 +102,7 @@ export default function Navbar() {
     ? "bg-white"
     : "bg-transparent";
 
-  if (pathname.startsWith("/presales")) return null;
+  if (pathname.startsWith("/presales") || pathname.startsWith("/spark")) return null;
 
   return (
     <header

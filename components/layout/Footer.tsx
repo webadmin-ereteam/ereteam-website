@@ -40,7 +40,7 @@ const resources = [
 
 export default function Footer() {
   const pathname = usePathname();
-  if (pathname.startsWith("/presales")) return null;
+  if (pathname.startsWith("/presales") || pathname.startsWith("/spark")) return null;
 
   return (
     <footer className="bg-brand-dark text-white">

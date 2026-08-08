@@ -311,3 +311,22 @@ model AdminLoginAttempt {
   lockedUntil DateTime?
   updatedAt   DateTime  @updatedAt
 }
+
+// Rolling Amplemarket activity feed for Spark. This stores source events, not
+// dashboard snapshots; records older than the reporting window can be pruned.
+model SparkAmplemarketEvent {
+  id           String   @id @default(cuid())
+  externalId   String   @unique
+  eventType    String   // sent | reply | positive | meeting | activity
+  sequenceKind String?  // bulk | duo when the source identifies it
+  sequenceName String?
+  ownerEmail   String?
+  personName   String?
+  companyName  String?
+  occurredAt   DateTime
+  payload      Json
+  createdAt    DateTime @default(now())
+
+  @@index([occurredAt])
+  @@index([eventType, occurredAt])
+}

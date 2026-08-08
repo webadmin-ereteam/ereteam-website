@@ -11,7 +11,7 @@ import { usePathname } from "next/navigation";
 // unconditionally so marketing-site consent behavior is unaffected.
 export default function CookieBannerGate() {
   const pathname = usePathname();
-  if (!pathname.startsWith("/presales")) return null;
+  if (!pathname.startsWith("/presales") && !pathname.startsWith("/spark")) return null;
 
   return (
     <style>{`
