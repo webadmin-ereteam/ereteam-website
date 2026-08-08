@@ -912,6 +912,10 @@ export default function Dashboard({
                 Amplemarket&apos;te bu hafta yeni ayarlanan toplantı bulunmuyor.
               </div>
             )}
+            <p className={styles.meetingNote}>
+              Bu bölüm yalnızca Amplemarket kampanyalarından gelen toplantıları
+              gösterir. Diğer kanallardan ayarlanan toplantılar burada yer almaz.
+            </p>
           </>
         ) : (
           <div className={styles.empty}>

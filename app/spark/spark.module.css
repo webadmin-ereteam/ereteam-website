@@ -947,6 +947,13 @@
   text-align: center;
   background: #f8fafb;
 }
+
+.meetingNote {
+  margin: 14px 2px 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
 .page footer {
   color: var(--muted);
   text-align: center;
