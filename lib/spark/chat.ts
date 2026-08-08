@@ -12,6 +12,10 @@ import { generateChatResponse } from "@/lib/services/llmService";
 
 type ObjectType = "deals" | "invoices" | "orders";
 type FlatRecord = Record<string, string> & { _id: string; _url: string; _object: ObjectType };
+export type SparkChatContextItem = {
+  question: string;
+  result: { kind: "metric"; title: string; value: string; recordCount: number } | { kind: "records"; title: string; recordCount: number; objectLabel: string };
+};
 
 export class SparkChatStageError extends Error {
   constructor(public readonly stage: string, cause: unknown) {
@@ -55,11 +59,19 @@ function parseJson(value: string) {
   return JSON.parse(fenced || value.match(/\{[\s\S]*\}/)?.[0] || value);
 }
 
-function catalogText(catalogs: Record<ObjectType, HubSpotProperty[]>) {
-  return objectTypes.map((type) => `${type}:\n${catalogs[type].map((p) => `${p.name} | ${p.label}`).join("\n")}`).join("\n\n");
+function catalogText(catalogs: Record<ObjectType, HubSpotProperty[]>, question: string) {
+  const terms = normalized(question).split(/[^a-z0-9çğıöşü]+/).filter((term) => term.length >= 4);
+  return objectTypes.map((type) => {
+    const required = new Set(requiredProperties[type]);
+    const relevant = catalogs[type].filter((property) => {
+      const text = normalized(`${property.name} ${property.label}`);
+      return required.has(property.name) || terms.some((term) => text.includes(term));
+    }).slice(0, 60);
+    return `${type}:\n${relevant.map((property) => `${property.name} | ${property.label}`).join("\n")}`;
+  }).join("\n\n");
 }
 
-async function createPlan(question: string, catalogs: Record<ObjectType, HubSpotProperty[]>, apiKey: string) {
+async function createPlan(question: string, catalogs: Record<ObjectType, HubSpotProperty[]>, apiKey: string, context: SparkChatContextItem[], retry = false) {
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Istanbul", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   const response = await generateChatResponse(
     `Sen HubSpot için salt-okunur JSON sorgu planlayıcısısın. Bugün ${today}, saat dilimi Europe/Istanbul.
@@ -76,10 +88,10 @@ Tek bir sayı/değer soruluyorsa metric, kayıtlar veya detaylar isteniyorsa rec
 Sanal alanlar: _stage_label ve _owner_name filtrelenebilir. Tarih değerlerini YYYY-MM-DD yaz. "Bu ay" için ayın ilk ve son gününü between values ile ver. "Bu yıl" için yılın ilk ve son gününü kullan.
 Bağlı faturanın/orderın deal özellikleri sorulursa associatedDealFilters kullan. Örneğin New Business için dealtype eq newbusiness.
 Kayıt görünümünde gerekli isim, tarih, tutar, owner ve şirket alanlarını properties içine ekle. Verilen katalog dışında gerçek property uydurma.`,
-    [{ role: "user", content: `SORU:\n${question}\n\nPROPERTY KATALOĞU:\n${catalogText(catalogs)}` }],
+    [{ role: "user", content: `${context.length ? `SON 5 KONUŞMA ÖZETİ (detay kayıt içermez):\n${JSON.stringify(context)}\n\n` : ""}SORU:\n${question}\n\nİLGİLİ PROPERTY KATALOĞU:\n${catalogText(catalogs, question)}${retry ? "\n\nÖnceki plan şemaya uymadı. Bu kez tüm zorunlu alanlarla geçerli, sade JSON üret." : ""}` }],
     apiKey,
     "",
-    { model: "llama-3.3-70b-versatile", temperature: 0, maxTokens: 900, jsonMode: true },
+    { model: "llama-3.1-8b-instant", temperature: 0, maxTokens: 900, jsonMode: true },
   );
   const raw = parseJson(response);
   if (process.env.SPARK_CHAT_DEBUG === "1") console.log("Spark query plan:", JSON.stringify(raw));
@@ -100,9 +112,10 @@ Kayıt görünümünde gerekli isim, tarih, tutar, owner ve şirket alanlarını
   raw.associatedDealFilters = normalizeFilters(raw.associatedDealFilters);
   raw.properties = Array.isArray(raw.properties) ? raw.properties.map(String).slice(0, 16) : [];
   for (const filter of raw.filters) {
-    if (["hs_pipeline_stage", "dealstage"].includes(filter.property) && ["open", "closed", "won", "lost"].some((word) => normalized(filter.value).includes(word))) {
+    if (["stage", "hs_pipeline_stage", "dealstage"].includes(filter.property) && ["open", "closed", "won", "lost"].some((word) => normalized(filter.value).includes(word))) {
       filter.property = "_stage_label";
     }
+    if (filter.operator === "between" && filter.value && filter.values?.length === 1) filter.values = [filter.value, filter.values[0]];
   }
   if (!raw.sort?.property || !["asc", "desc"].includes(raw.sort?.direction)) raw.sort = null;
   if (raw.responseType === "records") raw.aggregate = null;
@@ -189,12 +202,15 @@ function formatMetric(value: number, property?: string | null) {
     : new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 2 }).format(value);
 }
 
-export async function executeSparkChatQuery(question: string, apiKey: string) {
+export async function executeSparkChatQuery(question: string, apiKey: string, context: SparkChatContextItem[] = []) {
   const [dealCatalog, invoiceCatalog, orderCatalog] = await stage("catalog", () => Promise.all([
     fetchHubSpotPropertyCatalog("deals"), fetchHubSpotPropertyCatalog("invoices"), fetchHubSpotPropertyCatalog("orders"),
   ]));
   const catalogs: Record<ObjectType, HubSpotProperty[]> = { deals: dealCatalog, invoices: invoiceCatalog, orders: orderCatalog };
-  const plan = await stage("planner", () => createPlan(question, catalogs, apiKey));
+  const plan = await stage("planner", async () => {
+    try { return await createPlan(question, catalogs, apiKey, context); }
+    catch { return createPlan(question, catalogs, apiKey, context, true); }
+  });
   const valid = new Set(catalogs[plan.object].map((property) => property.name));
   const filterProperties = [...plan.filters, ...plan.associatedDealFilters].map((filter) => filter.property).filter((property) => !property.startsWith("_"));
   const selected = Array.from(new Set([...requiredProperties[plan.object], ...plan.properties, ...filterProperties, plan.aggregate?.property, plan.sort?.property]

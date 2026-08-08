@@ -11,6 +11,15 @@ type QueryResult =
   | { kind: "records"; title: string; objectLabel: string; totalRecords: number; shownRecords: number; columns: Column[]; records: Array<{ id: string; url: string; values: Record<string, string> }>; queriedAt: string };
 type HistoryItem = { question: string; result?: QueryResult; error?: string };
 
+function compactContext(history: HistoryItem[]) {
+  return history.filter((item) => item.result).slice(-5).map((item) => ({
+    question: item.question,
+    result: item.result!.kind === "metric"
+      ? { kind: "metric" as const, title: item.result!.title, value: item.result!.formattedValue, recordCount: item.result!.recordCount }
+      : { kind: "records" as const, title: item.result!.title, recordCount: item.result!.totalRecords, objectLabel: item.result!.objectLabel },
+  }));
+}
+
 const suggestions = [
   "Bu ay beklenen fatura toplamı nedir?",
   "Bu ay beklenen faturaların detaylarını göster",
@@ -69,7 +78,7 @@ export default function SparkChatWidget() {
     if (!question || loading) return;
     setInput(""); setLoading(true); setHistory((current) => [...current, { question }]);
     try {
-      const response = await fetch("/api/spark/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question }) });
+      const response = await fetch("/api/spark/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question, context: compactContext(history) }) });
       const result = await response.json();
       setHistory((current) => current.map((item, index) => index === current.length - 1 ? { ...item, ...(response.ok ? { result } : { error: result.error || "Sorgu tamamlanamadı." }) } : item));
     } catch {

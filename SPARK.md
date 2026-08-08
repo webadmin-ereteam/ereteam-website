@@ -40,7 +40,11 @@ only to translate the natural-language question into a constrained query plan.
 The server then queries HubSpot live and renders the result deterministically:
 single-value questions return a metric card, while record/detail questions return
 a table with HubSpot links. HubSpot result rows are not sent back to Groq for answer
-generation. The assistant is read-only, never exposes tokens to the browser, rate
+generation. The last five questions and compact result metadata are sent as
+conversation context so follow-up questions work; detailed record rows are excluded.
+The planner uses the lightweight Groq 8B model, retries one malformed plan once,
+and receives only question-relevant property catalog entries. The assistant is
+read-only, never exposes tokens to the browser, rate
 limits requests, and only works with a valid `spark_session`. Calculations use the
 approved USD fields.
 
