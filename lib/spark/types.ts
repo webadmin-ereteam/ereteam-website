@@ -47,6 +47,7 @@ export type SparkData = {
     duo: number | null;
     replies: number | null;
     positive: number | null;
+    owners: Array<{ owner: string; bulk: number; duo: number; total: number }>;
     meetings: Array<{ person: string; company: string; bookedAt: string; owner?: string }>;
   };
 };

@@ -100,6 +100,11 @@ off. Workflow headers remain empty because authentication uses the URL key.
 Spark stores source events for rolling aggregation, not dashboard archives.
 Remove dummy `John Doe`/`Jane Doe` events after testing.
 
+Lead Generation follows the approved standalone HTML: exact sent, bulk, Duo,
+reply, positive and meeting totals; person-level bulk/Duo/total send breakdown;
+positive/reply conversion; and meetings booked within the rolling seven-day
+window. Manually entered priorities and action lists are not rendered.
+
 ## Commands
 
 ```bash

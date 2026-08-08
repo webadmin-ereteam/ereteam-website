@@ -69,7 +69,7 @@ export async function collectSparkData(now = new Date()): Promise<{ data: SparkD
     sourceState.budget = { ok: false, message: error instanceof Error ? error.message : "Hedef okunamadı" };
   }
 
-  let leadGeneration: SparkData["leadGeneration"] = { sent: null, bulk: null, duo: null, replies: null, positive: null, meetings: [] };
+  let leadGeneration: SparkData["leadGeneration"] = { sent: null, bulk: null, duo: null, replies: null, positive: null, owners: [], meetings: [] };
   try {
     leadGeneration = await fetchAmplemarket(start, end);
     sourceState.amplemarket = { ok: true };

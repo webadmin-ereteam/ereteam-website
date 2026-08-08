@@ -19,12 +19,21 @@ export async function fetchAmplemarket(periodStart: Date, periodEnd: Date): Prom
   });
   const count = (type: string) => events.filter((event) => event.eventType === type).length;
   const sent = events.filter((event) => event.eventType === "sent");
+  const owners = Array.from(new Set(sent.map((event) => event.ownerEmail || "Owner belirtilmemiş")))
+    .map((owner) => {
+      const ownerEvents = sent.filter((event) => (event.ownerEmail || "Owner belirtilmemiş") === owner);
+      const bulk = ownerEvents.filter((event) => event.sequenceKind === "bulk").length;
+      const duo = ownerEvents.filter((event) => event.sequenceKind === "duo").length;
+      return { owner, bulk, duo, total: ownerEvents.length };
+    })
+    .sort((a, b) => b.total - a.total || a.owner.localeCompare(b.owner, "tr"));
   return {
     sent: sent.length,
     bulk: sent.filter((event) => event.sequenceKind === "bulk").length,
     duo: sent.filter((event) => event.sequenceKind === "duo").length,
     replies: count("reply"),
     positive: count("positive"),
+    owners,
     meetings: events.filter((event) => event.eventType === "meeting").map((event) => ({
       person: event.personName || "İsim belirtilmemiş",
       company: event.companyName || "Şirket belirtilmemiş",
