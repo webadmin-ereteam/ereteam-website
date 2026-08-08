@@ -71,7 +71,7 @@ function catalogText(catalogs: Record<ObjectType, HubSpotProperty[]>, question: 
   }).join("\n\n");
 }
 
-async function createPlan(question: string, catalogs: Record<ObjectType, HubSpotProperty[]>, apiKey: string, context: SparkChatContextItem[], retry = false) {
+async function createPlan(question: string, catalogs: Record<ObjectType, HubSpotProperty[]>, apiKey: string, context: SparkChatContextItem[], model: string, retry = false) {
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Istanbul", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   const response = await generateChatResponse(
     `Sen HubSpot için salt-okunur JSON sorgu planlayıcısısın. Bugün ${today}, saat dilimi Europe/Istanbul.
@@ -91,7 +91,7 @@ Kayıt görünümünde gerekli isim, tarih, tutar, owner ve şirket alanlarını
     [{ role: "user", content: `${context.length ? `SON 5 KONUŞMA ÖZETİ (detay kayıt içermez):\n${JSON.stringify(context)}\n\n` : ""}SORU:\n${question}\n\nİLGİLİ PROPERTY KATALOĞU:\n${catalogText(catalogs, question)}${retry ? "\n\nÖnceki plan şemaya uymadı. Bu kez tüm zorunlu alanlarla geçerli, sade JSON üret." : ""}` }],
     apiKey,
     "",
-    { model: "llama-3.1-8b-instant", temperature: 0, maxTokens: 900, jsonMode: true },
+    { model, temperature: 0, maxTokens: 900, jsonMode: true },
   );
   const raw = parseJson(response);
   if (process.env.SPARK_CHAT_DEBUG === "1") console.log("Spark query plan:", JSON.stringify(raw));
@@ -208,8 +208,13 @@ export async function executeSparkChatQuery(question: string, apiKey: string, co
   ]));
   const catalogs: Record<ObjectType, HubSpotProperty[]> = { deals: dealCatalog, invoices: invoiceCatalog, orders: orderCatalog };
   const plan = await stage("planner", async () => {
-    try { return await createPlan(question, catalogs, apiKey, context); }
-    catch { return createPlan(question, catalogs, apiKey, context, true); }
+    const models = ["openai/gpt-oss-20b", "llama-3.1-8b-instant", "openai/gpt-oss-120b"];
+    let lastError: unknown;
+    for (let index = 0; index < models.length; index += 1) {
+      try { return await createPlan(question, catalogs, apiKey, context, models[index], index > 0); }
+      catch (error) { lastError = error; }
+    }
+    throw lastError;
   });
   const valid = new Set(catalogs[plan.object].map((property) => property.name));
   const filterProperties = [...plan.filters, ...plan.associatedDealFilters].map((filter) => filter.property).filter((property) => !property.startsWith("_"));
