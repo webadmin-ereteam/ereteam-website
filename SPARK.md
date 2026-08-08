@@ -105,6 +105,25 @@ reply, positive and meeting totals; person-level bulk/Duo/total send breakdown;
 positive/reply conversion; and meetings booked within the rolling seven-day
 window. Manually entered priorities and action lists are not rendered.
 
+The live dashboard must preserve the visual hierarchy and interaction model of
+the approved standalone Spark HTML: branded dark header, three written numeric
+executive-summary cards, four KPI cards, dark weekly movement strip with inline
+deal-list buttons, target and invoicing cards, grouped New Business view,
+monthly trend, forecast and Lead Generation. Do not add a separate weekly deal
+movement card. Million-scale compact values always show two decimal places.
+
+The public Amplemarket REST API is used only for connection validation because
+it does not expose historical weekly sent/reply analytics. Lead Generation is
+calculated from stored JSON Data and workflow webhooks from the time those feeds
+were enabled; never fill missing historical periods with sample values.
+
+For the one-time pre-webhook gap, Amplemarket MCP Analytics can provide exact
+daily owner and bulk/Duo aggregates. Submit those rows to the authenticated
+`/api/spark/amplemarket/backfill` endpoint. The endpoint creates deterministic,
+deduplicated source events, so repeated submissions are safe. This is bootstrap
+only: after the gap is filled, Amplemarket webhooks and Vercel Cron operate in
+the cloud without requiring the user's Mac or a Codex automation to be online.
+
 ## Commands
 
 ```bash

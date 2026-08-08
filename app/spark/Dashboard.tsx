@@ -1,58 +1,106 @@
+"use client";
+
 import Image from "next/image";
+import { useState } from "react";
 import type { SparkData, SparkRecord, SparkSourceState } from "@/lib/spark/types";
 import styles from "./spark.module.css";
 
-const money = (n: number, compact = false) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", notation: compact ? "compact" : "standard", maximumFractionDigits: compact ? 1 : 2 }).format(n);
-const date = (v?: string) => v ? new Intl.DateTimeFormat("tr-TR", { day: "2-digit", month: "short", year: "numeric", timeZone: "Europe/Istanbul" }).format(new Date(v)) : "-";
-const sum = (r: SparkRecord[]) => r.reduce((a, b) => a + b.amount, 0);
-const ownerName = (value: string) => value.includes("@")
-  ? value.split("@")[0].split(/[._-]/).map(part => part ? part[0].toLocaleUpperCase("tr-TR") + part.slice(1) : "").join(" ")
-  : value;
+const exactMoney = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+const shortMoney = (n: number) => {
+  const sign = n < 0 ? "-" : "";
+  const value = Math.abs(n);
+  if (value >= 1_000_000) return `${sign}$${(value / 1_000_000).toFixed(2)}M`;
+  if (value >= 1_000) return `${sign}$${new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(value / 1_000)}K`;
+  return `${sign}$${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value)}`;
+};
+const date = (value?: string) => value ? new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Istanbul" }).format(new Date(value)) : "-";
+const monthName = (value: string) => new Intl.DateTimeFormat("tr-TR", { month: "long", timeZone: "Europe/Istanbul" }).format(new Date(value));
+const sum = (rows: SparkRecord[]) => rows.reduce((total, row) => total + row.amount, 0);
+const pct = (part: number, whole: number) => whole ? part / whole * 100 : 0;
+const ownerName = (value: string) => value.includes("@") ? value.split("@")[0].split(/[._-]/).map(part => part ? part[0].toLocaleUpperCase("tr-TR") + part.slice(1) : "").join(" ") : value;
+
+function RecordTable({ rows, carryover = false }: { rows: SparkRecord[]; carryover?: boolean }) {
+  return <div className={styles.tableWrap}><table><thead><tr><th>Kayıt</th><th>Şirket</th><th>Tarih</th><th>Tutar</th><th>Owner</th></tr></thead><tbody>{rows.map(row => <tr key={row.id} className={carryover && row.carryover ? styles.carryover : ""}><td><a href={row.url} target="_blank" rel="noreferrer">{row.name}</a></td><td>{row.company || "-"}</td><td>{date(row.date)}</td><td><b>{exactMoney(row.amount)}</b></td><td>{row.owner || "-"}</td></tr>)}</tbody></table></div>;
+}
 
 function Records({ label, rows, carryover = false }: { label: string; rows: SparkRecord[]; carryover?: boolean }) {
-  return <details className={styles.records}><summary><span>{label}</span><span>{rows.length} kayıt ↓</span></summary><div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Kayıt</th><th>Tarih</th><th>Owner</th><th>Tutar</th></tr></thead><tbody>{rows.map(r => <tr key={r.id} className={carryover && r.carryover ? styles.carry : ""}><td><a href={r.url} target="_blank" rel="noreferrer">{r.name}</a>{r.company ? <small> · {r.company}</small> : null}</td><td>{date(r.date)}</td><td>{r.owner || "-"}</td><td>{money(r.amount)}</td></tr>)}</tbody></table></div></details>;
+  return <details className={styles.details}><summary><span>{label}</span><span>{rows.length} kayıt</span></summary><RecordTable rows={rows} carryover={carryover}/>{carryover ? <div className={styles.legend}>Önceki yıllarda kapanan deallardan gelen kayıtlar farklı renkle gösterilir.</div> : null}</details>;
 }
-function Kpi({ label, value, detail, accent }: { label: string; value: string; detail: string; accent?: string }) { return <div className={styles.card} style={{ "--accent": accent } as React.CSSProperties}><div className={styles.label}>{label}</div><div className={styles.value}>{value}</div><div className={styles.detail}>{detail}</div></div>; }
-function Mini({ label, value, rows }: { label: string; value: string; rows?: SparkRecord[] }) { return <div className={styles.mini}><span className={styles.label}>{label}</span><b>{value}</b>{rows ? <Records label="Listeyi aç" rows={rows} /> : null}</div>; }
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return <div className={styles.metric}><b>{value}</b><small>{label}</small></div>;
+}
 
 export default function Dashboard({ data, sources }: { data: SparkData; sources: SparkSourceState }) {
+  const [dealPanel, setDealPanel] = useState<"new" | "won" | "lost" | null>(null);
+  const [billingPanel, setBillingPanel] = useState<"invoice" | "order" | null>(null);
+  const [monthListOpen, setMonthListOpen] = useState(false);
   const coverage = data.ytdInvoice + data.openOrders;
-  const coveragePct = data.target ? coverage / data.target * 100 : 0;
-  const maxTrend = Math.max(...data.monthlyInvoiceTrend.map(x => x.amount), 1);
+  const coveragePct = pct(coverage, data.target);
+  const invoicePct = pct(data.ytdInvoice, data.target);
+  const orderPct = pct(data.openOrders, data.target);
+  const remaining = Math.max(data.target - coverage, 0);
+  const won = sum(data.weeklyWon);
+  const lost = sum(data.weeklyLost);
+  const net = won - lost;
+  const maxTrend = Math.max(...data.monthlyInvoiceTrend.map(item => item.amount), 1);
+  const positiveRate = data.leadGeneration.replies ? pct(data.leadGeneration.positive ?? 0, data.leadGeneration.replies) : 0;
+  const owners = data.leadGeneration.owners ?? [];
   const nb = data.newBusiness;
-  return <main className={styles.page}><div className={styles.shell}>
-    <header className={styles.hero}><div className={styles.heroTop}><Image src="/logos/ereteam-logo.png" alt="Ereteam" width={180} height={70} className={styles.logo} priority/><span className={styles.live}>Güncel veri</span></div><div className={styles.eyebrow}>Revenue &amp; Growth</div><h1>Spark</h1><div className={styles.meta}>{date(data.periodStart)} – {date(data.periodEnd)} · Son yenileme {date(data.generatedAt)}</div></header>
+  const currentMonth = monthName(data.periodEnd);
+  const dealRows = dealPanel === "new" ? data.weeklyNewDeals : dealPanel === "won" ? data.weeklyWon : data.weeklyLost;
+  const dealLabel = dealPanel === "new" ? "Bu hafta açılan fırsatlar" : dealPanel === "won" ? "Bu hafta kazanılan deallar" : "Bu hafta kaybedilen deallar";
 
-    <section className={styles.section}><div className={styles.titleRow}><h2>Yönetici özeti</h2><span className={styles.subtle}>Karar için öne çıkan göstergeler</span></div><div className={styles.grid4}>
-      <Kpi label="Hedef karşılama · Fatura + sipariş" value={`%${coveragePct.toFixed(1)}`} detail={`${money(coverage,true)} / ${money(data.target,true)}`} accent="#1a9b70" />
-      <Kpi label="YTD fatura" value={money(data.ytdInvoice,true)} detail="Şirket para birimi · USD" accent="#388bb7" />
-      <Kpi label="Açık sipariş" value={money(data.openOrders,true)} detail={`${data.monthOrders.length} kayıt bu ay bekleniyor`} accent="#f0a52e" />
-      <Kpi label="Aktif pipeline" value={money(data.pipeline,true)} detail={`${data.activeDeals} aktif fırsat · ağırlıklı ${money(data.weightedForecast,true)}`} accent="#d22e8b" />
-    </div><div className={styles.strip}>
-      <div className={styles.stripItem}><span className={styles.label}>Yeni pipeline</span><div className={`${styles.stripValue} ${styles.green}`}>{money(data.weeklyNewPipeline,true)}</div></div>
-      <div className={styles.stripItem}><span className={styles.label}>Yeni fırsat</span><div className={styles.stripValue}>{data.weeklyNewDeals.length}</div></div>
-      <div className={styles.stripItem}><span className={styles.label}>Closed Won</span><div className={`${styles.stripValue} ${styles.green}`}>{money(sum(data.weeklyWon),true)}</div></div>
-      <div className={styles.stripItem}><span className={styles.label}>Closed Lost</span><div className={`${styles.stripValue} ${styles.red}`}>{money(sum(data.weeklyLost),true)}</div></div>
+  return <main className={styles.page}>
+    <header className={styles.hero}>
+      <div className={styles.logoBox}><Image src="/logos/ereteam-logo.png" alt="Ereteam" width={150} height={110} priority/></div>
+      <div className={styles.brand}><div className={styles.eyebrow}>Ereteam Spark</div><h1>Revenue &amp; Growth</h1><div className={styles.period}>{date(data.periodStart)}–{date(data.periodEnd)} · Haftalık yönetim görünümü</div></div>
+      <div className={styles.status}><span/> Veriler güncel · {date(data.generatedAt)}</div>
+    </header>
+
+    <section>
+      <div className={styles.sectionTitle}><h2>Yönetici Özeti</h2><span>30 saniyelik görünüm</span></div>
+      <div className={styles.summary}>
+        <article className={`${styles.card} ${styles.summaryCard} ${styles.summaryGreen}`}><h3><i>↗</i> Revenue durumu</h3><ul><li>Fatura + açık sipariş toplamı <b>{shortMoney(coverage)}</b>; yıllık hedefin <b>%{coveragePct.toFixed(2)}</b>&apos;si görünür durumda.</li><li>YTD fatura <b>{shortMoney(data.ytdInvoice)}</b>, açık sipariş <b>{shortMoney(data.openOrders)}</b>.</li><li>Hedefe kalan fark <b>{exactMoney(remaining)}</b>.</li></ul></article>
+        <article className={`${styles.card} ${styles.summaryCard} ${styles.summaryRed}`}><h3><i>!</i> Haftalık hareket</h3><ul><li><b>{shortMoney(data.weeklyNewPipeline)}</b> değerinde {data.weeklyNewDeals.length} yeni fırsat açıldı.</li><li><b>{shortMoney(won)}</b> Won&apos;a karşılık <b>{shortMoney(lost)}</b> Lost gerçekleşti.</li><li>Haftalık net kapanış etkisi <b>{shortMoney(net)}</b>.</li></ul></article>
+        <article className={`${styles.card} ${styles.summaryCard} ${styles.summaryBlue}`}><h3><i>→</i> Forecast görünümü</h3><ul><li>Aktif pipeline <b>{shortMoney(data.pipeline)}</b>; ağırlıklı forecast <b>{shortMoney(data.weightedForecast)}</b>.</li><li>Weighted forecast, kalan farkın <b>%{pct(data.weightedForecast, remaining).toFixed(1)}</b>&apos;ini karşılıyor.</li><li>Pipeline&apos;da <b>{data.activeDeals}</b> aktif opportunity bulunuyor.</li></ul></article>
+      </div>
+    </section>
+
+    <section>
+      <div className={styles.sectionTitle}><h2>Ana Göstergeler</h2><span>YTD ve mevcut durum</span></div>
+      <div className={styles.kpis}>
+        <article className={`${styles.card} ${styles.kpi} ${styles.kpiGreen}`}><div className={styles.label}>Yıl hedefi · Fatura + sipariş</div><div className={styles.value}>%{coveragePct.toFixed(2)}</div><div className={styles.sub}>{shortMoney(coverage)} / {shortMoney(data.target)}</div><span className={styles.chip}>Lisans + Servis</span></article>
+        <article className={`${styles.card} ${styles.kpi} ${styles.kpiBlue}`}><div className={styles.label}>Toplam pipeline</div><div className={styles.value}>{shortMoney(data.pipeline)}</div><div className={styles.sub}>{data.activeDeals} aktif opportunity</div><span className={styles.chip}>Canlı HubSpot</span></article>
+        <article className={`${styles.card} ${styles.kpi} ${styles.kpiViolet}`}><div className={styles.label}>YTD fatura</div><div className={styles.value}>{shortMoney(data.ytdInvoice)}</div><div className={styles.sub}>Şirket para birimi · USD</div><span className={styles.chip}>{exactMoney(data.ytdInvoice)}</span></article>
+        <article className={`${styles.card} ${styles.kpi} ${styles.kpiAmber}`}><div className={styles.label}>2026 açık sipariş</div><div className={styles.value}>{shortMoney(data.openOrders)}</div><div className={styles.sub}>Ana para birimi · USD</div><span className={styles.chip}>{exactMoney(data.openOrders)}</span></article>
+      </div>
+    </section>
+
+    <section className={`${styles.card} ${styles.delta}`}>
+      <div><span className={styles.label}>Yeni pipeline</span><strong className={styles.deltaGreen}>{shortMoney(data.weeklyNewPipeline)}</strong></div>
+      <div><span className={styles.label}>Yeni fırsat</span><div className={styles.metricLine}><strong>{data.weeklyNewDeals.length}</strong><button onClick={() => setDealPanel(dealPanel === "new" ? null : "new")}>Liste</button></div></div>
+      <div><span className={styles.label}>Closed Won</span><div className={styles.metricLine}><strong className={styles.deltaGreen}>{shortMoney(won)}</strong><button onClick={() => setDealPanel(dealPanel === "won" ? null : "won")}>{data.weeklyWon.length} deal</button></div></div>
+      <div><span className={styles.label}>Closed Lost</span><div className={styles.metricLine}><strong className={styles.deltaRed}>{shortMoney(lost)}</strong><button onClick={() => setDealPanel(dealPanel === "lost" ? null : "lost")}>{data.weeklyLost.length} deal</button></div></div>
+    </section>
+    {dealPanel ? <section className={`${styles.card} ${styles.dealPanel}`}><div className={styles.cardHead}><h3>{dealLabel}</h3><button onClick={() => setDealPanel(null)}>Kapat ×</button></div><RecordTable rows={dealRows}/></section> : null}
+
+    <section className={styles.twoCol}>
+      <article className={`${styles.card} ${styles.pad}`}><div className={styles.cardHead}><h3>Hedef görünümü</h3><small>Fatura + kesinleşmiş sipariş</small></div><div className={styles.progressMeta}><b>Yıllık revenue coverage</b><span>%{coveragePct.toFixed(2)}</span></div><div className={styles.track}><div className={styles.fill} style={{width:`${Math.min(coveragePct,100)}%`}}/></div><div className={styles.flow}><div><small>Fatura payı</small><b>%{invoicePct.toFixed(2)}</b></div><div><small>Açık sipariş payı</small><b>%{orderPct.toFixed(2)}</b></div><div><small>Kalan</small><b className={styles.red}>%{Math.max(100-coveragePct,0).toFixed(2)}</b></div></div><div className={styles.insight}><b>AI Insight:</b> {exactMoney(data.target)} yıllık hedefe kalan fark {exactMoney(remaining)}.</div></article>
+      <article className={`${styles.card} ${styles.pad}`}><div className={styles.cardHead}><h3>Faturalama özeti</h3><small>{currentMonth} 2026</small></div><div className={styles.flowFour}><div><small>Bu ay faturalandı</small><div className={styles.metricLine}><b>{shortMoney(data.monthInvoice)}</b><button className={styles.lightButton} onClick={() => setBillingPanel(billingPanel === "invoice" ? null : "invoice")}>{data.monthInvoices.length} fatura</button></div></div><div><small>Bu ay beklenen fatura</small><div className={styles.metricLine}><b>{shortMoney(data.monthExpected)}</b><button className={styles.lightButton} onClick={() => setBillingPanel(billingPanel === "order" ? null : "order")}>{data.monthOrders.length} order</button></div></div><div><small>YTD içindeki payı</small><b>%{pct(data.monthInvoice,data.ytdInvoice).toFixed(2)}</b></div><div><small>Yıl hedefindeki payı</small><b>%{pct(data.monthInvoice,data.target).toFixed(2)}</b></div></div><div className={styles.insight}><b>AI Insight:</b> {currentMonth} tarihli {data.monthOrders.length} açık orderdan {exactMoney(data.monthExpected)} fatura bekleniyor. Tamamı kesilirse ay sonu toplamı {exactMoney(data.monthInvoice+data.monthExpected)} olur.</div>{billingPanel ? <div className={styles.inlinePanel}><div className={styles.cardHead}><h3>{billingPanel === "invoice" ? `${currentMonth} faturaları` : `${currentMonth} açık orderları`}</h3><button className={styles.lightButton} onClick={() => setBillingPanel(null)}>Kapat ×</button></div><RecordTable rows={billingPanel === "invoice" ? data.monthInvoices : data.monthOrders}/></div> : null}</article>
+    </section>
+
+    <section className={`${styles.card} ${styles.pad}`}><div className={styles.cardHead}><h3>New Business performansı</h3><small>2026 YTD</small></div><div className={styles.nbOverview}>
+      <article className={`${styles.nbGroup} ${styles.nbTotal}`}><div className={styles.nbHead}><div><h4>Tüm New Business kaynakları</h4><p>Dealın kapanış yılından bağımsız, 2026 gelir görünümü</p></div><span>GENEL</span></div><div className={styles.nbMetricsTwo}><div><small>Fatura</small><b>{shortMoney(sum(nb.invoices))}</b><em>{exactMoney(sum(nb.invoices))}</em></div><div><small>Açık sipariş</small><b>{shortMoney(sum(nb.orders))}</b><em>{exactMoney(sum(nb.orders))}</em></div></div><Records label="Bağlı faturaları görüntüle" rows={nb.invoices} carryover/><Records label="Bağlı siparişleri görüntüle" rows={nb.orders} carryover/></article>
+      <article className={`${styles.nbGroup} ${styles.nbCurrent}`}><div className={styles.nbHead}><div><h4>Bu yıl kazanılan yeni işler</h4><p>2026 içinde Closed Won olan New Business deallar</p></div><span>2026</span></div><div className={styles.nbMetricsThree}><div><small>Kazanılan deal</small><b>{shortMoney(sum(nb.sameYearDeals))}</b><em>{exactMoney(sum(nb.sameYearDeals))}</em></div><div><small>Bağlı fatura</small><b>{shortMoney(sum(nb.sameYearInvoices))}</b><em>{exactMoney(sum(nb.sameYearInvoices))}</em></div><div><small>Açık sipariş</small><b>{shortMoney(sum(nb.sameYearOrders))}</b><em>{exactMoney(sum(nb.sameYearOrders))}</em></div></div><Records label="Kazanılan dealları görüntüle" rows={nb.sameYearDeals}/><Records label="Bağlı faturaları görüntüle" rows={nb.sameYearInvoices}/><Records label="Bağlı siparişleri görüntüle" rows={nb.sameYearOrders}/></article>
     </div></section>
 
-    <section className={`${styles.section} ${styles.twoCol}`}><div className={styles.panel}><div className={styles.titleRow}><h3>Bütçe hedef takibi</h3><span className={styles.subtle}>Fatura + kesinleşmiş sipariş</span></div><div className={styles.progressLabel}><span>Yıllık revenue coverage</span><span>{money(coverage,true)} / {money(data.target,true)}</span></div><div className={styles.track}><div className={styles.fill} style={{width:`${Math.min(coveragePct,100)}%`}} /></div><div className={styles.insight}><strong>Insight:</strong> Hedefin %{coveragePct.toFixed(1)}’i fatura ve açık siparişlerle karşılanıyor. Kalan fark {money(Math.max(data.target-coverage,0))}.</div></div>
-    <div className={styles.panel}><div className={styles.titleRow}><h3>Faturalama özeti</h3><span className={styles.subtle}>Bu ay</span></div><div className={styles.miniGrid}><Mini label="Bu ay faturalandı" value={money(data.monthInvoice,true)} rows={data.monthInvoices}/><Mini label="Bu ay beklenen fatura" value={money(data.monthExpected,true)} rows={data.monthOrders}/></div><div className={styles.insight}><strong>Insight:</strong> Bu ay fatura ve beklenen sipariş toplamı {money(data.monthInvoice+data.monthExpected)}.</div></div></section>
+    <section className={`${styles.card} ${styles.pad}`}><div className={styles.cardHead}><h3>Aylık faturalama trendi</h3><button className={styles.lightButton} onClick={() => setMonthListOpen(!monthListOpen)}>{currentMonth} listesini {monthListOpen ? "kapat" : "aç"}</button></div><div className={styles.chart}>{data.monthlyInvoiceTrend.map(item => <div className={styles.barCol} key={item.month}><span>{shortMoney(item.amount)}</span><div style={{height:`${Math.max(item.amount/maxTrend*100,2)}%`}}/><small>{item.month}</small></div>)}</div>{monthListOpen ? <div className={styles.inlinePanel}><RecordTable rows={data.monthInvoices}/></div> : null}</section>
 
-    <section className={styles.section}><div className={styles.titleRow}><h2>Yeni iş performansı</h2><span className={styles.subtle}>2026 YTD · New Business</span></div><div className={styles.panel}><div className={styles.nbGroups}>
-      <div className={styles.group}><div className={styles.groupHead}><div><h3>Tüm New Business bağlantılı</h3><p>Önceki yıllarda kazanılan işler dahil</p></div></div><div className={styles.statRow}><Mini label="Fatura" value={money(sum(nb.invoices),true)}/><Mini label="Açık sipariş" value={money(sum(nb.orders),true)}/></div><Records label="Bağlı faturaları görüntüle" rows={nb.invoices} carryover/><Records label="Bağlı siparişleri görüntüle" rows={nb.orders} carryover/><div className={styles.legend}><i/> Önceki yıllarda kapanan deallardan gelen kayıtlar</div></div>
-      <div className={styles.group}><div className={styles.groupHead}><div><h3>Bu yıl kazanılan yeni işler</h3><p>Bu yıl Closed Won olan New Business deallar</p></div></div><div className={styles.statRow}><Mini label="Kazanılan deal" value={money(sum(nb.sameYearDeals),true)}/><Mini label="Bağlı fatura" value={money(sum(nb.sameYearInvoices),true)}/><Mini label="Açık sipariş" value={money(sum(nb.sameYearOrders),true)}/></div><Records label="Kazanılan dealları görüntüle" rows={nb.sameYearDeals}/><Records label="Bağlı faturaları görüntüle" rows={nb.sameYearInvoices}/><Records label="Bağlı siparişleri görüntüle" rows={nb.sameYearOrders}/></div>
-    </div></div></section>
+    <section className={`${styles.card} ${styles.pad}`}><div className={styles.cardHead}><h3>Forecast</h3><small>Aktif pipeline</small></div>{[["Weighted forecast",data.weightedForecast,"green"],["Toplam aktif pipeline",data.pipeline,"blue"],["Hedefe kalan fark",remaining,"amber"]].map(([label,value,color]) => <div className={styles.progressRow} key={String(label)}><div className={styles.progressMeta}><b>{label}</b><span>{shortMoney(Number(value))}</span></div><div className={styles.track}><div className={`${styles.forecastFill} ${styles[String(color)]}`} style={{width:`${Math.min(pct(Number(value),Math.max(data.pipeline,remaining,1)),100)}%`}}/></div></div>)}<div className={styles.insight}><b>AI Insight:</b> Weighted forecast, hedefe kalan farkın %{pct(data.weightedForecast,remaining).toFixed(1)}&apos;ini karşılıyor.</div></section>
 
-    <section className={`${styles.section} ${styles.twoCol}`}><div className={styles.panel}><div className={styles.titleRow}><h3>Aylık faturalama</h3><span className={styles.subtle}>YTD trend</span></div><div className={styles.trend}>{data.monthlyInvoiceTrend.map(x=><div className={styles.barItem} key={x.month}><span className={styles.barValue}>{money(x.amount,true)}</span><div className={styles.bar} style={{height:`${Math.max(x.amount/maxTrend*100,2)}%`}}/><span className={styles.barLabel}>{x.month}</span></div>)}</div><Records label="Bu ayın faturalarını görüntüle" rows={data.monthInvoices}/></div>
-    <div className={styles.panel}><div className={styles.titleRow}><h3>Haftalık deal hareketi</h3><span className={styles.subtle}>Son 7 gün</span></div><Records label="Yeni fırsatları görüntüle" rows={data.weeklyNewDeals}/><Records label="Won dealları görüntüle" rows={data.weeklyWon}/><Records label="Lost dealları görüntüle" rows={data.weeklyLost}/><div className={styles.insight}><strong>Insight:</strong> Dönemde {data.weeklyNewDeals.length} yeni fırsat açıldı; {data.weeklyWon.length} won, {data.weeklyLost.length} lost kaydı oluştu.</div></div></section>
+    <section className={`${styles.card} ${styles.pad}`}><div className={styles.cardHead}><h3>Lead generation</h3><small>Amplemarket funnel · son 7 gün</small></div>{sources.amplemarket.ok ? <><div className={styles.metricStrip}><Metric label="Sent" value={String(data.leadGeneration.sent ?? 0)}/><Metric label="Toplu sequence" value={String(data.leadGeneration.bulk ?? 0)}/><Metric label="Duo sequence" value={String(data.leadGeneration.duo ?? 0)}/><Metric label="Reply" value={String(data.leadGeneration.replies ?? 0)}/><Metric label="Positive" value={String(data.leadGeneration.positive ?? 0)}/><Metric label="Meeting" value={String(data.leadGeneration.meetings.length)}/></div><div className={styles.cardHead}><h3>Kişi bazında gönderimler</h3><small>Toplu + Duo</small></div>{owners.length ? <div className={styles.tableWrap}><table><thead><tr><th>Kişi</th><th>Toplu sequence</th><th>Duo sequence</th><th>Toplam</th></tr></thead><tbody>{owners.map(owner => <tr key={owner.owner}><td><b>{ownerName(owner.owner)}</b></td><td>{owner.bulk}</td><td>{owner.duo}</td><td><b>{owner.total}</b></td></tr>)}<tr><td><b>Toplam</b></td><td><b>{data.leadGeneration.bulk ?? 0}</b></td><td><b>{data.leadGeneration.duo ?? 0}</b></td><td><b>{data.leadGeneration.sent ?? 0}</b></td></tr></tbody></table></div> : <div className={styles.empty}>Webhook etkinleştirildikten sonra oluşan haftalık gönderim bulunmuyor.</div>}<div className={styles.progressRow}><div className={styles.progressMeta}><b>Positive / reply</b><span>%{positiveRate.toFixed(1)}</span></div><div className={styles.track}><div className={`${styles.forecastFill} ${styles.green}`} style={{width:`${Math.min(positiveRate,100)}%`}}/></div></div><div className={styles.insight}><b>AI Insight:</b> {data.leadGeneration.positive ?? 0} olumlu yanıt, {data.leadGeneration.replies ?? 0} toplam yanıtın %{positiveRate.toFixed(1)}&apos;ini oluşturuyor.</div><div className={styles.cardHead}><h3>Bu hafta ayarlanan toplantılar</h3><small>Ayarlanma tarihi esas alınır</small></div>{data.leadGeneration.meetings.length ? <div className={styles.tableWrap}><table><thead><tr><th>Kişi</th><th>Şirket</th><th>Owner</th><th>Ayarlanma tarihi</th></tr></thead><tbody>{data.leadGeneration.meetings.map((meeting,index) => <tr key={`${meeting.person}-${index}`}><td><b>{meeting.person}</b></td><td>{meeting.company}</td><td>{meeting.owner ? ownerName(meeting.owner) : "-"}</td><td>{date(meeting.bookedAt)}</td></tr>)}</tbody></table></div> : <div className={styles.empty}>Amplemarket&apos;te bu hafta yeni ayarlanan toplantı bulunmuyor.</div>}</> : <div className={styles.empty}>Amplemarket bağlantısı şu anda veri sağlayamıyor.</div>}</section>
 
-    <section className={styles.section}><div className={styles.panel}><div className={styles.titleRow}><h3>Lead generation</h3><span className={styles.subtle}>Amplemarket funnel</span></div>{sources.amplemarket.ok ? <>
-      <div className={styles.lead}><Mini label="Gönderilen" value={String(data.leadGeneration.sent ?? 0)}/><Mini label="Toplu sequence" value={String(data.leadGeneration.bulk ?? 0)}/><Mini label="Duo sequence" value={String(data.leadGeneration.duo ?? 0)}/><Mini label="Yanıt" value={String(data.leadGeneration.replies ?? 0)}/><Mini label="Pozitif" value={String(data.leadGeneration.positive ?? 0)}/><Mini label="Toplantı" value={String(data.leadGeneration.meetings.length)}/></div>
-      <div className={styles.leadTitle}><h3>Kişi bazında gönderimler</h3><span className={styles.subtle}>Toplu + Duo</span></div>
-      {data.leadGeneration.owners?.length ? <div className={styles.tableWrap}><table className={`${styles.table} ${styles.leadTable}`}><thead><tr><th>Kişi</th><th>Toplu sequence</th><th>Duo sequence</th><th>Toplam</th></tr></thead><tbody>{data.leadGeneration.owners.map(owner => <tr key={owner.owner}><td><b>{ownerName(owner.owner)}</b></td><td>{owner.bulk}</td><td>{owner.duo}</td><td><b>{owner.total}</b></td></tr>)}<tr className={styles.totalRow}><td><b>Toplam</b></td><td><b>{data.leadGeneration.bulk ?? 0}</b></td><td><b>{data.leadGeneration.duo ?? 0}</b></td><td><b>{data.leadGeneration.sent ?? 0}</b></td></tr></tbody></table></div> : <div className={styles.empty}>Bu dönemde kişi bazında gönderim bulunmuyor.</div>}
-      <div className={styles.conversion}><div className={styles.progressLabel}><span>Positive / reply</span><span>%{data.leadGeneration.replies ? ((data.leadGeneration.positive ?? 0) / data.leadGeneration.replies * 100).toFixed(1) : "0.0"}</span></div><div className={styles.track}><div className={styles.positiveFill} style={{width:`${Math.min(data.leadGeneration.replies ? (data.leadGeneration.positive ?? 0) / data.leadGeneration.replies * 100 : 0,100)}%`}} /></div></div>
-      <div className={styles.leadTitle}><h3>Bu hafta ayarlanan toplantılar</h3><span className={styles.subtle}>Ayarlanma tarihi esas alınır</span></div>{data.leadGeneration.meetings.length ? data.leadGeneration.meetings.map((m,i)=><div className={styles.meeting} key={`${m.person}-${i}`}><b>{m.person}</b><span>{m.company}</span><span>{m.owner ? ownerName(m.owner) : "-"}</span><span>{date(m.bookedAt)}</span></div>) : <div className={styles.empty}>Bu dönemde ayarlanan toplantı bulunmuyor.</div>}
-    </> : <div className={styles.empty}>Amplemarket bağlantısı yapılandırıldığında tam sequence ve toplantı verileri burada gösterilecek.</div>}</div></section>
-    <p className={styles.footerNote}>Ereteam iç kullanımı · Kaynaklar: HubSpot, Sales / Bütçe_Hedef{sources.amplemarket.ok ? ", Amplemarket" : ""}</p>
-  </div></main>;
+    <footer>Ereteam · Revenue &amp; Growth · Spark Dashboard · {date(data.generatedAt)}</footer>
+  </main>;
 }

@@ -1,0 +1,57 @@
+import { timingSafeEqual } from "node:crypto";
+import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@/lib/generated/prisma/client";
+import { prisma } from "@/lib/presales/db";
+
+export const dynamic = "force-dynamic";
+
+type BackfillRow = {
+  date: string;
+  owner: string;
+  kind: "bulk" | "duo";
+  sent: number;
+  replies: number;
+  positive: number;
+};
+
+const safeEqual = (leftValue: string, rightValue: string) => {
+  const left = Buffer.from(leftValue);
+  const right = Buffer.from(rightValue);
+  return left.length === right.length && timingSafeEqual(left, right);
+};
+
+const validCount = (value: unknown) => Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 20_000;
+
+export async function POST(request: NextRequest) {
+  const configured = process.env.AMPLEMARKET_WEBHOOK_SECRET;
+  const supplied = request.nextUrl.searchParams.get("key") || request.headers.get("x-spark-webhook-secret") || "";
+  if (!configured || !safeEqual(supplied, configured)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const body = await request.json() as { rows?: BackfillRow[] };
+  if (!Array.isArray(body.rows) || body.rows.length > 500) return NextResponse.json({ error: "Invalid rows" }, { status: 400 });
+
+  const records: Prisma.SparkAmplemarketEventCreateManyInput[] = [];
+  for (const row of body.rows) {
+    const occurredAt = new Date(`${row.date}T12:00:00+03:00`);
+    if (!Number.isFinite(occurredAt.getTime()) || !row.owner || !["bulk", "duo"].includes(row.kind) || !validCount(row.sent) || !validCount(row.replies) || !validCount(row.positive)) {
+      return NextResponse.json({ error: "Invalid backfill row" }, { status: 400 });
+    }
+    const payload = { source: "amplemarket-mcp-backfill", date: row.date, owner: row.owner, kind: row.kind } as Prisma.InputJsonValue;
+    for (const [eventType, count] of [["sent", row.sent], ["reply", row.replies], ["positive", row.positive]] as const) {
+      for (let index = 0; index < count; index += 1) {
+        records.push({
+          externalId: `mcp-backfill:${row.date}:${row.owner}:${row.kind}:${eventType}:${index}`,
+          eventType,
+          sequenceKind: row.kind,
+          sequenceName: row.kind === "duo" ? "Duo" : "Toplu sequence",
+          ownerEmail: row.owner,
+          occurredAt,
+          payload,
+        });
+      }
+    }
+  }
+
+  const result = records.length ? await prisma.sparkAmplemarketEvent.createMany({ data: records, skipDuplicates: true }) : { count: 0 };
+  return NextResponse.json({ ok: true, inserted: result.count, submitted: records.length });
+}
