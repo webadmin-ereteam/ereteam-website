@@ -56,6 +56,13 @@ of its object, period, measure and filters. Follow-ups also carry the previous v
 query context—not record data—so short period changes and `bunların toplamı?` retain
 the intended scope. Active pipeline, Won/Lost, open expected orders
 and New Business-linked records use the same deterministic definitions as the dashboard.
+Country intent uses the live `country` enum on deals, invoices and orders:
+`Türkiye`/`Turkey` map to `Turkiye`; `Amerika`/`ABD`/`USA`/`United States` map to
+`USA`. Country-only follow-ups retain the prior validated object and scope.
+Vendor questions use `vendor_name` on all three objects. Revenue-type questions
+use `revenue_type`; `License` and `SNS` together form license revenue, while the
+remaining enum values form service/consulting revenue. On deals, New Business and
+Existing Business map to `dealtype = newbusiness|existingbusiness`.
 
 The former manually entered weekly focus/priorities section is intentionally
 excluded. The executive summary is generated only from current numerical
@@ -86,6 +93,10 @@ header. `SPARK_CRON_SECRET` is legacy and can be removed.
 - Invoice amount/date: `hs_amount_billed_in_company_currency`, `hs_invoice_date`
 - Order amount/date: `hs_homecurrency_amount`, `hs_processed_date` (internal only)
 - Deal amount: `amount_in_home_currency`
+- Country: `country` with enum values `Turkiye` and `USA` on deals, invoices and orders
+- Vendor: `vendor_name` on deals, invoices and orders
+- Revenue classification: `revenue_type`; license revenue = `License` + `SNS`, service revenue = all other values
+- Deal business type: `dealtype = newbusiness|existingbusiness`
 - New Business: `dealtype = newbusiness` and Closed Won
 - Annual target: `SPARK_LICENSE_TARGET_<year>` + `SPARK_SERVICE_TARGET_<year>`
 

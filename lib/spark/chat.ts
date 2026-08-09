@@ -48,9 +48,9 @@ const planSchema = z.object({
   limit: z.number().int().min(1).max(100).default(50),
 });
 const requiredProperties: Record<ObjectType, string[]> = {
-  deals: ["dealname", "dealstage", "createdate", "closedate", "amount_in_home_currency", "hs_is_closed_won", "dealtype", "hubspot_owner_id"],
-  invoices: ["hs_number", "invoice_name", "hs_invoice_latest_company_name", "hs_invoice_date", "hs_amount_billed_in_company_currency", "hubspot_owner_id"],
-  orders: ["hs_order_name", "hs_pipeline_stage", "hs_processed_date", "hs_homecurrency_amount", "hubspot_owner_id"],
+  deals: ["dealname", "dealstage", "createdate", "closedate", "amount_in_home_currency", "hs_is_closed_won", "dealtype", "country", "vendor_name", "revenue_type", "hubspot_owner_id"],
+  invoices: ["hs_number", "invoice_name", "hs_invoice_latest_company_name", "hs_invoice_date", "hs_amount_billed_in_company_currency", "country", "vendor_name", "revenue_type", "hubspot_owner_id"],
+  orders: ["hs_order_name", "hs_pipeline_stage", "hs_processed_date", "hs_homecurrency_amount", "country", "vendor_name", "revenue_type", "hubspot_owner_id"],
 };
 
 const objectNames: Record<ObjectType, string> = { deals: "Deal", invoices: "Fatura", orders: "Order" };
@@ -132,6 +132,54 @@ function explicitObject(question: string): ObjectType | null {
   return null;
 }
 
+function explicitCountry(question: string): "Turkiye" | "USA" | null {
+  const text = semanticText(question);
+  if (/\b(turkiye|turkey)/.test(text)) return "Turkiye";
+  if (/\b(amerika|abd|usa|united\s+states)/.test(text)) return "USA";
+  return null;
+}
+
+const revenueTypes: Record<ObjectType, string[]> = {
+  deals: ["License", "SNS", "Outsource", "Project", "Engineering", "Cloud", "Assessment", "Training", "Maintenance & Support"],
+  invoices: ["Cloud", "License", "Outsource", "Project", "SNS", "Training", "Maintenance & Support", "Eski_Backlog"],
+  orders: ["Cloud", "License", "Outsource", "Project", "SNS", "Training", "Maintenance & Support", "Engineering", "Eski_Backlog"],
+};
+
+const revenueTypeAliases: Array<[RegExp, string]> = [
+  [/\bsns\b/, "SNS"],
+  [/\b(outsource|dis\s+kaynak)\b/, "Outsource"],
+  [/\b(proje|project)\b/, "Project"],
+  [/\b(engineering|muhendislik)\b/, "Engineering"],
+  [/\bcloud\b/, "Cloud"],
+  [/\b(assessment|degerlendirme)\b/, "Assessment"],
+  [/\b(training|egitim)\b/, "Training"],
+  [/\b(maintenance|support|bakim|destek)\b/, "Maintenance & Support"],
+  [/\b(eski[ _-]?backlog)\b/, "Eski_Backlog"],
+];
+
+type RevenueIntent = { kind: "exact"; value: string } | { kind: "license" } | { kind: "service" };
+
+function explicitRevenueIntent(question: string): RevenueIntent | null {
+  const text = semanticText(question);
+  if (/\blisans\s+gelir/.test(text)) return { kind: "license" };
+  if (/\b(servis|danismanlik)\b/.test(text)) return { kind: "service" };
+  if (/\b(lisans|license)\b/.test(text)) return { kind: "exact", value: "License" };
+  const match = revenueTypeAliases.find(([pattern]) => pattern.test(text));
+  return match ? { kind: "exact", value: match[1] } : null;
+}
+
+const vendorValues: Record<ObjectType, string[]> = {
+  deals: ["Alterian", "Alteryx", "Apparo", "AtScale", "AWS", "DataRobot", "DigiEye", "Ereteam", "HCL", "IBM", "Insider", "Metrica", "Microsoft", "Qualytics", "Salesforce", "Snowflake", "Theobald"],
+  invoices: ["Alteryx", "Apparo", "AWS", "Datarobot", "Digieye", "Ereteam", "HCL", "IBM", "LOCATIONBOX", "Macrosoft", "Metrica", "Qlik", "Qualytics", "Salesforce", "Snowflake", "TechData", "Theobald", "ZASLOGIC"],
+  orders: ["Alteryx", "Apparo", "AWS", "DataRobot", "DigiEye", "Ereteam", "HCL", "IBM", "Qualitics", "Salesforce", "Snowflake", "Theobald"],
+};
+
+function explicitVendor(question: string, object: ObjectType) {
+  const text = semanticText(question);
+  if (!/\b(vendor|satici|uretici)\b/.test(text)) return null;
+  return vendorValues[object].find((value) => text.includes(semanticText(value))) ?? null;
+}
+
 function uniqueFilters(filters: QueryPlan["filters"]) {
   return Array.from(new Map(filters.map((filter) => [JSON.stringify(filter), filter])).values());
 }
@@ -139,13 +187,16 @@ function uniqueFilters(filters: QueryPlan["filters"]) {
 export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now = new Date(), context: SparkChatContextItem[] = []): QueryPlan {
   const text = semanticText(question);
   const explicit = explicitObject(question);
+  const country = explicitCountry(question);
+  const revenueIntent = explicitRevenueIntent(question);
   const previous = context.at(-1)?.result.queryContext;
   const range = resolveSparkDateRange(question, now);
   const referencesPrevious = /\b(peki|bunlar|bunlarin|onlar|onlarin|ayni)\b/.test(text)
     || /^(toplami|tutari|kac(\s+tane(si)?)?|detaylari|listele|goster)[?!.]*$/.test(text)
-    || Boolean(range);
+    || Boolean(range || country || revenueIntent || /\b(vendor|satici|uretici|yeni\s+is|mevcut\s+is)\b/.test(text));
   const followsPrevious = Boolean(!explicit && previous && referencesPrevious);
   const object = explicit ?? (followsPrevious ? previous!.object : plan.object);
+  const vendor = explicitVendor(question, object);
   const asksAverage = /\bortalama\b/.test(text);
   const asksCount = /\b(kac|sayi|adet)/.test(text) && !/\bne\s+kadar\b/.test(text);
   const asksAmount = /\b(ne\s+kadar|tutar|toplam|ciro)/.test(text);
@@ -175,6 +226,15 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
       associatedDealFilters = previous.associatedDealFilters;
     } else if (range) {
       filters = uniqueFilters([...previousNonDate, ...plannedNonDate]);
+      associatedDealFilters = previous.associatedDealFilters;
+    } else if (country || vendor || revenueIntent || /\b(yeni\s+is|mevcut\s+is)\b/.test(text)) {
+      const changedProperties = new Set([
+        country && "country", vendor && "vendor_name", revenueIntent && "revenue_type",
+        object === "deals" && /\b(yeni\s+is|mevcut\s+is)\b/.test(text) && "dealtype",
+      ].filter(Boolean));
+      const previousUnchanged = previous.filters.filter((filter) => !changedProperties.has(filter.property));
+      const plannedUnchanged = filters.filter((filter) => !changedProperties.has(filter.property));
+      filters = uniqueFilters([...previousUnchanged, ...plannedUnchanged]);
       associatedDealFilters = previous.associatedDealFilters;
     }
   }
@@ -216,6 +276,31 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
       { property: "dealtype", operator: "eq", value: "newbusiness" },
       { property: "_stage_label", operator: "contains", value: "won" },
     );
+  }
+  if (country) {
+    filters = filters.filter((filter) => filter.property !== "country");
+    filters.push({ property: "country", operator: "eq", value: country });
+  }
+  if (vendor) {
+    filters = filters.filter((filter) => filter.property !== "vendor_name");
+    filters.push({ property: "vendor_name", operator: "eq", value: vendor });
+  }
+  if (revenueIntent) {
+    filters = filters.filter((filter) => filter.property !== "revenue_type");
+    let values: string[];
+    if (revenueIntent.kind === "license") values = ["License", "SNS"];
+    else if (revenueIntent.kind === "service") values = revenueTypes[object].filter((value) => !["License", "SNS"].includes(value));
+    else values = [revenueIntent.value];
+    filters.push(values.length === 1
+      ? { property: "revenue_type", operator: "eq", value: values[0] }
+      : { property: "revenue_type", operator: "in", values });
+  }
+  if (object === "deals" && /\b(yeni\s+is|new\s+business)\b/.test(text)) {
+    filters = filters.filter((filter) => filter.property !== "dealtype");
+    filters.push({ property: "dealtype", operator: "eq", value: "newbusiness" });
+  } else if (object === "deals" && /\b(mevcut\s+is|existing\s+business)\b/.test(text)) {
+    filters = filters.filter((filter) => filter.property !== "dealtype");
+    filters.push({ property: "dealtype", operator: "eq", value: "existingbusiness" });
   }
 
   const guarded = { ...plan, object, responseType, aggregate, filters: uniqueFilters(filters), associatedDealFilters };
@@ -261,6 +346,10 @@ KESİN VERİ SÖZLEŞMESİ - HER SORGUDAN ÖNCE UYGULA:
 - "Faturalanan/kesilen fatura" object invoices demektir.
 - "Aktif pipeline/açık fırsat" Closed Won ve Closed Lost olmayan deal kayıtlarıdır. Won/Lost sorularında closedate kullan.
 - Fatura veya order için "New Business" deniyorsa bağlı deal üzerinde dealtype eq newbusiness ve Closed Won filtresini associatedDealFilters ile birlikte uygula.
+- Ülke property adı country, geçerli enum değerleri yalnızca Turkiye ve USA. Türkiye/Turkey -> Turkiye; Amerika/ABD/USA/United States -> USA.
+- Vendor sorularında tüm nesnelerde yalnızca vendor_name kullan.
+- Deal için yeni iş/New Business -> dealtype eq newbusiness; mevcut iş/Existing Business -> dealtype eq existingbusiness.
+- Revenue Type tüm nesnelerde revenue_type alanıdır. Belirli tip sorularında enum değerini kullan. Genel "lisans geliri" License veya SNS; genel "servis/danışmanlık geliri" License ve SNS dışındaki tiplerdir.
 - Kullanıcının istediği hiçbir dönem, owner, stage, tür veya bağlantı filtresini sessizce atlama. Katalogda olmayan property uydurma.
 Yalnızca JSON döndür. Şema:
 {"responseType":"metric|records","title":"kısa Türkçe başlık","object":"deals|invoices|orders","properties":[],"filters":[{"property":"","operator":"eq|neq|contains|not_contains|gt|gte|lt|lte|between|in|is_empty|not_empty","value":"","values":[]}],"associatedDealFilters":[],"aggregate":{"operation":"sum|count|average","property":""},"sort":{"property":"","direction":"asc|desc"},"limit":50}.
@@ -396,13 +485,17 @@ function labelMap(catalog: HubSpotProperty[]) {
   labels.set("hs_homecurrency_amount", "Tutar (USD)");
   labels.set("hs_amount_billed_in_company_currency", "Tutar (USD)");
   labels.set("amount_in_home_currency", "Tutar (USD)");
+  labels.set("country", "Ülke");
+  labels.set("vendor_name", "Vendor");
+  labels.set("revenue_type", "Revenue Type");
+  labels.set("dealtype", "İş tipi");
   return labels;
 }
 
 function coreFields(type: ObjectType) {
-  if (type === "deals") return ["dealname", "closedate", "amount_in_home_currency", "_owner_name", "_stage_label"];
-  if (type === "invoices") return ["hs_number", "invoice_name", "hs_invoice_latest_company_name", "hs_invoice_date", "hs_amount_billed_in_company_currency", "_owner_name"];
-  return ["hs_order_name", "hs_processed_date", "hs_homecurrency_amount", "_owner_name", "_stage_label"];
+  if (type === "deals") return ["dealname", "closedate", "amount_in_home_currency", "country", "vendor_name", "revenue_type", "dealtype", "_owner_name", "_stage_label"];
+  if (type === "invoices") return ["hs_number", "invoice_name", "hs_invoice_latest_company_name", "hs_invoice_date", "hs_amount_billed_in_company_currency", "country", "vendor_name", "revenue_type", "_owner_name"];
+  return ["hs_order_name", "hs_processed_date", "hs_homecurrency_amount", "country", "vendor_name", "revenue_type", "_owner_name", "_stage_label"];
 }
 
 function formatMetric(value: number, property?: string | null) {
