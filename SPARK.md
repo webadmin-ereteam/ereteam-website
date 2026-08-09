@@ -63,6 +63,9 @@ Vendor questions use `vendor_name` on all three objects. Revenue-type questions
 use `revenue_type`; `License` and `SNS` together form license revenue, while the
 remaining enum values form service/consulting revenue. On deals, New Business and
 Existing Business map to `dealtype = newbusiness|existingbusiness`.
+Ereteam expertise questions use `ereteam_domain` on all three objects: data work
+maps to `Data, Cloud & AI (DC&AI)`, finance work to `Enterprise Planning (EP)`,
+and marketing work to `Intelligent MarTech (IM)`.
 
 The former manually entered weekly focus/priorities section is intentionally
 excluded. The executive summary is generated only from current numerical
@@ -97,6 +100,7 @@ header. `SPARK_CRON_SECRET` is legacy and can be removed.
 - Vendor: `vendor_name` on deals, invoices and orders
 - Revenue classification: `revenue_type`; license revenue = `License` + `SNS`, service revenue = all other values
 - Deal business type: `dealtype = newbusiness|existingbusiness`
+- Ereteam expertise: `ereteam_domain` with `Data, Cloud & AI (DC&AI)`, `Enterprise Planning (EP)`, and `Intelligent MarTech (IM)`
 - New Business: `dealtype = newbusiness` and Closed Won
 - Annual target: `SPARK_LICENSE_TARGET_<year>` + `SPARK_SERVICE_TARGET_<year>`
 

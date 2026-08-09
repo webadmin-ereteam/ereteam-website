@@ -48,9 +48,9 @@ const planSchema = z.object({
   limit: z.number().int().min(1).max(100).default(50),
 });
 const requiredProperties: Record<ObjectType, string[]> = {
-  deals: ["dealname", "dealstage", "createdate", "closedate", "amount_in_home_currency", "hs_is_closed_won", "dealtype", "country", "vendor_name", "revenue_type", "hubspot_owner_id"],
-  invoices: ["hs_number", "invoice_name", "hs_invoice_latest_company_name", "hs_invoice_date", "hs_amount_billed_in_company_currency", "country", "vendor_name", "revenue_type", "hubspot_owner_id"],
-  orders: ["hs_order_name", "hs_pipeline_stage", "hs_processed_date", "hs_homecurrency_amount", "country", "vendor_name", "revenue_type", "hubspot_owner_id"],
+  deals: ["dealname", "dealstage", "createdate", "closedate", "amount_in_home_currency", "hs_is_closed_won", "dealtype", "country", "vendor_name", "revenue_type", "ereteam_domain", "hubspot_owner_id"],
+  invoices: ["hs_number", "invoice_name", "hs_invoice_latest_company_name", "hs_invoice_date", "hs_amount_billed_in_company_currency", "country", "vendor_name", "revenue_type", "ereteam_domain", "hubspot_owner_id"],
+  orders: ["hs_order_name", "hs_pipeline_stage", "hs_processed_date", "hs_homecurrency_amount", "country", "vendor_name", "revenue_type", "ereteam_domain", "hubspot_owner_id"],
 };
 
 const objectNames: Record<ObjectType, string> = { deals: "Deal", invoices: "Fatura", orders: "Order" };
@@ -180,6 +180,14 @@ function explicitVendor(question: string, object: ObjectType) {
   return vendorValues[object].find((value) => text.includes(semanticText(value))) ?? null;
 }
 
+function explicitEreteamDomain(question: string) {
+  const text = semanticText(question);
+  if (/\b(dc\s*&?\s*ai|data\s*,?\s*cloud\s*&?\s*ai|data\s+(isi|uzmanlik|domain)|veri\s+(isi|uzmanlik|domain))\b/.test(text)) return "Data, Cloud & AI (DC&AI)";
+  if (/\b(ep|enterprise\s+planning|finans\s+(isi|uzmanlik|domain)|financial\s+(planning|domain))\b/.test(text)) return "Enterprise Planning (EP)";
+  if (/\b(im|intelligent\s+martech|martech|marketing\s+(isi|uzmanlik|domain)|pazarlama\s+(isi|uzmanlik|domain))\b/.test(text)) return "Intelligent MarTech (IM)";
+  return null;
+}
+
 function uniqueFilters(filters: QueryPlan["filters"]) {
   return Array.from(new Map(filters.map((filter) => [JSON.stringify(filter), filter])).values());
 }
@@ -189,11 +197,12 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
   const explicit = explicitObject(question);
   const country = explicitCountry(question);
   const revenueIntent = explicitRevenueIntent(question);
+  const domain = explicitEreteamDomain(question);
   const previous = context.at(-1)?.result.queryContext;
   const range = resolveSparkDateRange(question, now);
   const referencesPrevious = /\b(peki|bunlar|bunlarin|onlar|onlarin|ayni)\b/.test(text)
     || /^(toplami|tutari|kac(\s+tane(si)?)?|detaylari|listele|goster)[?!.]*$/.test(text)
-    || Boolean(range || country || revenueIntent || /\b(vendor|satici|uretici|yeni\s+is|mevcut\s+is)\b/.test(text));
+    || Boolean(range || country || revenueIntent || domain || /\b(vendor|satici|uretici|yeni\s+is|mevcut\s+is)\b/.test(text));
   const followsPrevious = Boolean(!explicit && previous && referencesPrevious);
   const object = explicit ?? (followsPrevious ? previous!.object : plan.object);
   const vendor = explicitVendor(question, object);
@@ -227,9 +236,10 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
     } else if (range) {
       filters = uniqueFilters([...previousNonDate, ...plannedNonDate]);
       associatedDealFilters = previous.associatedDealFilters;
-    } else if (country || vendor || revenueIntent || /\b(yeni\s+is|mevcut\s+is)\b/.test(text)) {
+    } else if (country || vendor || revenueIntent || domain || /\b(yeni\s+is|mevcut\s+is)\b/.test(text)) {
       const changedProperties = new Set([
         country && "country", vendor && "vendor_name", revenueIntent && "revenue_type",
+        domain && "ereteam_domain",
         object === "deals" && /\b(yeni\s+is|mevcut\s+is)\b/.test(text) && "dealtype",
       ].filter(Boolean));
       const previousUnchanged = previous.filters.filter((filter) => !changedProperties.has(filter.property));
@@ -295,6 +305,10 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
       ? { property: "revenue_type", operator: "eq", value: values[0] }
       : { property: "revenue_type", operator: "in", values });
   }
+  if (domain) {
+    filters = filters.filter((filter) => filter.property !== "ereteam_domain");
+    filters.push({ property: "ereteam_domain", operator: "eq", value: domain });
+  }
   if (object === "deals" && /\b(yeni\s+is|new\s+business)\b/.test(text)) {
     filters = filters.filter((filter) => filter.property !== "dealtype");
     filters.push({ property: "dealtype", operator: "eq", value: "newbusiness" });
@@ -350,6 +364,7 @@ KESİN VERİ SÖZLEŞMESİ - HER SORGUDAN ÖNCE UYGULA:
 - Vendor sorularında tüm nesnelerde yalnızca vendor_name kullan.
 - Deal için yeni iş/New Business -> dealtype eq newbusiness; mevcut iş/Existing Business -> dealtype eq existingbusiness.
 - Revenue Type tüm nesnelerde revenue_type alanıdır. Belirli tip sorularında enum değerini kullan. Genel "lisans geliri" License veya SNS; genel "servis/danışmanlık geliri" License ve SNS dışındaki tiplerdir.
+- Ereteam uzmanlık alanı tüm nesnelerde ereteam_domain alanıdır: data/veri işi -> Data, Cloud & AI (DC&AI); finans işi -> Enterprise Planning (EP); marketing/pazarlama işi -> Intelligent MarTech (IM).
 - Kullanıcının istediği hiçbir dönem, owner, stage, tür veya bağlantı filtresini sessizce atlama. Katalogda olmayan property uydurma.
 Yalnızca JSON döndür. Şema:
 {"responseType":"metric|records","title":"kısa Türkçe başlık","object":"deals|invoices|orders","properties":[],"filters":[{"property":"","operator":"eq|neq|contains|not_contains|gt|gte|lt|lte|between|in|is_empty|not_empty","value":"","values":[]}],"associatedDealFilters":[],"aggregate":{"operation":"sum|count|average","property":""},"sort":{"property":"","direction":"asc|desc"},"limit":50}.
@@ -489,13 +504,14 @@ function labelMap(catalog: HubSpotProperty[]) {
   labels.set("vendor_name", "Vendor");
   labels.set("revenue_type", "Revenue Type");
   labels.set("dealtype", "İş tipi");
+  labels.set("ereteam_domain", "Ereteam Domain");
   return labels;
 }
 
 function coreFields(type: ObjectType) {
-  if (type === "deals") return ["dealname", "closedate", "amount_in_home_currency", "country", "vendor_name", "revenue_type", "dealtype", "_owner_name", "_stage_label"];
-  if (type === "invoices") return ["hs_number", "invoice_name", "hs_invoice_latest_company_name", "hs_invoice_date", "hs_amount_billed_in_company_currency", "country", "vendor_name", "revenue_type", "_owner_name"];
-  return ["hs_order_name", "hs_processed_date", "hs_homecurrency_amount", "country", "vendor_name", "revenue_type", "_owner_name", "_stage_label"];
+  if (type === "deals") return ["dealname", "closedate", "amount_in_home_currency", "country", "vendor_name", "revenue_type", "ereteam_domain", "dealtype", "_owner_name", "_stage_label"];
+  if (type === "invoices") return ["hs_number", "invoice_name", "hs_invoice_latest_company_name", "hs_invoice_date", "hs_amount_billed_in_company_currency", "country", "vendor_name", "revenue_type", "ereteam_domain", "_owner_name"];
+  return ["hs_order_name", "hs_processed_date", "hs_homecurrency_amount", "country", "vendor_name", "revenue_type", "ereteam_domain", "_owner_name", "_stage_label"];
 }
 
 function formatMetric(value: number, property?: string | null) {

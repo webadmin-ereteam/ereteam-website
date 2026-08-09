@@ -623,8 +623,12 @@ where admins actually work day to day.
 **Dashboard: filters, bulk actions, per-case shortcuts** (`app/presales/admin/page.tsx`
 + `JourneyListWithSelection.tsx`): combinable filters — Ara (search), Durum,
 Satışçı, Teknik Sorumlu, Ürün, Arşiv, Müşteri Linki, Aksiyon (Aksiyon Bizde / Müşteride —
-same "whose turn" logic as the Genel Bakış tab below, computed per journey
-from its survey statuses), and two separate date filters, **Kapanış Tarihi**
+current stage's sent-survey status determines ownership: an active,
+non-archived journey is **Müşteride** only while its current stage has a
+`sent` survey; otherwise it is **Aksiyon Bizde** — e.g. scheduling a meeting,
+running a demo, sending the first survey, or manually advancing a
+survey-free stage. Won/lost/paused, archived, or fully completed journeys are
+never counted as "Aksiyon Bizde"), and two separate date filters, **Kapanış Tarihi**
 (`Journey.outcomeSetAt`) and **Oluşturma Tarihi** (`Journey.createdAt`). Both
 render as a single preset dropdown (Tümü/Bugün/Bu Ay/Geçen Ay/Bu Yıl,
 `lib/presales/dateRangePresets.ts`) rather than raw date pickers — a raw
@@ -753,6 +757,13 @@ inactive, the customer sees a plain "Bu bağlantı artık aktif değil" screen
 instead of any journey content — enforced identically on the main page, the
 per-survey answers page, the submit action, and the public Excel-export
 route, so a disabled/archived case can't leak data through any side door.
+
+**Prospect details in Ayarlar**: the "Prospect Bilgileri" card updates the
+company name, contact name, and contact email directly on the related
+`Prospect` row (`updateProspectDetails`). The admin dashboard, journey views,
+and customer link are revalidated afterwards. `Journey.name` and the matching
+Drive folder name intentionally stay unchanged, so correcting a company name
+never breaks their original case/folder naming relationship.
 
 **Customer-facing page design** (`app/presales/j/[token]/page.tsx`): a
 "glassmorphism" look — soft, low-opacity blurred color blobs fixed behind the
