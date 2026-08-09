@@ -161,8 +161,8 @@ type RevenueIntent = { kind: "exact"; value: string } | { kind: "license" } | { 
 
 function explicitRevenueIntent(question: string): RevenueIntent | null {
   const text = semanticText(question);
-  if (/\blisans\s+gelir/.test(text)) return { kind: "license" };
-  if (/\b(servis|danismanlik)\b/.test(text)) return { kind: "service" };
+  if (/\b(lisans\s+gelir|ne\s+kadari\s+lisans\w*|lisans\w*\s+toplam)/.test(text)) return { kind: "license" };
+  if (/\b(servis\w*|danismanlik\w*)\b/.test(text)) return { kind: "service" };
   if (/\b(lisans|license)\b/.test(text)) return { kind: "exact", value: "License" };
   const match = revenueTypeAliases.find(([pattern]) => pattern.test(text));
   return match ? { kind: "exact", value: match[1] } : null;
@@ -208,7 +208,7 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
   const vendor = explicitVendor(question, object);
   const asksAverage = /\bortalama\b/.test(text);
   const asksCount = /\b(kac|sayi|adet)/.test(text) && !/\bne\s+kadar\b/.test(text);
-  const asksAmount = /\b(ne\s+kadar|tutar|toplam|ciro)/.test(text);
+  const asksAmount = /\b(ne\s+kadar(?:i)?|tutar|toplam|ciro)/.test(text);
   const asksRecords = /\b(hangi|liste|goster|detay|kayit)/.test(text) && !asksAmount && !asksCount && !asksAverage;
 
   let responseType = plan.responseType;

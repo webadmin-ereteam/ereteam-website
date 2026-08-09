@@ -61,7 +61,8 @@ Country intent uses the live `country` enum on deals, invoices and orders:
 `USA`. Country-only follow-ups retain the prior validated object and scope.
 Vendor questions use `vendor_name` on all three objects. Revenue-type questions
 use `revenue_type`; `License` and `SNS` together form license revenue, while the
-remaining enum values form service/consulting revenue. On deals, New Business and
+remaining enum values form service/consulting revenue. Turkish questions such as
+`ne kadarı lisanstı?` and `ne kadarı servisti?` use these grouped definitions. On deals, New Business and
 Existing Business map to `dealtype = newbusiness|existingbusiness`.
 Ereteam expertise questions use `ereteam_domain` on all three objects: data work
 maps to `Data, Cloud & AI (DC&AI)`, finance work to `Enterprise Planning (EP)`,
