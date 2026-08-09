@@ -68,6 +68,13 @@ Ereteam expertise questions use `ereteam_domain` on all three objects: data work
 maps to `Data, Cloud & AI (DC&AI)`, finance work to `Enterprise Planning (EP)`,
 and marketing work to `Intelligent MarTech (IM)`.
 
+All chatbot business vocabulary is maintained centrally in
+`lib/spark/chatKnowledge.ts`: HubSpot field contracts, enum values, Turkish/English
+aliases, grouped revenue definitions, planner rules and regression examples. Update
+that file first when a new interpretation gap is found; runtime guardrails and the
+planner prompt both consume it. Run `npm run test:spark-chat` after every update;
+its regression cases are maintained in the same knowledge file.
+
 The former manually entered weekly focus/priorities section is intentionally
 excluded. The executive summary is generated only from current numerical
 metrics: target coverage, YTD invoicing, open orders, pipeline and the rolling
@@ -175,6 +182,7 @@ the cloud without requiring the user's Mac or a Codex automation to be online.
 ## Commands
 
 ```bash
+npm run test:spark-chat
 npm run build
 ```
 

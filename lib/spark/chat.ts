@@ -9,8 +9,21 @@ import {
   type HubSpotProperty,
 } from "./hubspot";
 import { generateChatResponse } from "@/lib/services/llmService";
+import {
+  SPARK_CHAT_KNOWLEDGE,
+  detectSparkCountry,
+  detectSparkDealBusinessType,
+  detectSparkDomain,
+  detectSparkRevenueIntent,
+  detectSparkVendor,
+  normalizeSparkChatText,
+  sparkObjectTypes,
+  sparkPlannerKnowledge,
+  sparkRevenueValues,
+  type SparkObjectType,
+} from "./chatKnowledge";
 
-type ObjectType = "deals" | "invoices" | "orders";
+type ObjectType = SparkObjectType;
 type FlatRecord = Record<string, string> & { _id: string; _url: string; _object: ObjectType };
 
 export class SparkChatStageError extends Error {
@@ -24,7 +37,7 @@ async function stage<T>(name: string, task: () => Promise<T>) {
   try { return await task(); } catch (error) { throw new SparkChatStageError(name, error); }
 }
 
-const objectTypes: ObjectType[] = ["deals", "invoices", "orders"];
+const objectTypes = sparkObjectTypes;
 export const sparkChatFilterSchema = z.object({
   property: z.string().trim().min(1).max(120),
   operator: z.enum(["eq", "neq", "contains", "not_contains", "gt", "gte", "lt", "lte", "between", "in", "is_empty", "not_empty"]),
@@ -47,15 +60,10 @@ const planSchema = z.object({
   sort: z.object({ property: z.string(), direction: z.enum(["asc", "desc"]) }).nullish(),
   limit: z.number().int().min(1).max(100).default(50),
 });
-const requiredProperties: Record<ObjectType, string[]> = {
-  deals: ["dealname", "dealstage", "createdate", "closedate", "amount_in_home_currency", "hs_is_closed_won", "dealtype", "country", "vendor_name", "revenue_type", "ereteam_domain", "hubspot_owner_id"],
-  invoices: ["hs_number", "invoice_name", "hs_invoice_latest_company_name", "hs_invoice_date", "hs_amount_billed_in_company_currency", "country", "vendor_name", "revenue_type", "ereteam_domain", "hubspot_owner_id"],
-  orders: ["hs_order_name", "hs_pipeline_stage", "hs_processed_date", "hs_homecurrency_amount", "country", "vendor_name", "revenue_type", "ereteam_domain", "hubspot_owner_id"],
-};
-
-const objectNames: Record<ObjectType, string> = { deals: "Deal", invoices: "Fatura", orders: "Order" };
-const dateProperties: Record<ObjectType, string> = { deals: "closedate", invoices: "hs_invoice_date", orders: "hs_processed_date" };
-const amountProperties: Record<ObjectType, string> = { deals: "amount_in_home_currency", invoices: "hs_amount_billed_in_company_currency", orders: "hs_homecurrency_amount" };
+const requiredProperties = Object.fromEntries(objectTypes.map((type) => [type, SPARK_CHAT_KNOWLEDGE.objects[type].requiredProperties])) as unknown as Record<ObjectType, readonly string[]>;
+const objectNames = Object.fromEntries(objectTypes.map((type) => [type, SPARK_CHAT_KNOWLEDGE.objects[type].label])) as unknown as Record<ObjectType, string>;
+const dateProperties = Object.fromEntries(objectTypes.map((type) => [type, SPARK_CHAT_KNOWLEDGE.objects[type].dateProperty])) as unknown as Record<ObjectType, string>;
+const amountProperties = Object.fromEntries(objectTypes.map((type) => [type, SPARK_CHAT_KNOWLEDGE.objects[type].amountProperty])) as unknown as Record<ObjectType, string>;
 
 type QueryPlan = z.infer<typeof planSchema>;
 export type SparkChatQueryContext = Pick<QueryPlan, "object" | "filters" | "associatedDealFilters" | "aggregate">;
@@ -88,7 +96,7 @@ function nextIsoDate(value: string) {
 }
 
 function semanticText(value: string) {
-  return normalized(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ı/g, "i");
+  return normalizeSparkChatText(value);
 }
 
 export function resolveSparkDateRange(question: string, now = new Date()): DateRange | null {
@@ -132,62 +140,6 @@ function explicitObject(question: string): ObjectType | null {
   return null;
 }
 
-function explicitCountry(question: string): "Turkiye" | "USA" | null {
-  const text = semanticText(question);
-  if (/\b(turkiye|turkey)/.test(text)) return "Turkiye";
-  if (/\b(amerika|abd|usa|united\s+states)/.test(text)) return "USA";
-  return null;
-}
-
-const revenueTypes: Record<ObjectType, string[]> = {
-  deals: ["License", "SNS", "Outsource", "Project", "Engineering", "Cloud", "Assessment", "Training", "Maintenance & Support"],
-  invoices: ["Cloud", "License", "Outsource", "Project", "SNS", "Training", "Maintenance & Support", "Eski_Backlog"],
-  orders: ["Cloud", "License", "Outsource", "Project", "SNS", "Training", "Maintenance & Support", "Engineering", "Eski_Backlog"],
-};
-
-const revenueTypeAliases: Array<[RegExp, string]> = [
-  [/\bsns\b/, "SNS"],
-  [/\b(outsource|dis\s+kaynak)\b/, "Outsource"],
-  [/\b(proje|project)\b/, "Project"],
-  [/\b(engineering|muhendislik)\b/, "Engineering"],
-  [/\bcloud\b/, "Cloud"],
-  [/\b(assessment|degerlendirme)\b/, "Assessment"],
-  [/\b(training|egitim)\b/, "Training"],
-  [/\b(maintenance|support|bakim|destek)\b/, "Maintenance & Support"],
-  [/\b(eski[ _-]?backlog)\b/, "Eski_Backlog"],
-];
-
-type RevenueIntent = { kind: "exact"; value: string } | { kind: "license" } | { kind: "service" };
-
-function explicitRevenueIntent(question: string): RevenueIntent | null {
-  const text = semanticText(question);
-  if (/\b(lisans\s+gelir|ne\s+kadari\s+lisans\w*|lisans\w*\s+toplam)/.test(text)) return { kind: "license" };
-  if (/\b(servis\w*|danismanlik\w*)\b/.test(text)) return { kind: "service" };
-  if (/\b(lisans|license)\b/.test(text)) return { kind: "exact", value: "License" };
-  const match = revenueTypeAliases.find(([pattern]) => pattern.test(text));
-  return match ? { kind: "exact", value: match[1] } : null;
-}
-
-const vendorValues: Record<ObjectType, string[]> = {
-  deals: ["Alterian", "Alteryx", "Apparo", "AtScale", "AWS", "DataRobot", "DigiEye", "Ereteam", "HCL", "IBM", "Insider", "Metrica", "Microsoft", "Qualytics", "Salesforce", "Snowflake", "Theobald"],
-  invoices: ["Alteryx", "Apparo", "AWS", "Datarobot", "Digieye", "Ereteam", "HCL", "IBM", "LOCATIONBOX", "Macrosoft", "Metrica", "Qlik", "Qualytics", "Salesforce", "Snowflake", "TechData", "Theobald", "ZASLOGIC"],
-  orders: ["Alteryx", "Apparo", "AWS", "DataRobot", "DigiEye", "Ereteam", "HCL", "IBM", "Qualitics", "Salesforce", "Snowflake", "Theobald"],
-};
-
-function explicitVendor(question: string, object: ObjectType) {
-  const text = semanticText(question);
-  if (!/\b(vendor|satici|uretici)\b/.test(text)) return null;
-  return vendorValues[object].find((value) => text.includes(semanticText(value))) ?? null;
-}
-
-function explicitEreteamDomain(question: string) {
-  const text = semanticText(question);
-  if (/\b(dc\s*&?\s*ai|data\s*,?\s*cloud\s*&?\s*ai|data\s+(isi|uzmanlik|domain)|veri\s+(isi|uzmanlik|domain))\b/.test(text)) return "Data, Cloud & AI (DC&AI)";
-  if (/\b(ep|enterprise\s+planning|finans\s+(isi|uzmanlik|domain)|financial\s+(planning|domain))\b/.test(text)) return "Enterprise Planning (EP)";
-  if (/\b(im|intelligent\s+martech|martech|marketing\s+(isi|uzmanlik|domain)|pazarlama\s+(isi|uzmanlik|domain))\b/.test(text)) return "Intelligent MarTech (IM)";
-  return null;
-}
-
 function uniqueFilters(filters: QueryPlan["filters"]) {
   return Array.from(new Map(filters.map((filter) => [JSON.stringify(filter), filter])).values());
 }
@@ -195,17 +147,18 @@ function uniqueFilters(filters: QueryPlan["filters"]) {
 export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now = new Date(), context: SparkChatContextItem[] = []): QueryPlan {
   const text = semanticText(question);
   const explicit = explicitObject(question);
-  const country = explicitCountry(question);
-  const revenueIntent = explicitRevenueIntent(question);
-  const domain = explicitEreteamDomain(question);
+  const country = detectSparkCountry(text);
+  const revenueIntent = detectSparkRevenueIntent(text);
+  const domain = detectSparkDomain(text);
+  const businessType = detectSparkDealBusinessType(text);
   const previous = context.at(-1)?.result.queryContext;
   const range = resolveSparkDateRange(question, now);
   const referencesPrevious = /\b(peki|bunlar|bunlarin|onlar|onlarin|ayni)\b/.test(text)
     || /^(toplami|tutari|kac(\s+tane(si)?)?|detaylari|listele|goster)[?!.]*$/.test(text)
-    || Boolean(range || country || revenueIntent || domain || /\b(vendor|satici|uretici|yeni\s+is|mevcut\s+is)\b/.test(text));
+    || Boolean(range || country || revenueIntent || domain || businessType || SPARK_CHAT_KNOWLEDGE.vendors.triggerPattern.test(text));
   const followsPrevious = Boolean(!explicit && previous && referencesPrevious);
   const object = explicit ?? (followsPrevious ? previous!.object : plan.object);
-  const vendor = explicitVendor(question, object);
+  const vendor = detectSparkVendor(text, object);
   const asksAverage = /\bortalama\b/.test(text);
   const asksCount = /\b(kac|sayi|adet)/.test(text) && !/\bne\s+kadar\b/.test(text);
   const asksAmount = /\b(ne\s+kadar(?:i)?|tutar|toplam|ciro)/.test(text);
@@ -236,11 +189,11 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
     } else if (range) {
       filters = uniqueFilters([...previousNonDate, ...plannedNonDate]);
       associatedDealFilters = previous.associatedDealFilters;
-    } else if (country || vendor || revenueIntent || domain || /\b(yeni\s+is|mevcut\s+is)\b/.test(text)) {
+    } else if (country || vendor || revenueIntent || domain || businessType) {
       const changedProperties = new Set([
         country && "country", vendor && "vendor_name", revenueIntent && "revenue_type",
         domain && "ereteam_domain",
-        object === "deals" && /\b(yeni\s+is|mevcut\s+is)\b/.test(text) && "dealtype",
+        object === "deals" && businessType && "dealtype",
       ].filter(Boolean));
       const previousUnchanged = previous.filters.filter((filter) => !changedProperties.has(filter.property));
       const plannedUnchanged = filters.filter((filter) => !changedProperties.has(filter.property));
@@ -297,10 +250,7 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
   }
   if (revenueIntent) {
     filters = filters.filter((filter) => filter.property !== "revenue_type");
-    let values: string[];
-    if (revenueIntent.kind === "license") values = ["License", "SNS"];
-    else if (revenueIntent.kind === "service") values = revenueTypes[object].filter((value) => !["License", "SNS"].includes(value));
-    else values = [revenueIntent.value];
+    const values = sparkRevenueValues(revenueIntent, object);
     filters.push(values.length === 1
       ? { property: "revenue_type", operator: "eq", value: values[0] }
       : { property: "revenue_type", operator: "in", values });
@@ -309,10 +259,10 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
     filters = filters.filter((filter) => filter.property !== "ereteam_domain");
     filters.push({ property: "ereteam_domain", operator: "eq", value: domain });
   }
-  if (object === "deals" && /\b(yeni\s+is|new\s+business)\b/.test(text)) {
+  if (object === "deals" && businessType === "newbusiness") {
     filters = filters.filter((filter) => filter.property !== "dealtype");
     filters.push({ property: "dealtype", operator: "eq", value: "newbusiness" });
-  } else if (object === "deals" && /\b(mevcut\s+is|existing\s+business)\b/.test(text)) {
+  } else if (object === "deals" && businessType === "existingbusiness") {
     filters = filters.filter((filter) => filter.property !== "dealtype");
     filters.push({ property: "dealtype", operator: "eq", value: "existingbusiness" });
   }
@@ -352,20 +302,7 @@ async function createPlan(question: string, catalogs: Record<ObjectType, HubSpot
   const response = await generateChatResponse(
     `Sen HubSpot için salt-okunur JSON sorgu planlayıcısısın. Bugün ${today}, saat dilimi Europe/Istanbul.
 KESİN VERİ SÖZLEŞMESİ - HER SORGUDAN ÖNCE UYGULA:
-- Order tarihi yalnızca hs_processed_date, USD tutarı yalnızca hs_homecurrency_amount.
-- Fatura tarihi yalnızca hs_invoice_date, USD tutarı yalnızca hs_amount_billed_in_company_currency.
-- Deal USD tutarı yalnızca amount_in_home_currency; deal tarih bağlamına göre closedate veya createdate.
-- Genel amount, TL tutarı veya başka para birimi property'lerini kullanma.
-- "Beklenen fatura" henüz kesilmemiş, ilgili dönem tarihli açık order demektir: object orders, tarih hs_processed_date, tutar hs_homecurrency_amount, stage _stage_label eq Open.
-- "Faturalanan/kesilen fatura" object invoices demektir.
-- "Aktif pipeline/açık fırsat" Closed Won ve Closed Lost olmayan deal kayıtlarıdır. Won/Lost sorularında closedate kullan.
-- Fatura veya order için "New Business" deniyorsa bağlı deal üzerinde dealtype eq newbusiness ve Closed Won filtresini associatedDealFilters ile birlikte uygula.
-- Ülke property adı country, geçerli enum değerleri yalnızca Turkiye ve USA. Türkiye/Turkey -> Turkiye; Amerika/ABD/USA/United States -> USA.
-- Vendor sorularında tüm nesnelerde yalnızca vendor_name kullan.
-- Deal için yeni iş/New Business -> dealtype eq newbusiness; mevcut iş/Existing Business -> dealtype eq existingbusiness.
-- Revenue Type tüm nesnelerde revenue_type alanıdır. Belirli tip sorularında enum değerini kullan. Genel "lisans geliri" License veya SNS; genel "servis/danışmanlık geliri" License ve SNS dışındaki tiplerdir.
-- Ereteam uzmanlık alanı tüm nesnelerde ereteam_domain alanıdır: data/veri işi -> Data, Cloud & AI (DC&AI); finans işi -> Enterprise Planning (EP); marketing/pazarlama işi -> Intelligent MarTech (IM).
-- Kullanıcının istediği hiçbir dönem, owner, stage, tür veya bağlantı filtresini sessizce atlama. Katalogda olmayan property uydurma.
+${sparkPlannerKnowledge}
 Yalnızca JSON döndür. Şema:
 {"responseType":"metric|records","title":"kısa Türkçe başlık","object":"deals|invoices|orders","properties":[],"filters":[{"property":"","operator":"eq|neq|contains|not_contains|gt|gte|lt|lte|between|in|is_empty|not_empty","value":"","values":[]}],"associatedDealFilters":[],"aggregate":{"operation":"sum|count|average","property":""},"sort":{"property":"","direction":"asc|desc"},"limit":50}.
 Tek bir sayı/değer soruluyorsa metric, kayıtlar veya detaylar isteniyorsa records seç. Metric için aggregate zorunlu. Tutar toplamında sum kullan.
@@ -509,9 +446,7 @@ function labelMap(catalog: HubSpotProperty[]) {
 }
 
 function coreFields(type: ObjectType) {
-  if (type === "deals") return ["dealname", "closedate", "amount_in_home_currency", "country", "vendor_name", "revenue_type", "ereteam_domain", "dealtype", "_owner_name", "_stage_label"];
-  if (type === "invoices") return ["hs_number", "invoice_name", "hs_invoice_latest_company_name", "hs_invoice_date", "hs_amount_billed_in_company_currency", "country", "vendor_name", "revenue_type", "ereteam_domain", "_owner_name"];
-  return ["hs_order_name", "hs_processed_date", "hs_homecurrency_amount", "country", "vendor_name", "revenue_type", "ereteam_domain", "_owner_name", "_stage_label"];
+  return [...SPARK_CHAT_KNOWLEDGE.objects[type].coreFields];
 }
 
 function formatMetric(value: number, property?: string | null) {

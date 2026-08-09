@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test:spark-chat": "tsx scripts/test-spark-chat-knowledge.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
