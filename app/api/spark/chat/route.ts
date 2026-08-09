@@ -2,14 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { verifySessionToken } from "@/lib/presales/session";
 import { getClientIp, rateLimit } from "@/lib/rateLimit";
-import { executeSparkChatQuery, SparkChatStageError } from "@/lib/spark/chat";
+import { executeSparkChatQuery, sparkChatFilterSchema, SparkChatStageError } from "@/lib/spark/chat";
 
 export const dynamic = "force-dynamic";
 
+const queryContextSchema = z.object({
+  object: z.enum(["deals", "invoices", "orders"]),
+  filters: z.array(sparkChatFilterSchema).max(10),
+  associatedDealFilters: z.array(sparkChatFilterSchema).max(8),
+  aggregate: z.object({ operation: z.enum(["sum", "count", "average"]), property: z.string().max(120).nullish() }).nullish(),
+});
 const contextResultSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("metric"), title: z.string().max(100), value: z.string().max(100), recordCount: z.number().int().nonnegative() }),
   z.object({ kind: z.literal("records"), title: z.string().max(100), recordCount: z.number().int().nonnegative(), objectLabel: z.string().max(30) }),
-]);
+]).and(z.object({ queryContext: queryContextSchema.optional() }));
 const schema = z.object({
   question: z.string().trim().min(1).max(1_500),
   context: z.array(z.object({ question: z.string().max(1_500), result: contextResultSchema })).max(5).default([]),

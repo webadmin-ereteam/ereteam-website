@@ -6,17 +6,23 @@ import { ArrowUpRight, Bot, Database, Send, X } from "lucide-react";
 import styles from "./sparkChat.module.css";
 
 type Column = { key: string; label: string; format: "currency" | "date" | "text" };
+type QueryContext = {
+  object: "deals" | "invoices" | "orders";
+  filters: Array<{ property: string; operator: string; value?: string | null; values?: string[] | null }>;
+  associatedDealFilters: Array<{ property: string; operator: string; value?: string | null; values?: string[] | null }>;
+  aggregate?: { operation: "sum" | "count" | "average"; property?: string | null } | null;
+};
 type QueryResult =
-  | { kind: "metric"; title: string; formattedValue: string; recordCount: number; queriedAt: string }
-  | { kind: "records"; title: string; objectLabel: string; totalRecords: number; shownRecords: number; columns: Column[]; records: Array<{ id: string; url: string; values: Record<string, string> }>; queriedAt: string };
+  | { kind: "metric"; title: string; formattedValue: string; recordCount: number; interpretation: string; queryContext: QueryContext; queriedAt: string }
+  | { kind: "records"; title: string; objectLabel: string; totalRecords: number; shownRecords: number; columns: Column[]; records: Array<{ id: string; url: string; values: Record<string, string> }>; interpretation: string; queryContext: QueryContext; queriedAt: string };
 type HistoryItem = { question: string; result?: QueryResult; error?: string };
 
 function compactContext(history: HistoryItem[]) {
   return history.filter((item) => item.result).slice(-5).map((item) => ({
     question: item.question,
     result: item.result!.kind === "metric"
-      ? { kind: "metric" as const, title: item.result!.title, value: item.result!.formattedValue, recordCount: item.result!.recordCount }
-      : { kind: "records" as const, title: item.result!.title, recordCount: item.result!.totalRecords, objectLabel: item.result!.objectLabel },
+      ? { kind: "metric" as const, title: item.result!.title, value: item.result!.formattedValue, recordCount: item.result!.recordCount, queryContext: item.result!.queryContext }
+      : { kind: "records" as const, title: item.result!.title, recordCount: item.result!.totalRecords, objectLabel: item.result!.objectLabel, queryContext: item.result!.queryContext },
   }));
 }
 
@@ -42,13 +48,14 @@ function ResultView({ result }: { result: QueryResult }) {
     <section className={styles.metricResult}>
       <span>{result.title}</span>
       <strong>{result.formattedValue}</strong>
+      <p className={styles.interpretation}>{result.interpretation}</p>
       <small>{result.recordCount} HubSpot kaydı · Canlı sorgu {time}</small>
     </section>
   );
   return (
     <section className={styles.recordsResult}>
       <div className={styles.resultHeader}>
-        <div><b>{result.title}</b><small>{result.totalRecords} kayıt · {result.shownRecords} gösteriliyor</small></div>
+        <div><b>{result.title}</b><p className={styles.interpretation}>{result.interpretation}</p><small>{result.totalRecords} kayıt · {result.shownRecords} gösteriliyor</small></div>
         <span>Canlı {time}</span>
       </div>
       {result.records.length ? <div className={styles.tableScroll}><table>

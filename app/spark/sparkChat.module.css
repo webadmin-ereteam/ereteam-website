@@ -22,9 +22,10 @@
 .metricResult span { color:#557084; font-size:12px; font-weight:700; }
 .metricResult strong { color:#102a40; font-size:34px; letter-spacing:-.04em; }
 .metricResult small { color:#7890a2; font-size:10.5px; }
+.interpretation { margin:0; color:#647f92; font-size:10.5px; line-height:1.45; }
 .recordsResult { overflow:hidden; border:1px solid #d4e2eb; border-radius:18px; background:#fff; }
 .resultHeader { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:14px 15px; border-bottom:1px solid #deE8ef; background:#f6fafc; }
-.resultHeader div { display:grid; gap:3px; }.resultHeader b { color:#173247; font-size:13px; }.resultHeader small,.resultHeader > span { color:#71889a; font-size:10px; }
+.resultHeader div { display:grid; gap:3px; }.resultHeader b { color:#173247; font-size:13px; }.resultHeader small,.resultHeader > span { color:#71889a; font-size:10px; }.resultHeader .interpretation { max-width:470px; }
 .tableScroll { max-height:330px; overflow:auto; }
 .tableScroll table { width:100%; border-collapse:collapse; min-width:620px; font-size:11px; }
 .tableScroll th { position:sticky; top:0; z-index:1; padding:9px 11px; background:#edf4f8; color:#5d7385; text-align:left; white-space:nowrap; font-size:9.5px; text-transform:uppercase; letter-spacing:.05em; }

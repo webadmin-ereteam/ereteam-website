@@ -47,7 +47,15 @@ Llama 8B, then `gpt-oss-120b`) when a model is rate-limited or returns an invali
 plan, and receives only question-relevant property catalog entries. The assistant is
 read-only, never exposes tokens to the browser, rate
 limits requests, and only works with a valid `spark_session`. Calculations use the
-approved USD fields.
+approved USD fields. Common Turkish periods (`bu/geçen ay`, `bu/geçen yıl`,
+`bugün`, `dün`, `son 7/30 gün`), record type, amount/count intent and the matching
+HubSpot date/amount fields are enforced deterministically after planning. Invalid
+or incomplete filters, properties, sorting and aggregations trigger model fallback
+instead of returning an over-broad total. Each answer exposes a compact interpretation
+of its object, period, measure and filters. Follow-ups also carry the previous validated
+query context—not record data—so short period changes and `bunların toplamı?` retain
+the intended scope. Active pipeline, Won/Lost, open expected orders
+and New Business-linked records use the same deterministic definitions as the dashboard.
 
 The former manually entered weekly focus/priorities section is intentionally
 excluded. The executive summary is generated only from current numerical
