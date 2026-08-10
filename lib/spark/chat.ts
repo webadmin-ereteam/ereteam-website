@@ -109,6 +109,16 @@ export function resolveSparkDateRange(question: string, now = new Date()): DateR
   const { year, month, day } = dateParts(now);
   const previousMonthYear = month === 1 ? year - 1 : year;
   const previousMonth = month === 1 ? 12 : month - 1;
+  const explicitYear = text.match(/\b(20\d{2})\b/)?.[1];
+  const halfYear = SPARK_CHAT_KNOWLEDGE.halfYears.find((period) => period.pattern.test(text));
+
+  if (halfYear) {
+    const selectedYear = explicitYear ? Number(explicitYear) : /\bgecen\s+yil/.test(text) ? year - 1 : year;
+    const endExclusive = halfYear.endExclusiveMonth === 13
+      ? isoDate(selectedYear + 1, 1, 1)
+      : isoDate(selectedYear, halfYear.endExclusiveMonth, 1);
+    return { start: isoDate(selectedYear, halfYear.startMonth, 1), endExclusive, label: `${selectedYear} ${halfYear.label}` };
+  }
 
   if (/\bgecen\s+ay\b/.test(text)) {
     return { start: isoDate(previousMonthYear, previousMonth, 1), endExclusive: isoDate(year, month, 1), label: "Geçen ay" };
@@ -133,7 +143,6 @@ export function resolveSparkDateRange(question: string, now = new Date()): DateR
     const days = Number(rollingDays);
     return { start: shiftCalendarDay(year, month, day, 1 - days), endExclusive: shiftCalendarDay(year, month, day, 1), label: `Son ${days} gün` };
   }
-  const explicitYear = text.match(/\b(20\d{2})\b/)?.[1];
   if (explicitYear) {
     const selectedYear = Number(explicitYear);
     return { start: isoDate(selectedYear, 1, 1), endExclusive: isoDate(selectedYear + 1, 1, 1), label: explicitYear };

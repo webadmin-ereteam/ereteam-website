@@ -106,6 +106,10 @@ export const SPARK_CHAT_KNOWLEDGE = {
     { value: "newbusiness", pattern: /\b(yeni\s+is|new\s+business)\b/ },
     { value: "existingbusiness", pattern: /\b(mevcut\s+is|existing\s+business)\b/ },
   ],
+  halfYears: [
+    { key: "first", pattern: /\b(ilk\s+(yari(si|sinda)?|6\s+ay(i|inda)?)|h1|first\s+half)\b/, startMonth: 1, endExclusiveMonth: 7, label: "ilk yarı" },
+    { key: "second", pattern: /\b(ikinci\s+(yari(si|sinda)?|6\s+ay(i|inda)?)|h2|second\s+half)\b/, startMonth: 7, endExclusiveMonth: 13, label: "ikinci yarı" },
+  ],
   ownerMatching: {
     minimumSimilarity: 0.72,
     ambiguityMargin: 0.08,
@@ -130,6 +134,7 @@ export const SPARK_CHAT_KNOWLEDGE = {
     'Revenue Type tüm nesnelerde revenue_type alanıdır. "Ne kadarı lisanstı/lisans geliri" License + SNS; "ne kadarı servisti/servis/danışmanlık geliri" License ve SNS dışındaki tiplerdir.',
     "Ereteam uzmanlık alanı tüm nesnelerde ereteam_domain alanıdır: data/veri -> Data, Cloud & AI (DC&AI); finans -> Enterprise Planning (EP); marketing/pazarlama -> Intelligent MarTech (IM).",
     "Owner adını kullanıcının yazdığı biçimde _owner_name filtresine koy. Çalışma zamanı bu değeri canlı HubSpot owner listesindeki en yakın güvenli tam adla eşleştirir.",
+    '"Yılın ilk yarısı" ve H1, 1 Ocak dahil–1 Temmuz hariç; "yılın ikinci yarısı" ve H2, 1 Temmuz dahil–sonraki 1 Ocak hariç aralığıdır.',
     "Kırılım, bazında, karşılaştırma veya iki rakam istenirse groupBy alanına ilgili property adını yaz; kategoriyi tek bir filtreye indirgeme.",
     "Kullanıcının istediği hiçbir dönem, owner, stage, tür veya bağlantı filtresini sessizce atlama. Katalogda olmayan property uydurma.",
   ],
@@ -144,6 +149,7 @@ export const SPARK_CHAT_KNOWLEDGE = {
     { question: "MarTech faturalarını göster", object: "invoices", expectedProperty: "ereteam_domain", expectedValues: ["Intelligent MarTech (IM)"], expectedResponseType: "records" },
     { question: "2026'da toplam açık orderı Türkiye ve ABD kırılımında iki rakam olarak göster", object: "orders", expectedProperty: "country", expectedValues: ["Turkiye", "USA"], expectedResponseType: "metric", expectedGroupBy: "country", expectedFilterProperties: ["country", "hs_processed_date", "_stage_label"] },
     { question: "Lisans ve servis gelirini iki rakam olarak karşılaştır", object: "invoices", expectedResponseType: "metric", expectedGroupBy: "_revenue_group" },
+    { question: "2026 yılının ilk yarısında ABD için kesilen toplam servis faturası ne kadardır?", object: "invoices", expectedProperty: "revenue_type", excludedValues: ["License", "SNS"], expectedResponseType: "metric", expectedFilterProperties: ["hs_invoice_date", "country", "revenue_type"], expectedDateRange: ["2026-01-01", "2026-07-01"] },
   ],
 } as const;
 

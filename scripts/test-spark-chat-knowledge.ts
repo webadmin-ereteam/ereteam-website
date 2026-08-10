@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { applySparkQueryGuardrails, resolveSparkOwnerFilter, resolveSparkOwnerName, sparkChatComparableValue } from "../lib/spark/chat";
+import { applySparkQueryGuardrails, resolveSparkDateRange, resolveSparkOwnerFilter, resolveSparkOwnerName, sparkChatComparableValue } from "../lib/spark/chat";
 import { SPARK_CHAT_KNOWLEDGE, type SparkObjectType } from "../lib/spark/chatKnowledge";
 
 const amountProperties: Record<SparkObjectType, string> = {
@@ -19,6 +19,8 @@ assert.deepEqual(
   { property: "_owner_name", operator: "eq", value: "Selda Kaygusuz" },
   "Owner filtresi canlı tam ada çevrilmeli",
 );
+assert.deepEqual(resolveSparkDateRange("2026 yılının ilk yarısı", new Date("2026-08-10T12:00:00Z")), { start: "2026-01-01", endExclusive: "2026-07-01", label: "2026 ilk yarı" });
+assert.deepEqual(resolveSparkDateRange("H2 2026", new Date("2026-08-10T12:00:00Z")), { start: "2026-07-01", endExclusive: "2027-01-01", label: "2026 ikinci yarı" });
 
 for (const testCase of SPARK_CHAT_KNOWLEDGE.regressionCases) {
   const plan = applySparkQueryGuardrails({
@@ -43,6 +45,11 @@ for (const testCase of SPARK_CHAT_KNOWLEDGE.regressionCases) {
   if ("expectedResponseType" in testCase) assert.equal(plan.responseType, testCase.expectedResponseType, `${testCase.question}: sonuç tipi yanlış`);
   if ("expectedGroupBy" in testCase) assert.equal(plan.groupBy, testCase.expectedGroupBy, `${testCase.question}: kırılım alanı yanlış`);
   if ("expectedFilterProperties" in testCase) assert.ok(testCase.expectedFilterProperties.every((property) => plan.filters.some((filter) => filter.property === property)), `${testCase.question}: zorunlu filtrelerden biri eksik`);
+  if ("expectedDateRange" in testCase) {
+    const dateProperty = SPARK_CHAT_KNOWLEDGE.objects[testCase.object].dateProperty;
+    assert.equal(plan.filters.find((filter) => filter.property === dateProperty && filter.operator === "gte")?.value, testCase.expectedDateRange[0], `${testCase.question}: dönem başlangıcı yanlış`);
+    assert.equal(plan.filters.find((filter) => filter.property === dateProperty && filter.operator === "lt")?.value, testCase.expectedDateRange[1], `${testCase.question}: dönem bitişi yanlış`);
+  }
   if (/ne\s+kadar/i.test(testCase.question)) {
     assert.equal(plan.responseType, "metric", `${testCase.question}: metric olmalı`);
     assert.deepEqual(plan.aggregate, { operation: "sum", property: amountProperties[testCase.object] }, `${testCase.question}: tutar alanı yanlış`);
