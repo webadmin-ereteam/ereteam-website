@@ -79,6 +79,9 @@ validated `groupBy` property. For example, a Türkiye/USA country comparison ret
 both values and a short calculated difference sentence. Explanation, interpretation,
 methodology and conversational questions may return a concise `text` response; live
 record rows are still never sent to the planner.
+Calendar date boundaries are interpreted at midnight in `Europe/Istanbul`, including
+explicit years. A HubSpot datetime at `21:00Z` on 31 December therefore belongs to
+1 January in Istanbul and is excluded from the preceding year.
 
 The former manually entered weekly focus/priorities section is intentionally
 excluded. The executive summary is generated only from current numerical

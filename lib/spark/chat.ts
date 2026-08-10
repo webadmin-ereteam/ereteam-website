@@ -435,18 +435,19 @@ function flatten(type: ObjectType, row: HubSpotObject, owners: Map<string, strin
 }
 
 const normalized = (value?: string | null) => (value ?? "").trim().toLocaleLowerCase("tr-TR");
-function comparable(value?: string | null) {
+export function sparkChatComparableValue(value?: string | null) {
   value = value ?? "";
   const number = Number(value);
   if (value !== "" && Number.isFinite(number)) return number;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return Date.parse(`${value}T00:00:00+03:00`);
   const date = Date.parse(value);
   return Number.isFinite(date) ? date : normalized(value);
 }
 
 function matches(record: FlatRecord, filter: z.infer<typeof filterSchema>) {
   const raw = record[filter.property] ?? "";
-  const left = comparable(raw);
-  const right = comparable(filter.value ?? "");
+  const left = sparkChatComparableValue(raw);
+  const right = sparkChatComparableValue(filter.value ?? "");
   if (filter.operator === "is_empty") return raw.trim() === "";
   if (filter.operator === "not_empty") return raw.trim() !== "";
   if (filter.operator === "contains") return normalized(raw).includes(normalized(filter.value));
@@ -456,7 +457,7 @@ function matches(record: FlatRecord, filter: z.infer<typeof filterSchema>) {
   if (filter.operator === "in") return (filter.values ?? []).some((value) => normalized(raw) === normalized(value));
   if (filter.operator === "between") {
     const [min, max] = filter.values ?? [];
-    return min !== undefined && max !== undefined && left >= comparable(min) && left <= comparable(max);
+    return min !== undefined && max !== undefined && left >= sparkChatComparableValue(min) && left <= sparkChatComparableValue(max);
   }
   if (filter.operator === "gt") return left > right;
   if (filter.operator === "gte") return left >= right;
@@ -587,8 +588,8 @@ export async function executeSparkChatQuery(question: string, apiKey: string, co
 
   if (plan.sort) {
     filtered.sort((a, b) => {
-      const left = comparable(a[plan.sort!.property]);
-      const right = comparable(b[plan.sort!.property]);
+      const left = sparkChatComparableValue(a[plan.sort!.property]);
+      const right = sparkChatComparableValue(b[plan.sort!.property]);
       const result = left < right ? -1 : left > right ? 1 : 0;
       return plan.sort!.direction === "asc" ? result : -result;
     });
