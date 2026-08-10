@@ -41,6 +41,27 @@ export const SPARK_CHAT_KNOWLEDGE = {
     { value: "Turkiye", pattern: /\b(turkiye|turkey)\b/ },
     { value: "USA", pattern: /\b(amerika|abd|usa|united\s+states)\b/ },
   ],
+  breakdown: {
+    triggerPattern: /\b(kirilim\w*|bazinda|ayri\s+(ayri|rakam)|karsilastir\w*|iki\s+rakam)\b/,
+    dimensions: [
+      { property: "country", pattern: /\b(ulke|turkiye|turkey|amerika|abd|usa|united\s+states)\b/ },
+      { property: "vendor_name", pattern: /\b(vendor|satici|uretici)\b/ },
+      { property: "_revenue_group", pattern: /(?=.*\b(lisans|license|sns)\b)(?=.*\b(servis|danismanlik)\b)/ },
+      { property: "revenue_type", pattern: /\b(revenue\s*type|gelir\s+tip|lisans|servis|danismanlik|sns|proje|project)\b/ },
+      { property: "ereteam_domain", pattern: /\b(ereteam\s+domain|uzmanlik|data\s+isi|veri\s+isi|finans\s+isi|marketing\s+isi|pazarlama\s+isi|martech)\b/ },
+      { property: "dealtype", pattern: /\b(is\s+tip|deal\s*type|yeni\s+is|mevcut\s+is|new\s+business|existing\s+business)\b/ },
+      { property: "_owner_name", pattern: /\b(owner|satisci|sorumlu)\b/ },
+      { property: "_stage_label", pattern: /\b(stage|asama|durum)\b/ },
+    ],
+    valueLabels: {
+      Turkiye: "Türkiye",
+      USA: "USA",
+      newbusiness: "New Business",
+      existingbusiness: "Existing Business",
+      license: "Lisans",
+      service: "Servis",
+    },
+  },
   revenue: {
     property: "revenue_type",
     licenseValues: ["License", "SNS"],
@@ -99,6 +120,7 @@ export const SPARK_CHAT_KNOWLEDGE = {
     "Deal için yeni iş/New Business -> dealtype eq newbusiness; mevcut iş/Existing Business -> dealtype eq existingbusiness.",
     'Revenue Type tüm nesnelerde revenue_type alanıdır. "Ne kadarı lisanstı/lisans geliri" License + SNS; "ne kadarı servisti/servis/danışmanlık geliri" License ve SNS dışındaki tiplerdir.',
     "Ereteam uzmanlık alanı tüm nesnelerde ereteam_domain alanıdır: data/veri -> Data, Cloud & AI (DC&AI); finans -> Enterprise Planning (EP); marketing/pazarlama -> Intelligent MarTech (IM).",
+    "Kırılım, bazında, karşılaştırma veya iki rakam istenirse groupBy alanına ilgili property adını yaz; kategoriyi tek bir filtreye indirgeme.",
     "Kullanıcının istediği hiçbir dönem, owner, stage, tür veya bağlantı filtresini sessizce atlama. Katalogda olmayan property uydurma.",
   ],
   regressionCases: [
@@ -110,13 +132,30 @@ export const SPARK_CHAT_KNOWLEDGE = {
     { question: "Ne kadarı servisti?", object: "invoices", expectedProperty: "revenue_type", excludedValues: ["License", "SNS"] },
     { question: "Finans işi faturaları ne kadar?", object: "invoices", expectedProperty: "ereteam_domain", expectedValues: ["Enterprise Planning (EP)"] },
     { question: "MarTech faturalarını göster", object: "invoices", expectedProperty: "ereteam_domain", expectedValues: ["Intelligent MarTech (IM)"], expectedResponseType: "records" },
+    { question: "2026'da toplam açık orderı Türkiye ve ABD kırılımında iki rakam olarak göster", object: "orders", expectedProperty: "country", expectedValues: ["Turkiye", "USA"], expectedResponseType: "metric", expectedGroupBy: "country", expectedFilterProperties: ["country", "hs_processed_date", "_stage_label"] },
+    { question: "Lisans ve servis gelirini iki rakam olarak karşılaştır", object: "invoices", expectedResponseType: "metric", expectedGroupBy: "_revenue_group" },
   ],
 } as const;
 
 export const sparkObjectTypes = Object.keys(SPARK_CHAT_KNOWLEDGE.objects) as SparkObjectType[];
 
 export function detectSparkCountry(text: string) {
-  return SPARK_CHAT_KNOWLEDGE.countries.find((entry) => entry.pattern.test(text))?.value ?? null;
+  return detectSparkCountries(text)[0] ?? null;
+}
+
+export function detectSparkCountries(text: string) {
+  return SPARK_CHAT_KNOWLEDGE.countries.filter((entry) => entry.pattern.test(text)).map((entry) => entry.value);
+}
+
+export function detectSparkGroupBy(text: string) {
+  const countries = detectSparkCountries(text);
+  if (countries.length > 1) return "country";
+  if (!SPARK_CHAT_KNOWLEDGE.breakdown.triggerPattern.test(text)) return null;
+  return SPARK_CHAT_KNOWLEDGE.breakdown.dimensions.find((entry) => entry.pattern.test(text))?.property ?? null;
+}
+
+export function sparkBreakdownValueLabel(value: string) {
+  return SPARK_CHAT_KNOWLEDGE.breakdown.valueLabels[value as keyof typeof SPARK_CHAT_KNOWLEDGE.breakdown.valueLabels] ?? (value || "Belirtilmemiş");
 }
 
 export function detectSparkRevenueIntent(text: string): SparkRevenueIntent | null {

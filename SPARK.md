@@ -74,6 +74,11 @@ aliases, grouped revenue definitions, planner rules and regression examples. Upd
 that file first when a new interpretation gap is found; runtime guardrails and the
 planner prompt both consume it. Run `npm run test:spark-chat` after every update;
 its regression cases are maintained in the same knowledge file.
+Metric questions can also return a deterministic multi-value breakdown through a
+validated `groupBy` property. For example, a Türkiye/USA country comparison returns
+both values and a short calculated difference sentence. Explanation, interpretation,
+methodology and conversational questions may return a concise `text` response; live
+record rows are still never sent to the planner.
 
 The former manually entered weekly focus/priorities section is intentionally
 excluded. The executive summary is generated only from current numerical

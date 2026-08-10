@@ -11,9 +11,12 @@ type QueryContext = {
   filters: Array<{ property: string; operator: string; value?: string | null; values?: string[] | null }>;
   associatedDealFilters: Array<{ property: string; operator: string; value?: string | null; values?: string[] | null }>;
   aggregate?: { operation: "sum" | "count" | "average"; property?: string | null } | null;
+  groupBy?: string | null;
 };
 type QueryResult =
   | { kind: "metric"; title: string; formattedValue: string; recordCount: number; interpretation: string; queryContext: QueryContext; queriedAt: string }
+  | { kind: "breakdown"; title: string; groupLabel: string; items: Array<{ key: string; label: string; formattedValue: string; recordCount: number }>; summary: string; recordCount: number; interpretation: string; queryContext: QueryContext; queriedAt: string }
+  | { kind: "text"; title: string; text: string; queriedAt: string }
   | { kind: "records"; title: string; objectLabel: string; totalRecords: number; shownRecords: number; columns: Column[]; records: Array<{ id: string; url: string; values: Record<string, string> }>; interpretation: string; queryContext: QueryContext; queriedAt: string };
 type HistoryItem = { question: string; result?: QueryResult; error?: string };
 
@@ -22,6 +25,10 @@ function compactContext(history: HistoryItem[]) {
     question: item.question,
     result: item.result!.kind === "metric"
       ? { kind: "metric" as const, title: item.result!.title, value: item.result!.formattedValue, recordCount: item.result!.recordCount, queryContext: item.result!.queryContext }
+      : item.result!.kind === "breakdown"
+      ? { kind: "breakdown" as const, title: item.result!.title, value: item.result!.items.map((entry) => `${entry.label}: ${entry.formattedValue}`).join("; "), recordCount: item.result!.recordCount, queryContext: item.result!.queryContext }
+      : item.result!.kind === "text"
+      ? { kind: "text" as const, title: item.result!.title, value: item.result!.text, recordCount: 0 }
       : { kind: "records" as const, title: item.result!.title, recordCount: item.result!.totalRecords, objectLabel: item.result!.objectLabel, queryContext: item.result!.queryContext },
   }));
 }
@@ -51,6 +58,17 @@ function ResultView({ result }: { result: QueryResult }) {
       <p className={styles.interpretation}>{result.interpretation}</p>
       <small>{result.recordCount} HubSpot kaydı · Canlı sorgu {time}</small>
     </section>
+  );
+  if (result.kind === "breakdown") return (
+    <section className={styles.breakdownResult}>
+      <header><span>{result.title}</span><small>{result.groupLabel} kırılımı · Canlı {time}</small></header>
+      <p className={styles.answerText}>{result.summary}</p>
+      <div className={styles.breakdownGrid}>{result.items.map((item) => <article key={item.key}><span>{item.label}</span><strong>{item.formattedValue}</strong><small>{item.recordCount} kayıt</small></article>)}</div>
+      <p className={styles.interpretation}>{result.interpretation}</p>
+    </section>
+  );
+  if (result.kind === "text") return (
+    <section className={styles.textResult}><span>{result.title}</span><p>{result.text}</p><small>Yanıt {time}</small></section>
   );
   return (
     <section className={styles.recordsResult}>

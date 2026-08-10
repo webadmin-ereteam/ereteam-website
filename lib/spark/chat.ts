@@ -11,13 +11,16 @@ import {
 import { generateChatResponse } from "@/lib/services/llmService";
 import {
   SPARK_CHAT_KNOWLEDGE,
+  detectSparkCountries,
   detectSparkCountry,
   detectSparkDealBusinessType,
   detectSparkDomain,
+  detectSparkGroupBy,
   detectSparkRevenueIntent,
   detectSparkVendor,
   normalizeSparkChatText,
   sparkObjectTypes,
+  sparkBreakdownValueLabel,
   sparkPlannerKnowledge,
   sparkRevenueValues,
   type SparkObjectType,
@@ -50,13 +53,15 @@ export const sparkChatFilterSchema = z.object({
 });
 const filterSchema = sparkChatFilterSchema;
 const planSchema = z.object({
-  responseType: z.enum(["metric", "records"]),
+  responseType: z.enum(["metric", "records", "text"]),
   title: z.string().max(100),
   object: z.enum(objectTypes),
   properties: z.array(z.string()).max(16).default([]),
   filters: z.array(filterSchema).max(10).default([]),
   associatedDealFilters: z.array(filterSchema).max(8).default([]),
   aggregate: z.object({ operation: z.enum(["sum", "count", "average"]), property: z.string().nullish() }).nullish(),
+  groupBy: z.string().max(120).nullish().default(null),
+  answer: z.string().max(800).nullish().default(null),
   sort: z.object({ property: z.string(), direction: z.enum(["asc", "desc"]) }).nullish(),
   limit: z.number().int().min(1).max(100).default(50),
 });
@@ -66,10 +71,10 @@ const dateProperties = Object.fromEntries(objectTypes.map((type) => [type, SPARK
 const amountProperties = Object.fromEntries(objectTypes.map((type) => [type, SPARK_CHAT_KNOWLEDGE.objects[type].amountProperty])) as unknown as Record<ObjectType, string>;
 
 type QueryPlan = z.infer<typeof planSchema>;
-export type SparkChatQueryContext = Pick<QueryPlan, "object" | "filters" | "associatedDealFilters" | "aggregate">;
+export type SparkChatQueryContext = Pick<QueryPlan, "object" | "filters" | "associatedDealFilters" | "aggregate"> & { groupBy?: string | null };
 export type SparkChatContextItem = {
   question: string;
-  result: ({ kind: "metric"; title: string; value: string; recordCount: number } | { kind: "records"; title: string; recordCount: number; objectLabel: string }) & { queryContext?: SparkChatQueryContext };
+  result: ({ kind: "metric" | "breakdown"; title: string; value: string; recordCount: number } | { kind: "records"; title: string; recordCount: number; objectLabel: string } | { kind: "text"; title: string; value: string; recordCount: number }) & { queryContext?: SparkChatQueryContext };
 };
 type DateRange = { start: string; endExclusive: string; label: string };
 
@@ -128,14 +133,19 @@ export function resolveSparkDateRange(question: string, now = new Date()): DateR
     const days = Number(rollingDays);
     return { start: shiftCalendarDay(year, month, day, 1 - days), endExclusive: shiftCalendarDay(year, month, day, 1), label: `Son ${days} gün` };
   }
+  const explicitYear = text.match(/\b(20\d{2})\b/)?.[1];
+  if (explicitYear) {
+    const selectedYear = Number(explicitYear);
+    return { start: isoDate(selectedYear, 1, 1), endExclusive: isoDate(selectedYear + 1, 1, 1), label: explicitYear };
+  }
   return null;
 }
 
 function explicitObject(question: string): ObjectType | null {
   const text = semanticText(question);
-  if (/\bbeklenen\s+fatura/.test(text) || /\b(open|acik)\s+order\b/.test(text)) return "orders";
+  if (/\bbeklenen\s+fatura/.test(text) || /\b(open|acik)\s+order\w*/.test(text)) return "orders";
   if (/\b(fatura|faturalan|invoice)/.test(text)) return "invoices";
-  if (/\b(order|siparis)/.test(text)) return "orders";
+  if (/\b(order\w*|siparis\w*)/.test(text)) return "orders";
   if (/\b(deal|firsat|pipeline|won|lost)/.test(text)) return "deals";
   return null;
 }
@@ -147,18 +157,22 @@ function uniqueFilters(filters: QueryPlan["filters"]) {
 export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now = new Date(), context: SparkChatContextItem[] = []): QueryPlan {
   const text = semanticText(question);
   const explicit = explicitObject(question);
-  const country = detectSparkCountry(text);
+  const countries = detectSparkCountries(text);
+  const country = countries.length === 1 ? detectSparkCountry(text) : null;
   const revenueIntent = detectSparkRevenueIntent(text);
   const domain = detectSparkDomain(text);
   const businessType = detectSparkDealBusinessType(text);
+  const requestedGroupBy = detectSparkGroupBy(text);
   const previous = context.at(-1)?.result.queryContext;
   const range = resolveSparkDateRange(question, now);
   const referencesPrevious = /\b(peki|bunlar|bunlarin|onlar|onlarin|ayni)\b/.test(text)
     || /^(toplami|tutari|kac(\s+tane(si)?)?|detaylari|listele|goster)[?!.]*$/.test(text)
-    || Boolean(range || country || revenueIntent || domain || businessType || SPARK_CHAT_KNOWLEDGE.vendors.triggerPattern.test(text));
+    || Boolean(range || countries.length || revenueIntent || domain || businessType || requestedGroupBy || SPARK_CHAT_KNOWLEDGE.vendors.triggerPattern.test(text));
   const followsPrevious = Boolean(!explicit && previous && referencesPrevious);
   const object = explicit ?? (followsPrevious ? previous!.object : plan.object);
   const vendor = detectSparkVendor(text, object);
+  const collapsesBreakdown = /^(bunlarin\s+|onlarin\s+)?(toplami|tutari)[?!.]*$/.test(text);
+  let groupBy = requestedGroupBy ?? (followsPrevious && !collapsesBreakdown ? previous?.groupBy ?? null : null);
   const asksAverage = /\bortalama\b/.test(text);
   const asksCount = /\b(kac|sayi|adet)/.test(text) && !/\bne\s+kadar\b/.test(text);
   const asksAmount = /\b(ne\s+kadar(?:i)?|tutar|toplam|ciro)/.test(text);
@@ -166,7 +180,12 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
 
   let responseType = plan.responseType;
   let aggregate = plan.aggregate;
-  if (asksRecords) {
+  if (groupBy) {
+    responseType = "metric";
+    aggregate = asksCount
+      ? { operation: "count" as const, property: null }
+      : { operation: asksAverage ? "average" as const : "sum" as const, property: amountProperties[object] };
+  } else if (asksRecords) {
     responseType = "records";
     aggregate = null;
   } else if (asksAverage || asksCount || asksAmount) {
@@ -189,9 +208,9 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
     } else if (range) {
       filters = uniqueFilters([...previousNonDate, ...plannedNonDate]);
       associatedDealFilters = previous.associatedDealFilters;
-    } else if (country || vendor || revenueIntent || domain || businessType) {
+    } else if (countries.length || vendor || revenueIntent || domain || businessType || requestedGroupBy) {
       const changedProperties = new Set([
-        country && "country", vendor && "vendor_name", revenueIntent && "revenue_type",
+        countries.length && "country", vendor && "vendor_name", revenueIntent && "revenue_type",
         domain && "ereteam_domain",
         object === "deals" && businessType && "dealtype",
       ].filter(Boolean));
@@ -214,7 +233,7 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
       { property: dateProperty, operator: "lt", value: range.endExclusive },
     );
   }
-  if (object === "orders" && /\bbeklenen\s+fatura/.test(text)) {
+  if (object === "orders" && (/\bbeklenen\s+fatura/.test(text) || /\b(open|acik)\s+order\w*/.test(text))) {
     filters = filters.filter((filter) => filter.property !== "_stage_label");
     filters.push({ property: "_stage_label", operator: "eq", value: "Open" });
   }
@@ -240,34 +259,41 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
       { property: "_stage_label", operator: "contains", value: "won" },
     );
   }
-  if (country) {
+  if (groupBy === "country" && countries.length) {
+    filters = filters.filter((filter) => filter.property !== "country");
+    filters.push({ property: "country", operator: "in", values: countries });
+  } else if (country) {
     filters = filters.filter((filter) => filter.property !== "country");
     filters.push({ property: "country", operator: "eq", value: country });
   }
-  if (vendor) {
+  if (vendor && groupBy !== "vendor_name") {
     filters = filters.filter((filter) => filter.property !== "vendor_name");
     filters.push({ property: "vendor_name", operator: "eq", value: vendor });
   }
-  if (revenueIntent) {
+  if (revenueIntent && !["revenue_type", "_revenue_group"].includes(groupBy ?? "")) {
     filters = filters.filter((filter) => filter.property !== "revenue_type");
     const values = sparkRevenueValues(revenueIntent, object);
     filters.push(values.length === 1
       ? { property: "revenue_type", operator: "eq", value: values[0] }
       : { property: "revenue_type", operator: "in", values });
   }
-  if (domain) {
+  if (domain && groupBy !== "ereteam_domain") {
     filters = filters.filter((filter) => filter.property !== "ereteam_domain");
     filters.push({ property: "ereteam_domain", operator: "eq", value: domain });
   }
-  if (object === "deals" && businessType === "newbusiness") {
+  if (object === "deals" && businessType === "newbusiness" && groupBy !== "dealtype") {
     filters = filters.filter((filter) => filter.property !== "dealtype");
     filters.push({ property: "dealtype", operator: "eq", value: "newbusiness" });
-  } else if (object === "deals" && businessType === "existingbusiness") {
+  } else if (object === "deals" && businessType === "existingbusiness" && groupBy !== "dealtype") {
     filters = filters.filter((filter) => filter.property !== "dealtype");
     filters.push({ property: "dealtype", operator: "eq", value: "existingbusiness" });
   }
 
-  const guarded = { ...plan, object, responseType, aggregate, filters: uniqueFilters(filters), associatedDealFilters };
+  if (responseType === "text") {
+    aggregate = null;
+    groupBy = null;
+  }
+  const guarded = { ...plan, object, responseType, aggregate, groupBy, filters: uniqueFilters(filters), associatedDealFilters };
   if (range && responseType === "metric") {
     const subject = object === "invoices" ? "fatura" : object === "orders" ? "order" : "deal";
     const measure = aggregate?.operation === "count" ? "sayısı" : aggregate?.operation === "average" ? "ortalama tutarı" : "tutarı";
@@ -285,7 +311,7 @@ function catalogText(catalogs: Record<ObjectType, HubSpotProperty[]>, question: 
   const terms = normalized(question).split(/[^a-z0-9çğıöşü]+/).filter((term) => term.length >= 4);
   const contextProperties = new Set(context.flatMap((item) => {
     const query = item.result.queryContext;
-    return query ? [...query.filters, ...query.associatedDealFilters].map((filter) => filter.property).concat(query.aggregate?.property ?? []) : [];
+    return query ? [...query.filters, ...query.associatedDealFilters].map((filter) => filter.property).concat(query.aggregate?.property ?? [], query.groupBy ?? []) : [];
   }));
   return objectTypes.map((type) => {
     const required = new Set(requiredProperties[type]);
@@ -304,9 +330,9 @@ async function createPlan(question: string, catalogs: Record<ObjectType, HubSpot
 KESİN VERİ SÖZLEŞMESİ - HER SORGUDAN ÖNCE UYGULA:
 ${sparkPlannerKnowledge}
 Yalnızca JSON döndür. Şema:
-{"responseType":"metric|records","title":"kısa Türkçe başlık","object":"deals|invoices|orders","properties":[],"filters":[{"property":"","operator":"eq|neq|contains|not_contains|gt|gte|lt|lte|between|in|is_empty|not_empty","value":"","values":[]}],"associatedDealFilters":[],"aggregate":{"operation":"sum|count|average","property":""},"sort":{"property":"","direction":"asc|desc"},"limit":50}.
-Tek bir sayı/değer soruluyorsa metric, kayıtlar veya detaylar isteniyorsa records seç. Metric için aggregate zorunlu. Tutar toplamında sum kullan.
-Sanal alanlar: _stage_label ve _owner_name filtrelenebilir. Tarih değerlerini YYYY-MM-DD yaz. "Bu ay", "geçen ay", "bu yıl", "geçen yıl", "bugün", "dün" ve "son 7/30 gün" ifadelerinde tam takvim aralığını uygula; tarih filtresini asla atlama.
+{"responseType":"metric|records|text","title":"kısa Türkçe başlık","object":"deals|invoices|orders","properties":[],"filters":[{"property":"","operator":"eq|neq|contains|not_contains|gt|gte|lt|lte|between|in|is_empty|not_empty","value":"","values":[]}],"associatedDealFilters":[],"aggregate":{"operation":"sum|count|average","property":""},"groupBy":"property veya null","answer":"text cevabı veya null","sort":{"property":"","direction":"asc|desc"},"limit":50}.
+Tek bir sayı/değer soruluyorsa metric, kayıtlar veya detaylar isteniyorsa records seç. Açıklama, yorum, selamlama veya "ne demek/nasıl hesaplanır" sorularında text seç ve yalnızca doğrulanmış sözleşmeye dayanan kısa Türkçe answer yaz. Metric için aggregate zorunlu. Tutar toplamında sum kullan. Kırılım istenirse metric ve groupBy kullan.
+Sanal alanlar: _stage_label, _owner_name ve lisans/servis kırılımı için _revenue_group kullanılabilir. Tarih değerlerini YYYY-MM-DD yaz. "Bu ay", "geçen ay", "bu yıl", "geçen yıl", "bugün", "dün" ve "son 7/30 gün" ifadelerinde tam takvim aralığını uygula; tarih filtresini asla atlama.
 Bağlı faturanın/orderın deal özellikleri sorulursa associatedDealFilters kullan. Örneğin New Business için dealtype eq newbusiness.
 Kayıt görünümünde gerekli isim, tarih, tutar, owner ve şirket alanlarını properties içine ekle. Verilen katalog dışında gerçek property uydurma.`,
     [{ role: "user", content: `${context.length ? `SON 5 KONUŞMA ÖZETİ VE DOĞRULANMIŞ SORGU BAĞLAMI (detay kayıt içermez):\n${JSON.stringify(context)}\n\nTakip sorusunda önceki queryContext kapsamını koru; yalnızca kullanıcı yeni nesne, dönem veya filtre belirttiyse ilgili kısmı değiştir.\n\n` : ""}SORU:\n${question}\n\nİLGİLİ PROPERTY KATALOĞU:\n${catalogText(catalogs, question, context)}${retry ? "\n\nÖnceki plan şemaya uymadı. Bu kez hiçbir istenen filtreyi atlamadan tüm zorunlu alanlarla geçerli, sade JSON üret." : ""}` }],
@@ -323,9 +349,10 @@ Kayıt görünümünde gerekli isim, tarih, tutar, owner ve şirket alanlarını
     between: "between", in: "in", is_empty: "is_empty", not_empty: "not_empty",
   };
   raw.object = objectAliases[String(raw.object ?? "").toLowerCase()] ?? raw.object;
-  const responseAliases: Record<string, "metric" | "records"> = {
+  const responseAliases: Record<string, "metric" | "records" | "text"> = {
     metric: "metric", metrics: "metric", value: "metric", number: "metric", single_value: "metric",
     records: "records", record: "records", list: "records", table: "records", details: "records",
+    text: "text", answer: "text", explanation: "text", narrative: "text",
   };
   raw.responseType = responseAliases[String(raw.responseType ?? "").toLowerCase()] ?? raw.responseType;
   const normalizeFilters = (filters: unknown) => {
@@ -357,7 +384,10 @@ Kayıt görünümünde gerekli isim, tarih, tutar, owner ve şirket alanlarını
     if (filter.operator === "between" && filter.value && filter.values?.length === 1) filter.values = [filter.value, filter.values[0]];
   }
   if (raw.sort == null || (typeof raw.sort === "object" && !raw.sort.property && !raw.sort.direction)) raw.sort = null;
+  raw.groupBy = raw.groupBy == null || raw.groupBy === "" ? null : String(raw.groupBy);
+  raw.answer = raw.answer == null || raw.answer === "" ? null : String(raw.answer).slice(0, 800);
   if (raw.responseType === "records") raw.aggregate = null;
+  if (raw.responseType === "text") { raw.aggregate = null; raw.groupBy = null; }
   if (raw.responseType === "metric") {
     const operationAliases: Record<string, "sum" | "count" | "average"> = { sum: "sum", total: "sum", count: "count", average: "average", avg: "average" };
     if (raw.aggregate?.operation) raw.aggregate.operation = operationAliases[String(raw.aggregate.operation).toLowerCase()];
@@ -366,7 +396,7 @@ Kayıt görünümünde gerekli isim, tarih, tutar, owner ve şirket alanlarını
   raw.title = String(raw.title || "HubSpot canlı sonucu").slice(0, 100);
   const plan = applySparkQueryGuardrails(planSchema.parse(raw), question, new Date(), context);
   if (plan.responseType === "metric" && !plan.aggregate) throw new Error("Metric sorgusunda hesaplama eksik");
-  const virtualProperties = plan.object === "invoices" ? ["_owner_name"] : ["_owner_name", "_stage_label"];
+  const virtualProperties = plan.object === "invoices" ? ["_owner_name", "_revenue_group"] : ["_owner_name", "_stage_label", "_revenue_group"];
   const objectFilterProperties = new Set([...catalogs[plan.object].map((property) => property.name), ...virtualProperties]);
   const dealFilterProperties = new Set([...catalogs.deals.map((property) => property.name), "_owner_name", "_stage_label"]);
   const invalidFilter = plan.filters.find((filter) => !objectFilterProperties.has(filter.property));
@@ -374,8 +404,9 @@ Kayıt görünümünde gerekli isim, tarih, tutar, owner ve şirket alanlarını
   const invalidProperty = plan.properties.find((property) => !objectFilterProperties.has(property));
   const invalidSort = plan.sort && !objectFilterProperties.has(plan.sort.property) ? plan.sort.property : null;
   const invalidAggregate = plan.aggregate?.property && !objectFilterProperties.has(plan.aggregate.property) ? plan.aggregate.property : null;
-  if (invalidFilter || invalidDealFilter || invalidProperty || invalidSort || invalidAggregate) {
-    throw new Error(`Geçersiz sorgu alanı: ${invalidFilter?.property ?? invalidDealFilter?.property ?? invalidProperty ?? invalidSort ?? invalidAggregate}`);
+  const invalidGroupBy = plan.groupBy && !objectFilterProperties.has(plan.groupBy) ? plan.groupBy : null;
+  if (invalidFilter || invalidDealFilter || invalidProperty || invalidSort || invalidAggregate || invalidGroupBy) {
+    throw new Error(`Geçersiz sorgu alanı: ${invalidFilter?.property ?? invalidDealFilter?.property ?? invalidProperty ?? invalidSort ?? invalidAggregate ?? invalidGroupBy}`);
   }
   return plan;
 }
@@ -389,13 +420,17 @@ function recordUrl(type: ObjectType, id: string) {
 
 function flatten(type: ObjectType, row: HubSpotObject, owners: Map<string, string>, stages: Map<string, { label: string }>): FlatRecord {
   const stageKey = type === "deals" ? "dealstage" : type === "orders" ? "hs_pipeline_stage" : "";
-  return {
+  const flat = {
     _id: row.id,
     _url: recordUrl(type, row.id),
     _object: type,
     ...Object.fromEntries(Object.entries(row.properties).map(([key, value]) => [key, value ?? ""])),
     _owner_name: owners.get(row.properties.hubspot_owner_id ?? "") ?? "",
     _stage_label: stageKey ? stages.get(row.properties[stageKey] ?? "")?.label ?? "" : "",
+  };
+  return {
+    ...flat,
+    _revenue_group: SPARK_CHAT_KNOWLEDGE.revenue.licenseValues.includes(row.properties.revenue_type as "License" | "SNS") ? "license" : "service",
   };
 }
 
@@ -442,6 +477,7 @@ function labelMap(catalog: HubSpotProperty[]) {
   labels.set("revenue_type", "Revenue Type");
   labels.set("dealtype", "İş tipi");
   labels.set("ereteam_domain", "Ereteam Domain");
+  labels.set("_revenue_group", "Gelir grubu");
   return labels;
 }
 
@@ -462,6 +498,7 @@ function queryContext(plan: QueryPlan): SparkChatQueryContext {
     filters: plan.filters,
     associatedDealFilters: plan.associatedDealFilters,
     aggregate: plan.aggregate,
+    groupBy: plan.groupBy,
   };
 }
 
@@ -488,7 +525,20 @@ function interpretation(plan: QueryPlan, catalog: HubSpotProperty[]) {
     .slice(0, 3)
     .map((filter) => `${labels.get(filter.property) ?? filter.property}: ${filter.value ?? filter.values?.join(", ") ?? filter.operator}`);
   if (plan.associatedDealFilters.length) otherFilters.push("Bağlı deal filtresi uygulandı");
+  if (plan.groupBy) otherFilters.push(`Kırılım: ${labels.get(plan.groupBy) ?? plan.groupBy}`);
   return [objectNames[plan.object], period, measure, ...otherFilters].join(" · ");
+}
+
+function aggregateRows(rows: FlatRecord[], operation: "sum" | "count" | "average", property?: string | null) {
+  const values = property ? rows.flatMap((row) => {
+    const raw = row[property];
+    const numeric = Number(raw);
+    return raw?.trim() && Number.isFinite(numeric) ? [numeric] : [];
+  }) : [];
+  const value = operation === "count" ? rows.length
+    : operation === "average" ? values.reduce((sum, item) => sum + item, 0) / Math.max(values.length, 1)
+    : values.reduce((sum, item) => sum + item, 0);
+  return { value, recordCount: operation === "count" ? rows.length : values.length };
 }
 
 export async function executeSparkChatQuery(question: string, apiKey: string, context: SparkChatContextItem[] = []) {
@@ -505,9 +555,18 @@ export async function executeSparkChatQuery(question: string, apiKey: string, co
     }
     throw lastError;
   });
+  if (plan.responseType === "text") {
+    return {
+      kind: "text" as const,
+      title: plan.title,
+      text: plan.answer ?? "Bu konuda doğrulanmış Spark veri sözleşmesinde yeterli bilgi bulunmuyor.",
+      queriedAt: new Date().toISOString(),
+      source: "planner_knowledge" as const,
+    };
+  }
   const valid = new Set(catalogs[plan.object].map((property) => property.name));
   const filterProperties = [...plan.filters, ...plan.associatedDealFilters].map((filter) => filter.property).filter((property) => !property.startsWith("_"));
-  const selected = Array.from(new Set([...requiredProperties[plan.object], ...plan.properties, ...filterProperties, plan.aggregate?.property, plan.sort?.property]
+  const selected = Array.from(new Set([...requiredProperties[plan.object], ...plan.properties, ...filterProperties, plan.aggregate?.property, plan.groupBy, plan.sort?.property]
     .filter((property): property is string => Boolean(property) && valid.has(property!))));
 
   const [rows, owners, dealStages, orderStages] = await stage("records", () => Promise.all([
@@ -541,13 +600,26 @@ export async function executeSparkChatQuery(question: string, apiKey: string, co
   if (plan.responseType === "metric") {
     const operation = plan.aggregate?.operation ?? "count";
     const property = plan.aggregate?.property;
-    const values = property ? filtered.flatMap((row) => {
-      const raw = row[property];
-      const numeric = Number(raw);
-      return raw?.trim() && Number.isFinite(numeric) ? [numeric] : [];
-    }) : [];
-    const value = operation === "count" ? filtered.length : operation === "average" ? (values.reduce((sum, item) => sum + item, 0) / Math.max(values.length, 1)) : values.reduce((sum, item) => sum + item, 0);
-    const recordCount = operation === "count" ? filtered.length : values.length;
+    if (plan.groupBy) {
+      const groupFilter = plan.filters.find((filter) => filter.property === plan.groupBy && ["eq", "in"].includes(filter.operator));
+      const requestedGroups = groupFilter?.operator === "in" ? groupFilter.values ?? [] : groupFilter?.value ? [groupFilter.value] : [];
+      const defaultGroups = plan.groupBy === "_revenue_group" ? ["license", "service"] : [];
+      const groupValues = requestedGroups.length ? requestedGroups : defaultGroups.length ? defaultGroups : Array.from(new Set(filtered.map((row) => row[plan.groupBy!] ?? ""))).filter(Boolean);
+      const items = groupValues.map((groupValue) => {
+        const groupRows = filtered.filter((row) => normalized(row[plan.groupBy!]) === normalized(groupValue));
+        const metric = aggregateRows(groupRows, operation, property);
+        return { key: groupValue, label: sparkBreakdownValueLabel(groupValue), ...metric, formattedValue: formatMetric(metric.value, property) };
+      });
+      const ranked = [...items].sort((a, b) => b.value - a.value);
+      const difference = ranked.length >= 2 ? Math.abs(ranked[0].value - ranked[1].value) : 0;
+      const summary = ranked.length >= 2
+        ? difference === 0
+          ? `${ranked[0].label} ve ${ranked[1].label} sonuçları ${ranked[0].formattedValue} ile eşit.`
+          : `${ranked[0].label} ${ranked[0].formattedValue}, ${ranked[1].label} ${ranked[1].formattedValue}. ${ranked[0].label}, ${formatMetric(difference, property)} daha yüksek.`
+        : ranked.length === 1 ? `${ranked[0].label} sonucu ${ranked[0].formattedValue}.` : "Bu kırılımda eşleşen kayıt bulunamadı.";
+      return { kind: "breakdown" as const, title: plan.title, groupLabel: labelMap(catalogs[plan.object]).get(plan.groupBy) ?? plan.groupBy, items, summary, recordCount: items.reduce((sum, item) => sum + item.recordCount, 0), interpretation: planInterpretation, queryContext: compactQuery, queriedAt, source: "live_hubspot" as const };
+    }
+    const { value, recordCount } = aggregateRows(filtered, operation, property);
     return { kind: "metric" as const, title: plan.title, value, formattedValue: formatMetric(value, property), recordCount, interpretation: planInterpretation, queryContext: compactQuery, queriedAt, source: "live_hubspot" as const };
   }
 

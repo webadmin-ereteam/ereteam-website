@@ -11,10 +11,13 @@ const queryContextSchema = z.object({
   filters: z.array(sparkChatFilterSchema).max(10),
   associatedDealFilters: z.array(sparkChatFilterSchema).max(8),
   aggregate: z.object({ operation: z.enum(["sum", "count", "average"]), property: z.string().max(120).nullish() }).nullish(),
+  groupBy: z.string().max(120).nullish(),
 });
 const contextResultSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("metric"), title: z.string().max(100), value: z.string().max(100), recordCount: z.number().int().nonnegative() }),
+  z.object({ kind: z.literal("breakdown"), title: z.string().max(100), value: z.string().max(500), recordCount: z.number().int().nonnegative() }),
   z.object({ kind: z.literal("records"), title: z.string().max(100), recordCount: z.number().int().nonnegative(), objectLabel: z.string().max(30) }),
+  z.object({ kind: z.literal("text"), title: z.string().max(100), value: z.string().max(800), recordCount: z.literal(0) }),
 ]).and(z.object({ queryContext: queryContextSchema.optional() }));
 const schema = z.object({
   question: z.string().trim().min(1).max(1_500),
