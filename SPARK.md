@@ -48,7 +48,8 @@ plan, and receives only question-relevant property catalog entries. The assistan
 read-only, never exposes tokens to the browser, rate
 limits requests, and only works with a valid `spark_session`. Calculations use the
 approved USD fields. Common Turkish periods (`bu/geçen ay`, `bu/geçen yıl`,
-`yılın ilk/ikinci yarısı`, `H1/H2`, `bugün`, `dün`, `son 7/30 gün`), record type,
+`ilk/ikinci/üçüncü/dördüncü çeyrek`, `Q1–Q4`, `yılın ilk/ikinci yarısı`, `H1/H2`,
+`bugün`, `dün`, `son 7/30 gün`), record type,
 amount/count intent and the matching
 HubSpot date/amount fields are enforced deterministically after planning. Invalid
 or incomplete filters, properties, sorting and aggregations trigger model fallback
@@ -87,7 +88,8 @@ Calendar date boundaries are interpreted at midnight in `Europe/Istanbul`, inclu
 explicit years. A HubSpot datetime at `21:00Z` on 31 December therefore belongs to
 1 January in Istanbul and is excluded from the preceding year. First-half/H1 ranges
 are 1 January inclusive through 1 July exclusive; second-half/H2 ranges are 1 July
-inclusive through the following 1 January exclusive.
+inclusive through the following 1 January exclusive. Quarter ranges use calendar
+boundaries: Q1 January–March, Q2 April–June, Q3 July–September and Q4 October–December.
 
 The former manually entered weekly focus/priorities section is intentionally
 excluded. The executive summary is generated only from current numerical

@@ -106,6 +106,12 @@ export const SPARK_CHAT_KNOWLEDGE = {
     { value: "newbusiness", pattern: /\b(yeni\s+is|new\s+business)\b/ },
     { value: "existingbusiness", pattern: /\b(mevcut\s+is|existing\s+business)\b/ },
   ],
+  quarters: [
+    { key: "q1", pattern: /\b(q1|first\s+quarter|(ilk|birinci|1\.?|1['’]?inci)\s+ceyre(k(te)?|g(i|inde)))\b/, startMonth: 1, endExclusiveMonth: 4, label: "1. çeyrek" },
+    { key: "q2", pattern: /\b(q2|second\s+quarter|(ikinci|2\.?|2['’]?nci)\s+ceyre(k(te)?|g(i|inde)))\b/, startMonth: 4, endExclusiveMonth: 7, label: "2. çeyrek" },
+    { key: "q3", pattern: /\b(q3|third\s+quarter|(ucuncu|3\.?|3['’]?uncu)\s+ceyre(k(te)?|g(i|inde)))\b/, startMonth: 7, endExclusiveMonth: 10, label: "3. çeyrek" },
+    { key: "q4", pattern: /\b(q4|fourth\s+quarter|(dorduncu|son|4\.?|4['’]?uncu)\s+ceyre(k(te)?|g(i|inde)))\b/, startMonth: 10, endExclusiveMonth: 13, label: "4. çeyrek" },
+  ],
   halfYears: [
     { key: "first", pattern: /\b(ilk\s+(yari(si|sinda)?|6\s+ay(i|inda)?)|h1|first\s+half)\b/, startMonth: 1, endExclusiveMonth: 7, label: "ilk yarı" },
     { key: "second", pattern: /\b(ikinci\s+(yari(si|sinda)?|6\s+ay(i|inda)?)|h2|second\s+half)\b/, startMonth: 7, endExclusiveMonth: 13, label: "ikinci yarı" },
@@ -135,6 +141,7 @@ export const SPARK_CHAT_KNOWLEDGE = {
     "Ereteam uzmanlık alanı tüm nesnelerde ereteam_domain alanıdır: data/veri -> Data, Cloud & AI (DC&AI); finans -> Enterprise Planning (EP); marketing/pazarlama -> Intelligent MarTech (IM).",
     "Owner adını kullanıcının yazdığı biçimde _owner_name filtresine koy. Çalışma zamanı bu değeri canlı HubSpot owner listesindeki en yakın güvenli tam adla eşleştirir.",
     '"Yılın ilk yarısı" ve H1, 1 Ocak dahil–1 Temmuz hariç; "yılın ikinci yarısı" ve H2, 1 Temmuz dahil–sonraki 1 Ocak hariç aralığıdır.',
+    "Çeyrek ifadelerinde ilk/1. çeyrek/Q1 Ocak–Mart, ikinci/Q2 Nisan–Haziran, üçüncü/Q3 Temmuz–Eylül, dördüncü/son/Q4 Ekim–Aralık takvim aralığıdır.",
     "Kırılım, bazında, karşılaştırma veya iki rakam istenirse groupBy alanına ilgili property adını yaz; kategoriyi tek bir filtreye indirgeme.",
     "Kullanıcının istediği hiçbir dönem, owner, stage, tür veya bağlantı filtresini sessizce atlama. Katalogda olmayan property uydurma.",
   ],
@@ -150,6 +157,7 @@ export const SPARK_CHAT_KNOWLEDGE = {
     { question: "2026'da toplam açık orderı Türkiye ve ABD kırılımında iki rakam olarak göster", object: "orders", expectedProperty: "country", expectedValues: ["Turkiye", "USA"], expectedResponseType: "metric", expectedGroupBy: "country", expectedFilterProperties: ["country", "hs_processed_date", "_stage_label"] },
     { question: "Lisans ve servis gelirini iki rakam olarak karşılaştır", object: "invoices", expectedResponseType: "metric", expectedGroupBy: "_revenue_group" },
     { question: "2026 yılının ilk yarısında ABD için kesilen toplam servis faturası ne kadardır?", object: "invoices", expectedProperty: "revenue_type", excludedValues: ["License", "SNS"], expectedResponseType: "metric", expectedFilterProperties: ["hs_invoice_date", "country", "revenue_type"], expectedDateRange: ["2026-01-01", "2026-07-01"] },
+    { question: "2026 3. çeyreğinde açık order toplamı nedir?", object: "orders", expectedResponseType: "metric", expectedFilterProperties: ["hs_processed_date", "_stage_label"], expectedDateRange: ["2026-07-01", "2026-10-01"] },
   ],
 } as const;
 

@@ -110,7 +110,16 @@ export function resolveSparkDateRange(question: string, now = new Date()): DateR
   const previousMonthYear = month === 1 ? year - 1 : year;
   const previousMonth = month === 1 ? 12 : month - 1;
   const explicitYear = text.match(/\b(20\d{2})\b/)?.[1];
+  const quarter = SPARK_CHAT_KNOWLEDGE.quarters.find((period) => period.pattern.test(text));
   const halfYear = SPARK_CHAT_KNOWLEDGE.halfYears.find((period) => period.pattern.test(text));
+
+  if (quarter) {
+    const selectedYear = explicitYear ? Number(explicitYear) : /\bgecen\s+yil/.test(text) ? year - 1 : year;
+    const endExclusive = quarter.endExclusiveMonth === 13
+      ? isoDate(selectedYear + 1, 1, 1)
+      : isoDate(selectedYear, quarter.endExclusiveMonth, 1);
+    return { start: isoDate(selectedYear, quarter.startMonth, 1), endExclusive, label: `${selectedYear} ${quarter.label}` };
+  }
 
   if (halfYear) {
     const selectedYear = explicitYear ? Number(explicitYear) : /\bgecen\s+yil/.test(text) ? year - 1 : year;
