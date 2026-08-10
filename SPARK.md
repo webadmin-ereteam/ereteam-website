@@ -67,6 +67,9 @@ Existing Business map to `dealtype = newbusiness|existingbusiness`.
 Ereteam expertise questions use `ereteam_domain` on all three objects: data work
 maps to `Data, Cloud & AI (DC&AI)`, finance work to `Enterprise Planning (EP)`,
 and marketing work to `Intelligent MarTech (IM)`.
+Owner questions use the live HubSpot owner directory. A first name or minor typo is
+matched to the nearest unambiguous active owner name before records are filtered;
+ambiguous low-confidence names are not guessed.
 
 All chatbot business vocabulary is maintained centrally in
 `lib/spark/chatKnowledge.ts`: HubSpot field contracts, enum values, Turkish/English

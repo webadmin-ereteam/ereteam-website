@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { applySparkQueryGuardrails, sparkChatComparableValue } from "../lib/spark/chat";
+import { applySparkQueryGuardrails, resolveSparkOwnerFilter, resolveSparkOwnerName, sparkChatComparableValue } from "../lib/spark/chat";
 import { SPARK_CHAT_KNOWLEDGE, type SparkObjectType } from "../lib/spark/chatKnowledge";
 
 const amountProperties: Record<SparkObjectType, string> = {
@@ -10,6 +10,15 @@ const amountProperties: Record<SparkObjectType, string> = {
 
 assert.equal(sparkChatComparableValue("2027-01-01"), Date.parse("2026-12-31T21:00:00Z"), "İstanbul takvim günü UTC sınırı yanlış");
 assert.ok(sparkChatComparableValue("2026-12-31T21:00:00Z") >= sparkChatComparableValue("2027-01-01"), "1 Ocak İstanbul kaydı 2026 aralığına girmemeli");
+
+for (const testCase of SPARK_CHAT_KNOWLEDGE.ownerMatching.regressionCases) {
+  assert.equal(resolveSparkOwnerName(testCase.input, testCase.owners), testCase.expected, `${testCase.input}: owner eşleşmesi yanlış`);
+}
+assert.deepEqual(
+  resolveSparkOwnerFilter({ property: "_owner_name", operator: "eq", value: "Selda" }, ["Kerem Arıtürk", "Selda Kaygusuz"]),
+  { property: "_owner_name", operator: "eq", value: "Selda Kaygusuz" },
+  "Owner filtresi canlı tam ada çevrilmeli",
+);
 
 for (const testCase of SPARK_CHAT_KNOWLEDGE.regressionCases) {
   const plan = applySparkQueryGuardrails({

@@ -106,6 +106,15 @@ export const SPARK_CHAT_KNOWLEDGE = {
     { value: "newbusiness", pattern: /\b(yeni\s+is|new\s+business)\b/ },
     { value: "existingbusiness", pattern: /\b(mevcut\s+is|existing\s+business)\b/ },
   ],
+  ownerMatching: {
+    minimumSimilarity: 0.72,
+    ambiguityMargin: 0.08,
+    regressionCases: [
+      { input: "Selda", owners: ["Kerem Arıtürk", "Selda Kaygusuz"], expected: "Selda Kaygusuz" },
+      { input: "Sleda", owners: ["Kerem Arıtürk", "Selda Kaygusuz"], expected: "Selda Kaygusuz" },
+      { input: "Ali", owners: ["Ali Veli", "Ali Can"], expected: null },
+    ],
+  },
   plannerRules: [
     "Order tarihi yalnızca hs_processed_date, USD tutarı yalnızca hs_homecurrency_amount.",
     "Fatura tarihi yalnızca hs_invoice_date, USD tutarı yalnızca hs_amount_billed_in_company_currency.",
@@ -120,6 +129,7 @@ export const SPARK_CHAT_KNOWLEDGE = {
     "Deal için yeni iş/New Business -> dealtype eq newbusiness; mevcut iş/Existing Business -> dealtype eq existingbusiness.",
     'Revenue Type tüm nesnelerde revenue_type alanıdır. "Ne kadarı lisanstı/lisans geliri" License + SNS; "ne kadarı servisti/servis/danışmanlık geliri" License ve SNS dışındaki tiplerdir.',
     "Ereteam uzmanlık alanı tüm nesnelerde ereteam_domain alanıdır: data/veri -> Data, Cloud & AI (DC&AI); finans -> Enterprise Planning (EP); marketing/pazarlama -> Intelligent MarTech (IM).",
+    "Owner adını kullanıcının yazdığı biçimde _owner_name filtresine koy. Çalışma zamanı bu değeri canlı HubSpot owner listesindeki en yakın güvenli tam adla eşleştirir.",
     "Kırılım, bazında, karşılaştırma veya iki rakam istenirse groupBy alanına ilgili property adını yaz; kategoriyi tek bir filtreye indirgeme.",
     "Kullanıcının istediği hiçbir dönem, owner, stage, tür veya bağlantı filtresini sessizce atlama. Katalogda olmayan property uydurma.",
   ],
