@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { applySparkQueryGuardrails, resolveSparkDateRange, resolveSparkOwnerFilter, resolveSparkOwnerName, sparkChatComparableValue, sparkChatMatchesFilter } from "../lib/spark/chat";
-import { SPARK_CHAT_KNOWLEDGE, detectSparkCompanyName, sparkGuaranteedRevenueSubquestions, sparkRevenueGroup, type SparkObjectType } from "../lib/spark/chatKnowledge";
+import { SPARK_CHAT_KNOWLEDGE, detectSparkCompanyName, detectSparkCompositeRevenueMetric, sparkCompositeRevenueSubquestions, sparkGuaranteedRevenueSubquestions, sparkRevenueGroup, type SparkObjectType } from "../lib/spark/chatKnowledge";
 
 const amountProperties: Record<SparkObjectType, string> = {
   deals: "amount_in_home_currency",
@@ -38,6 +38,15 @@ assert.equal(SPARK_CHAT_KNOWLEDGE.compositeMetrics.guaranteedRevenue.pattern.tes
 assert.deepEqual(sparkGuaranteedRevenueSubquestions("2026 toplam garanti gelirim ne olacak?"), {
   invoices: "2026 toplam fatura tutarı ne olacak?",
   orders: "2026 toplam açık order tutarı ne olacak?",
+});
+assert.equal(detectSparkCompositeRevenueMetric("Bu ay beklenen fatura toplamı nedir?"), "expected_revenue");
+assert.equal(detectSparkCompositeRevenueMetric("Bu ay beklenen faturaların toplamı nedir?"), "expected_revenue");
+assert.equal(detectSparkCompositeRevenueMetric("Bu ay ne kadar gelir bekliyoruz?"), "expected_revenue");
+assert.equal(detectSparkCompositeRevenueMetric("Bu ay beklenen faturaların detaylarını göster"), null);
+assert.equal(detectSparkCompositeRevenueMetric("Bu ay kestiğimiz faturalar ne kadar?"), null);
+assert.deepEqual(sparkCompositeRevenueSubquestions("Bu ay beklenen fatura toplamı nedir?", "expected_revenue"), {
+  invoices: "Bu ay fatura tutarı toplamı nedir?",
+  orders: "Bu ay açık order tutarı toplamı nedir?",
 });
 
 for (const testCase of SPARK_CHAT_KNOWLEDGE.regressionCases) {

@@ -12,7 +12,7 @@ const queryContextSchema = z.object({
   associatedDealFilters: z.array(sparkChatFilterSchema).max(8),
   aggregate: z.object({ operation: z.enum(["sum", "count", "average"]), property: z.string().max(120).nullish() }).nullish(),
   groupBy: z.string().max(120).nullish(),
-  metricKind: z.enum(["guaranteed_revenue", "weighted_pipeline"]).optional(),
+  metricKind: z.enum(["guaranteed_revenue", "expected_revenue", "weighted_pipeline"]).optional(),
 });
 const contextResultSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("metric"), title: z.string().max(100), value: z.string().max(100), recordCount: z.number().int().nonnegative() }),

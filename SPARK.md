@@ -60,6 +60,9 @@ the intended scope. Active pipeline, Won/Lost, open expected orders
 and New Business-linked records use the same deterministic definitions as the dashboard.
 `Garanti gelir` is a deterministic composite metric: invoiced revenue plus open
 orders in the same requested period. The answer shows both components and their total.
+`Beklenen fatura/gelir toplamı` uses the same period-based composite calculation:
+invoices already issued plus open orders. A request to list or show expected invoice
+details remains an open-order record query rather than a composite total.
 `Weighted pipeline`, `ağırlıklı pipeline` and `weighted forecast` sum the live
 `hs_projected_amount_in_home_currency` field for active deals; the chatbot does not
 recalculate HubSpot's projected amount.
@@ -140,6 +143,7 @@ header. `SPARK_CRON_SECRET` is legacy and can be removed.
 - Order amount/date: `hs_homecurrency_amount`, `hs_processed_date` (internal only)
 - Deal amount: `amount_in_home_currency`
 - Guaranteed revenue: period invoices + period open orders
+- Expected invoice/revenue total: period invoices + period open orders; detail questions list open orders
 - Weighted pipeline: sum `hs_projected_amount_in_home_currency` over active deals
 - Country: `country` with enum values `Turkiye` and `USA` on deals, invoices and orders
 - Vendor: `vendor_name` on deals, invoices and orders

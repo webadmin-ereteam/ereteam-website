@@ -14,6 +14,7 @@ import {
   SPARK_CHAT_KNOWLEDGE,
   detectSparkCountries,
   detectSparkCompanyName,
+  detectSparkCompositeRevenueMetric,
   detectSparkCountry,
   detectSparkDealBusinessType,
   detectSparkDomain,
@@ -23,7 +24,7 @@ import {
   normalizeSparkChatText,
   sparkObjectTypes,
   sparkBreakdownValueLabel,
-  sparkGuaranteedRevenueSubquestions,
+  sparkCompositeRevenueSubquestions,
   sparkMultiValueTokens,
   sparkPlannerKnowledge,
   sparkRevenueGroup,
@@ -78,7 +79,7 @@ const amountProperties = Object.fromEntries(objectTypes.map((type) => [type, SPA
 type QueryPlan = z.infer<typeof planSchema>;
 export type SparkChatQueryContext = Pick<QueryPlan, "object" | "filters" | "associatedDealFilters" | "aggregate"> & {
   groupBy?: string | null;
-  metricKind?: "guaranteed_revenue" | "weighted_pipeline";
+  metricKind?: "guaranteed_revenue" | "expected_revenue" | "weighted_pipeline";
 };
 export type SparkChatContextItem = {
   question: string;
@@ -730,29 +731,32 @@ function aggregateRows(rows: FlatRecord[], operation: "sum" | "count" | "average
 }
 
 export async function executeSparkChatQuery(question: string, apiKey: string, context: SparkChatContextItem[] = []): Promise<SparkChatExecutionResult> {
-  const guaranteedRevenuePattern = SPARK_CHAT_KNOWLEDGE.compositeMetrics.guaranteedRevenue.pattern;
-  if (guaranteedRevenuePattern.test(normalizeSparkChatText(question))) {
-    const subquestions = sparkGuaranteedRevenueSubquestions(question);
+  const compositeMetricKind = detectSparkCompositeRevenueMetric(question);
+  if (compositeMetricKind) {
+    const metric = compositeMetricKind === "guaranteed_revenue"
+      ? SPARK_CHAT_KNOWLEDGE.compositeMetrics.guaranteedRevenue
+      : SPARK_CHAT_KNOWLEDGE.compositeMetrics.expectedRevenue;
+    const subquestions = sparkCompositeRevenueSubquestions(question, compositeMetricKind);
     const invoiceQuestion = subquestions.invoices;
     const orderQuestion = subquestions.orders;
     const invoiceResult = await executeSparkChatQuery(invoiceQuestion, apiKey, []);
     const orderResult = await executeSparkChatQuery(orderQuestion, apiKey, []);
-    if (invoiceResult.kind !== "metric" || orderResult.kind !== "metric") throw new SparkChatStageError("guaranteed revenue", "Garanti gelir bileşenleri metric üretmedi");
+    if (invoiceResult.kind !== "metric" || orderResult.kind !== "metric") throw new SparkChatStageError("composite revenue", `${metric.label} bileşenleri metric üretmedi`);
     const value = invoiceResult.value + orderResult.value;
     const queriedAt = new Date().toISOString();
     const period = invoiceResult.interpretation.split(" · ")[1] ?? "Aynı dönem";
     return {
       kind: "breakdown" as const,
-      title: SPARK_CHAT_KNOWLEDGE.compositeMetrics.guaranteedRevenue.label,
+      title: metric.label,
       groupLabel: "Gelir bileşeni",
       items: [
         { key: "invoiced", label: "Faturalanan", value: invoiceResult.value, formattedValue: formatMetric(invoiceResult.value, amountProperties.invoices), recordCount: invoiceResult.recordCount },
         { key: "orders", label: "Açık order", value: orderResult.value, formattedValue: formatMetric(orderResult.value, amountProperties.orders), recordCount: orderResult.recordCount },
       ],
-      summary: `Garanti gelir ${formatMetric(value, amountProperties.invoices)}: faturalanan ${invoiceResult.formattedValue} + açık order ${orderResult.formattedValue}.`,
+      summary: `${metric.label} ${formatMetric(value, amountProperties.invoices)}: faturalanan ${invoiceResult.formattedValue} + açık order ${orderResult.formattedValue}.`,
       recordCount: invoiceResult.recordCount + orderResult.recordCount,
       interpretation: `Fatura + açık order · ${period} · Toplam USD tutarı`,
-      queryContext: { ...invoiceResult.queryContext, metricKind: "guaranteed_revenue" as const },
+      queryContext: { ...invoiceResult.queryContext, metricKind: compositeMetricKind },
       queriedAt,
       source: "live_hubspot" as const,
     };
