@@ -12,6 +12,7 @@ import { generateChatResponse } from "@/lib/services/llmService";
 import {
   SPARK_CHAT_KNOWLEDGE,
   detectSparkCountries,
+  detectSparkCompanyName,
   detectSparkCountry,
   detectSparkDealBusinessType,
   detectSparkDomain,
@@ -180,15 +181,17 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
   const revenueIntent = detectSparkRevenueIntent(text);
   const domain = detectSparkDomain(text);
   const businessType = detectSparkDealBusinessType(text);
+  const companyIntent = SPARK_CHAT_KNOWLEDGE.companies.triggerPattern.test(text);
   const requestedGroupBy = detectSparkGroupBy(text);
   const previous = context.at(-1)?.result.queryContext;
   const range = resolveSparkDateRange(question, now);
   const referencesPrevious = /\b(peki|bunlar|bunlarin|onlar|onlarin|ayni)\b/.test(text)
     || /^(toplami|tutari|kac(\s+tane(si)?)?|detaylari|listele|goster)[?!.]*$/.test(text)
-    || Boolean(range || countries.length || revenueIntent || domain || businessType || requestedGroupBy || SPARK_CHAT_KNOWLEDGE.vendors.triggerPattern.test(text));
+    || Boolean(range || countries.length || revenueIntent || domain || businessType || requestedGroupBy || companyIntent || SPARK_CHAT_KNOWLEDGE.vendors.triggerPattern.test(text));
   const followsPrevious = Boolean(!explicit && previous && referencesPrevious);
   const object = explicit ?? (followsPrevious ? previous!.object : plan.object);
   const vendor = detectSparkVendor(text, object);
+  let companyName = detectSparkCompanyName(text);
   const collapsesBreakdown = /^(bunlarin\s+|onlarin\s+)?(toplami|tutari)[?!.]*$/.test(text);
   let groupBy = requestedGroupBy ?? (followsPrevious && !collapsesBreakdown ? previous?.groupBy ?? null : null);
   const asksAverage = /\bortalama\b/.test(text);
@@ -226,9 +229,9 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
     } else if (range) {
       filters = uniqueFilters([...previousNonDate, ...plannedNonDate]);
       associatedDealFilters = previous.associatedDealFilters;
-    } else if (countries.length || vendor || revenueIntent || domain || businessType || requestedGroupBy) {
+    } else if (countries.length || vendor || companyName || revenueIntent || domain || businessType || requestedGroupBy) {
       const changedProperties = new Set([
-        countries.length && "country", vendor && "vendor_name", revenueIntent && "revenue_type",
+        countries.length && "country", vendor && "vendor_name", companyName && "_company_name", revenueIntent && "revenue_type",
         domain && "ereteam_domain",
         object === "deals" && businessType && "dealtype",
       ].filter(Boolean));
@@ -284,9 +287,22 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
     filters = filters.filter((filter) => filter.property !== "country");
     filters.push({ property: "country", operator: "eq", value: country });
   }
+  const explicitVendorIntent = SPARK_CHAT_KNOWLEDGE.vendors.triggerPattern.test(text);
+  const plannerVendorValue = filters.find((filter) => filter.property === "vendor_name")?.value?.trim();
+  if (!explicitVendorIntent && !companyName && plannerVendorValue) companyName = plannerVendorValue;
   if (vendor && groupBy !== "vendor_name") {
     filters = filters.filter((filter) => filter.property !== "vendor_name");
     filters.push({ property: "vendor_name", operator: "eq", value: vendor });
+  } else if (!explicitVendorIntent) {
+    filters = filters.filter((filter) => filter.property !== "vendor_name");
+  }
+  if (companyName) {
+    filters = filters.filter((filter) => !["_company_name", "hs_invoice_latest_company_name"].includes(filter.property));
+    filters.push({ property: "_company_name", operator: "contains", value: companyName });
+  } else if (companyIntent) {
+    filters = filters.map((filter) => filter.property === "hs_invoice_latest_company_name"
+      ? { ...filter, property: "_company_name", operator: "contains" as const }
+      : filter);
   }
   if (revenueIntent && !["revenue_type", "_revenue_group"].includes(groupBy ?? "")) {
     filters = filters.filter((filter) => filter.property !== "revenue_type");
@@ -414,7 +430,7 @@ Kayıt görünümünde gerekli isim, tarih, tutar, owner ve şirket alanlarını
   raw.title = String(raw.title || "HubSpot canlı sonucu").slice(0, 100);
   const plan = applySparkQueryGuardrails(planSchema.parse(raw), question, new Date(), context);
   if (plan.responseType === "metric" && !plan.aggregate) throw new Error("Metric sorgusunda hesaplama eksik");
-  const virtualProperties = plan.object === "invoices" ? ["_owner_name", "_revenue_group"] : ["_owner_name", "_stage_label", "_revenue_group"];
+  const virtualProperties = plan.object === "invoices" ? ["_owner_name", "_company_name", "_revenue_group"] : ["_owner_name", "_company_name", "_stage_label", "_revenue_group"];
   const objectFilterProperties = new Set([...catalogs[plan.object].map((property) => property.name), ...virtualProperties]);
   const dealFilterProperties = new Set([...catalogs.deals.map((property) => property.name), "_owner_name", "_stage_label"]);
   const invalidFilter = plan.filters.find((filter) => !objectFilterProperties.has(filter.property));
@@ -444,6 +460,7 @@ function flatten(type: ObjectType, row: HubSpotObject, owners: Map<string, strin
     _object: type,
     ...Object.fromEntries(Object.entries(row.properties).map(([key, value]) => [key, value ?? ""])),
     _owner_name: owners.get(row.properties.hubspot_owner_id ?? "") ?? "",
+    _company_name: type === "invoices" ? row.properties.hs_invoice_latest_company_name ?? "" : "",
     _stage_label: stageKey ? stages.get(row.properties[stageKey] ?? "")?.label ?? "" : "",
   };
   return {
@@ -563,6 +580,7 @@ function labelMap(catalog: HubSpotProperty[]) {
   labels.set("amount_in_home_currency", "Tutar (USD)");
   labels.set("country", "Ülke");
   labels.set("vendor_name", "Vendor");
+  labels.set("_company_name", "Müşteri / Şirket");
   labels.set("revenue_type", "Revenue Type");
   labels.set("dealtype", "İş tipi");
   labels.set("ereteam_domain", "Ereteam Domain");
@@ -663,7 +681,23 @@ export async function executeSparkChatQuery(question: string, apiKey: string, co
   ]));
   const resolvedPlan = resolveOwnerFilters(plan, owners);
   const stages = resolvedPlan.object === "deals" ? dealStages : resolvedPlan.object === "orders" ? orderStages : new Map();
-  let filtered = rows.map((row) => flatten(resolvedPlan.object, row, owners, stages)).filter((row) => resolvedPlan.filters.every((filter) => matches(row, filter)));
+  let flattenedRows = rows.map((row) => flatten(resolvedPlan.object, row, owners, stages));
+  const needsCompany = resolvedPlan.object !== "invoices" && (resolvedPlan.responseType === "records"
+    || resolvedPlan.properties.includes("_company_name")
+    || resolvedPlan.filters.some((filter) => filter.property === "_company_name")
+    || resolvedPlan.groupBy === "_company_name");
+  if (needsCompany) {
+    const [companies, associations] = await stage("company associations", () => Promise.all([
+      fetchHubSpotObjects("companies", ["name"]),
+      fetchHubSpotAssociations(resolvedPlan.object, flattenedRows.map((row) => row._id), "companies"),
+    ]));
+    const companyNames = new Map(companies.map((company) => [company.id, company.properties.name ?? ""]));
+    flattenedRows = flattenedRows.map((row) => ({
+      ...row,
+      _company_name: (associations.get(row._id) ?? []).map((companyId) => companyNames.get(companyId)).filter(Boolean).join(" | "),
+    }));
+  }
+  let filtered = flattenedRows.filter((row) => resolvedPlan.filters.every((filter) => matches(row, filter)));
 
   if (resolvedPlan.associatedDealFilters.length && resolvedPlan.object !== "deals") {
     const associatedObject: "invoices" | "orders" = resolvedPlan.object;

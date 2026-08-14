@@ -20,21 +20,21 @@ export const SPARK_CHAT_KNOWLEDGE = {
       dateProperty: "closedate",
       amountProperty: "amount_in_home_currency",
       requiredProperties: ["dealname", "dealstage", "createdate", "closedate", "amount_in_home_currency", "hs_is_closed_won", "dealtype", "country", "vendor_name", "revenue_type", "ereteam_domain", "hubspot_owner_id"],
-      coreFields: ["dealname", "closedate", "amount_in_home_currency", "country", "vendor_name", "revenue_type", "ereteam_domain", "dealtype", "_owner_name", "_stage_label"],
+      coreFields: ["dealname", "_company_name", "closedate", "amount_in_home_currency", "country", "vendor_name", "revenue_type", "ereteam_domain", "dealtype", "_owner_name", "_stage_label"],
     },
     invoices: {
       label: "Fatura",
       dateProperty: "hs_invoice_date",
       amountProperty: "hs_amount_billed_in_company_currency",
       requiredProperties: ["hs_number", "invoice_name", "hs_invoice_latest_company_name", "hs_invoice_date", "hs_amount_billed_in_company_currency", "country", "vendor_name", "revenue_type", "ereteam_domain", "hubspot_owner_id"],
-      coreFields: ["hs_number", "invoice_name", "hs_invoice_latest_company_name", "hs_invoice_date", "hs_amount_billed_in_company_currency", "country", "vendor_name", "revenue_type", "ereteam_domain", "_owner_name"],
+      coreFields: ["hs_number", "invoice_name", "_company_name", "hs_invoice_date", "hs_amount_billed_in_company_currency", "country", "vendor_name", "revenue_type", "ereteam_domain", "_owner_name"],
     },
     orders: {
       label: "Order",
       dateProperty: "hs_processed_date",
       amountProperty: "hs_homecurrency_amount",
       requiredProperties: ["hs_order_name", "hs_pipeline_stage", "hs_processed_date", "hs_homecurrency_amount", "country", "vendor_name", "revenue_type", "ereteam_domain", "hubspot_owner_id"],
-      coreFields: ["hs_order_name", "hs_processed_date", "hs_homecurrency_amount", "country", "vendor_name", "revenue_type", "ereteam_domain", "_owner_name", "_stage_label"],
+      coreFields: ["hs_order_name", "_company_name", "hs_processed_date", "hs_homecurrency_amount", "country", "vendor_name", "revenue_type", "ereteam_domain", "_owner_name", "_stage_label"],
     },
   },
   countries: [
@@ -87,12 +87,16 @@ export const SPARK_CHAT_KNOWLEDGE = {
   },
   vendors: {
     property: "vendor_name",
-    triggerPattern: /\b(vendor|satici|uretici)\b/,
+    triggerPattern: /\b(vendor\w*|partner\w*|satici\w*|uretici\w*)\b/,
     valuesByObject: {
       deals: ["Alterian", "Alteryx", "Apparo", "AtScale", "AWS", "DataRobot", "DigiEye", "Ereteam", "HCL", "IBM", "Insider", "Metrica", "Microsoft", "Qualytics", "Salesforce", "Snowflake", "Theobald"],
       invoices: ["Alteryx", "Apparo", "AWS", "Datarobot", "Digieye", "Ereteam", "HCL", "IBM", "LOCATIONBOX", "Macrosoft", "Metrica", "Qlik", "Qualytics", "Salesforce", "Snowflake", "TechData", "Theobald", "ZASLOGIC"],
       orders: ["Alteryx", "Apparo", "AWS", "DataRobot", "DigiEye", "Ereteam", "HCL", "IBM", "Qualitics", "Salesforce", "Snowflake", "Theobald"],
     },
+  },
+  companies: {
+    property: "_company_name",
+    triggerPattern: /\b(firma\w*|sirket\w*|musteri\w*|kestigimiz|kesilen|duzenledigimiz|ait)\b/,
   },
   domains: {
     property: "ereteam_domain",
@@ -135,7 +139,8 @@ export const SPARK_CHAT_KNOWLEDGE = {
     '"Aktif pipeline/açık fırsat" Closed Won ve Closed Lost olmayan deal kayıtlarıdır. Won/Lost sorularında closedate kullan.',
     "Fatura veya order için New Business sorusunda bağlı deal üzerinde dealtype eq newbusiness ve Closed Won filtresini associatedDealFilters ile uygula.",
     "country enumları Turkiye ve USA: Türkiye/Turkey -> Turkiye; Amerika/ABD/USA/United States -> USA.",
-    "Vendor sorularında tüm nesnelerde vendor_name kullan.",
+    'Müşteri/firma sorularında tüm nesnelerde sanal _company_name alanını kullan. "Migros\'a kestiğimiz faturalar" müşteri Migros filtresidir; vendor değildir.',
+    'vendor_name yalnızca kullanıcı açıkça vendor, satıcı, üretici veya partner dediğinde kullanılır. "Vendorı IBM" ve "partneri IBM" vendor filtresidir.',
     "Deal için yeni iş/New Business -> dealtype eq newbusiness; mevcut iş/Existing Business -> dealtype eq existingbusiness.",
     'Revenue Type tüm nesnelerde revenue_type alanıdır. "Ne kadarı lisanstı/lisans geliri" License + SNS; "ne kadarı servisti/servis/danışmanlık geliri" License ve SNS dışındaki tiplerdir.',
     "Ereteam uzmanlık alanı tüm nesnelerde ereteam_domain alanıdır: data/veri -> Data, Cloud & AI (DC&AI); finans -> Enterprise Planning (EP); marketing/pazarlama -> Intelligent MarTech (IM).",
@@ -149,6 +154,9 @@ export const SPARK_CHAT_KNOWLEDGE = {
     { question: "Geçen ay ne kadar fatura kestik?", object: "invoices", expectedProperty: "hs_invoice_date" },
     { question: "Türkiye faturaları ne kadar?", object: "invoices", expectedProperty: "country", expectedValues: ["Turkiye"] },
     { question: "IBM vendor aktif pipeline ne kadar?", object: "deals", expectedProperty: "vendor_name", expectedValues: ["IBM"] },
+    { question: "Partneri IBM olan faturalar ne kadar?", object: "invoices", expectedProperty: "vendor_name", expectedValues: ["IBM"] },
+    { question: "Migros'a kestiğimiz faturalar ne kadar?", object: "invoices", plannerFilters: [{ property: "vendor_name", operator: "eq", value: "Migros" }], expectedProperty: "_company_name", expectedValues: ["migros"], unexpectedProperty: "vendor_name" },
+    { question: "Migros firmasına ait siparişleri göster", object: "orders", expectedProperty: "_company_name", expectedValues: ["migros"], expectedResponseType: "records" },
     { question: "Mevcut iş deallarının toplamı", object: "deals", expectedProperty: "dealtype", expectedValues: ["existingbusiness"] },
     { question: "Ne kadarı lisanstı?", object: "invoices", expectedProperty: "revenue_type", expectedValues: ["License", "SNS"] },
     { question: "Ne kadarı servisti?", object: "invoices", expectedProperty: "revenue_type", excludedValues: ["License", "SNS"] },
@@ -199,6 +207,26 @@ export function sparkRevenueValues(intent: SparkRevenueIntent, object: SparkObje
 export function detectSparkVendor(text: string, object: SparkObjectType) {
   if (!SPARK_CHAT_KNOWLEDGE.vendors.triggerPattern.test(text)) return null;
   return SPARK_CHAT_KNOWLEDGE.vendors.valuesByObject[object].find((value) => text.includes(normalizeSparkChatText(value))) ?? null;
+}
+
+function cleanSparkCompanyName(value: string) {
+  return value
+    .replace(/^(?:(?:20\d{2}(?:\s+yilinda)?|bu\s+(?:ay|yil)|gecen\s+(?:ay|yil))\s+)*/, "")
+    .replace(/^(?:bana|toplam|tum)\s+/, "")
+    .trim();
+}
+
+export function detectSparkCompanyName(text: string) {
+  if (SPARK_CHAT_KNOWLEDGE.vendors.triggerPattern.test(text)) return null;
+  const normalized = normalizeSparkChatText(text);
+  const namedCompany = normalized.match(/(?:^|\b)([a-z0-9][a-z0-9&. -]{0,80}?)\s+(?:firmasina|sirketine|musterisine|firmasinin|sirketinin|musterinin)\b/)?.[1];
+  if (namedCompany) return cleanSparkCompanyName(namedCompany);
+  const billedPrefix = normalized.match(/^(.{1,100}?)\s+(?:kestigimiz|kesilen|duzenledigimiz|verdigimiz|sattigimiz)\b/)?.[1];
+  if (!billedPrefix) return null;
+  const words = cleanSparkCompanyName(billedPrefix).split(/\s+/).filter(Boolean);
+  const suffixWord = words.pop() ?? "";
+  if (!/^(?:a|e)$/.test(suffixWord)) words.push(suffixWord.replace(/(?:['’](?:ya|ye|a|e)|(?:ya|ye|na|ne|a|e))$/, ""));
+  return words.filter(Boolean).join(" ") || null;
 }
 
 export function detectSparkDomain(text: string) {

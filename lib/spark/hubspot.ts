@@ -68,12 +68,12 @@ export async function fetchHubSpotOwners() {
   return new Map(result.results.map((owner) => [owner.id, `${owner.firstName ?? ""} ${owner.lastName ?? ""}`.trim() || owner.email || owner.id]));
 }
 
-export async function fetchHubSpotAssociations(from: "invoices" | "orders", ids: string[]) {
+export async function fetchHubSpotAssociations(from: "deals" | "invoices" | "orders", ids: string[], to: "deals" | "companies" = "deals") {
   const map = new Map<string, string[]>();
   for (let index = 0; index < ids.length; index += 100) {
     const inputs = ids.slice(index, index + 100).map((id) => ({ id }));
     const result = await request<{ results: Array<{ from: { id: string }; to: Array<{ toObjectId: number }> }> }>(
-      `/crm/v4/associations/${from}/deals/batch/read`,
+      `/crm/v4/associations/${from}/${to}/batch/read`,
       { method: "POST", body: JSON.stringify({ inputs }) }
     );
     for (const row of result.results) map.set(row.from.id, row.to.map((item) => String(item.toObjectId)));
