@@ -90,6 +90,8 @@ explicit years. A HubSpot datetime at `21:00Z` on 31 December therefore belongs 
 are 1 January inclusive through 1 July exclusive; second-half/H2 ranges are 1 July
 inclusive through the following 1 January exclusive. Quarter ranges use calendar
 boundaries: Q1 January–March, Q2 April–June, Q3 July–September and Q4 October–December.
+Turkish half-year aliases also accept case suffixes and compact spelling, including
+`ilk yarısının`, `ilkyarısının`, `birinci yarı`, and the equivalent second-half forms.
 
 The former manually entered weekly focus/priorities section is intentionally
 excluded. The executive summary is generated only from current numerical

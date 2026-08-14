@@ -113,8 +113,8 @@ export const SPARK_CHAT_KNOWLEDGE = {
     { key: "q4", pattern: /\b(q4|fourth\s+quarter|(dorduncu|son|4\.?|4['’]?uncu)\s+ceyre(k(te)?|g(i|inde)))\b/, startMonth: 10, endExclusiveMonth: 13, label: "4. çeyrek" },
   ],
   halfYears: [
-    { key: "first", pattern: /\b(ilk\s+(yari(si|sinda)?|6\s+ay(i|inda)?)|h1|first\s+half)\b/, startMonth: 1, endExclusiveMonth: 7, label: "ilk yarı" },
-    { key: "second", pattern: /\b(ikinci\s+(yari(si|sinda)?|6\s+ay(i|inda)?)|h2|second\s+half)\b/, startMonth: 7, endExclusiveMonth: 13, label: "ikinci yarı" },
+    { key: "first", pattern: /\b((ilk|birinci)\s*(yari[a-z]*|6\s*ay[a-z]*)|h1|first\s+half)\b/, startMonth: 1, endExclusiveMonth: 7, label: "ilk yarı" },
+    { key: "second", pattern: /\b(ikinci\s*(yari[a-z]*|6\s*ay[a-z]*)|h2|second\s+half)\b/, startMonth: 7, endExclusiveMonth: 13, label: "ikinci yarı" },
   ],
   ownerMatching: {
     minimumSimilarity: 0.72,
@@ -157,6 +157,7 @@ export const SPARK_CHAT_KNOWLEDGE = {
     { question: "2026'da toplam açık orderı Türkiye ve ABD kırılımında iki rakam olarak göster", object: "orders", expectedProperty: "country", expectedValues: ["Turkiye", "USA"], expectedResponseType: "metric", expectedGroupBy: "country", expectedFilterProperties: ["country", "hs_processed_date", "_stage_label"] },
     { question: "Lisans ve servis gelirini iki rakam olarak karşılaştır", object: "invoices", expectedResponseType: "metric", expectedGroupBy: "_revenue_group" },
     { question: "2026 yılının ilk yarısında ABD için kesilen toplam servis faturası ne kadardır?", object: "invoices", expectedProperty: "revenue_type", excludedValues: ["License", "SNS"], expectedResponseType: "metric", expectedFilterProperties: ["hs_invoice_date", "country", "revenue_type"], expectedDateRange: ["2026-01-01", "2026-07-01"] },
+    { question: "2026 ilkyarısının toplam danışmanlık faturası ne kadar?", object: "invoices", expectedProperty: "revenue_type", excludedValues: ["License", "SNS"], expectedResponseType: "metric", expectedFilterProperties: ["hs_invoice_date", "revenue_type"], expectedDateRange: ["2026-01-01", "2026-07-01"] },
     { question: "2026 3. çeyreğinde açık order toplamı nedir?", object: "orders", expectedResponseType: "metric", expectedFilterProperties: ["hs_processed_date", "_stage_label"], expectedDateRange: ["2026-07-01", "2026-10-01"] },
   ],
 } as const;

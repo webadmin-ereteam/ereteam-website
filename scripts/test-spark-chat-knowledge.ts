@@ -20,6 +20,8 @@ assert.deepEqual(
   "Owner filtresi canlı tam ada çevrilmeli",
 );
 assert.deepEqual(resolveSparkDateRange("2026 yılının ilk yarısı", new Date("2026-08-10T12:00:00Z")), { start: "2026-01-01", endExclusive: "2026-07-01", label: "2026 ilk yarı" });
+assert.deepEqual(resolveSparkDateRange("2026 ilk yarısının toplamı", new Date("2026-08-14T12:00:00Z")), { start: "2026-01-01", endExclusive: "2026-07-01", label: "2026 ilk yarı" });
+assert.deepEqual(resolveSparkDateRange("2026 ilkyarısının toplamı", new Date("2026-08-14T12:00:00Z")), { start: "2026-01-01", endExclusive: "2026-07-01", label: "2026 ilk yarı" });
 assert.deepEqual(resolveSparkDateRange("H2 2026", new Date("2026-08-10T12:00:00Z")), { start: "2026-07-01", endExclusive: "2027-01-01", label: "2026 ikinci yarı" });
 assert.deepEqual(resolveSparkDateRange("2026 yılının ilk çeyreği", new Date("2026-08-10T12:00:00Z")), { start: "2026-01-01", endExclusive: "2026-04-01", label: "2026 1. çeyrek" });
 assert.deepEqual(resolveSparkDateRange("2026 Q4", new Date("2026-08-10T12:00:00Z")), { start: "2026-10-01", endExclusive: "2027-01-01", label: "2026 4. çeyrek" });
