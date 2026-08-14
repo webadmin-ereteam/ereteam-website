@@ -63,6 +63,10 @@ orders in the same requested period. The answer shows both components and their 
 `Beklenen fatura/gelir toplamı` uses the same period-based composite calculation:
 invoices already issued plus open orders. A request to list or show expected invoice
 details remains an open-order record query rather than a composite total.
+For the current month, issued invoices use the month-to-date cutoff while open orders
+use the full calendar month through month-end. Composite business intent is represented
+explicitly in the LLM query plan (`metricKind`), so natural paraphrases are not limited
+to a fixed phrase list; deterministic code validates and executes the calculation.
 `Weighted pipeline`, `ağırlıklı pipeline` and `weighted forecast` sum the live
 `hs_projected_amount_in_home_currency` field for active deals; the chatbot does not
 recalculate HubSpot's projected amount.

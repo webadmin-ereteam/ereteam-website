@@ -19,6 +19,7 @@ export const SPARK_CHAT_KNOWLEDGE = {
     guaranteedRevenue: {
       kind: "guaranteed_revenue",
       pattern: /\b(garanti|garantili)\s+gelir\w*\b/,
+      amountPattern: /\b(ne\s+kadar|toplam\w*|tutar\w*|ne\s+olacak)\b/,
       label: "Garanti gelir",
       definition: "Aynı dönemde faturalanan gelir ile açık order toplamı",
     },
@@ -164,6 +165,8 @@ export const SPARK_CHAT_KNOWLEDGE = {
     "Deal USD tutarı yalnızca amount_in_home_currency; deal tarih bağlamına göre closedate veya createdate.",
     "Genel amount, TL tutarı veya başka para birimi property'lerini kullanma.",
     '"Beklenen fatura/gelir toplamı" aynı dönem için kesilen faturalar ile açık order toplamıdır. Detay/liste sorusuysa yalnız açık order kayıtlarını getir.',
+    'İş metriğini kelime eşleşmesiyle sınırlama: Kullanıcının farklı bir ifadeyle gerçekleşen faturalar + açık order beklentisini sorması expected_revenue; garanti geliri sorması guaranteed_revenue; olasılık ağırlıklı aktif pipeline istemesi weighted_pipeline metricKind değeridir.',
+    'expected_revenue için bu ay faturaları bugüne kadar, açık orderları ay sonuna kadar hesapla. Diğer açık dönemlerde iki bileşene de sorulan takvim aralığını uygula.',
     '"Faturalanan/kesilen fatura" object invoices demektir.',
     '"Aktif pipeline/açık fırsat" Closed Won ve Closed Lost olmayan deal kayıtlarıdır. Won/Lost sorularında closedate kullan.',
     '"Garanti gelir" aynı dönem için faturalanan gelir ile açık order toplamıdır. Fatura tarafında hs_invoice_date + hs_amount_billed_in_company_currency; order tarafında hs_processed_date + hs_homecurrency_amount + Open stage kullan.',
@@ -186,6 +189,7 @@ export const SPARK_CHAT_KNOWLEDGE = {
   ],
   regressionCases: [
     { question: "Geçen ay ne kadar fatura kestik?", object: "invoices", expectedProperty: "hs_invoice_date" },
+    { question: "Bu ay gerçekleşen faturalarla açık siparişleri beraber düşünürsek toplam ne eder?", object: "invoices", plannerMetricKind: "expected_revenue", expectedMetricKind: "expected_revenue", expectedResponseType: "metric" },
     { question: "Bu ay beklenen faturaların detaylarını göster", object: "orders", expectedResponseType: "records", expectedFilterProperties: ["hs_processed_date", "_stage_label"] },
     { question: "Türkiye faturaları ne kadar?", object: "invoices", expectedProperty: "country", expectedValues: ["Turkiye"] },
     { question: "IBM vendor aktif pipeline ne kadar?", object: "deals", expectedProperty: "vendor_name", expectedValues: ["IBM"] },
@@ -239,28 +243,12 @@ export function sparkRevenueGroup(value?: string | null) {
   return sparkMultiValueTokens(value).some((item) => licenseValues.has(normalizeSparkChatText(item))) ? "license" : "service";
 }
 
-export function sparkGuaranteedRevenueSubquestions(question: string) {
-  const pattern = /garanti(?:li)?\s+gelir\w*/i;
-  return {
-    invoices: question.replace(pattern, "fatura tutarı"),
-    orders: question.replace(pattern, "açık order tutarı"),
-  };
-}
-
 export function detectSparkCompositeRevenueMetric(question: string): SparkCompositeRevenueMetricKind | null {
   const text = normalizeSparkChatText(question);
-  if (SPARK_CHAT_KNOWLEDGE.compositeMetrics.guaranteedRevenue.pattern.test(text)) return "guaranteed_revenue";
+  const guaranteed = SPARK_CHAT_KNOWLEDGE.compositeMetrics.guaranteedRevenue;
+  if (guaranteed.pattern.test(text) && guaranteed.amountPattern.test(text)) return "guaranteed_revenue";
   const expected = SPARK_CHAT_KNOWLEDGE.compositeMetrics.expectedRevenue;
   return expected.pattern.test(text) && expected.amountPattern.test(text) ? "expected_revenue" : null;
-}
-
-export function sparkCompositeRevenueSubquestions(question: string, kind: SparkCompositeRevenueMetricKind) {
-  if (kind === "guaranteed_revenue") return sparkGuaranteedRevenueSubquestions(question);
-  const pattern = /(?:beklenen\s+(?:fatura|gelir)\w*|(?:fatura|gelir)\w*\s+beklenti\w*|ne\s+kadar\s+(?:fatura|gelir)\w*\s+bekliyoruz)/i;
-  return {
-    invoices: question.replace(pattern, "fatura tutarı"),
-    orders: question.replace(pattern, "açık order tutarı"),
-  };
 }
 
 export function detectSparkRevenueIntent(text: string): SparkRevenueIntent | null {

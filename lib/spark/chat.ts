@@ -24,7 +24,6 @@ import {
   normalizeSparkChatText,
   sparkObjectTypes,
   sparkBreakdownValueLabel,
-  sparkCompositeRevenueSubquestions,
   sparkMultiValueTokens,
   sparkPlannerKnowledge,
   sparkRevenueGroup,
@@ -62,6 +61,7 @@ const planSchema = z.object({
   responseType: z.enum(["metric", "records", "text"]),
   title: z.string().max(100),
   object: z.enum(objectTypes),
+  metricKind: z.enum(["guaranteed_revenue", "expected_revenue", "weighted_pipeline"]).nullish().default(null),
   properties: z.array(z.string()).max(16).default([]),
   filters: z.array(filterSchema).max(10).default([]),
   associatedDealFilters: z.array(filterSchema).max(8).default([]),
@@ -146,6 +146,10 @@ export function resolveSparkDateRange(question: string, now = new Date()): DateR
   if (/\bgecen\s+ay\b/.test(text)) {
     return { start: isoDate(previousMonthYear, previousMonth, 1), endExclusive: isoDate(year, month, 1), label: "Geçen ay" };
   }
+  if (/\bbu\s+ay\s+(?:sonuna\s+kadar|tamami\w*|tum\w*)\b/.test(text)) {
+    const endExclusive = month === 12 ? isoDate(year + 1, 1, 1) : isoDate(year, month + 1, 1);
+    return { start: isoDate(year, month, 1), endExclusive, label: "Bu ay" };
+  }
   if (/\bbu\s+ay\b/.test(text)) {
     return { start: isoDate(year, month, 1), endExclusive: shiftCalendarDay(year, month, day, 1), label: "Bu ay" };
   }
@@ -194,7 +198,7 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
   const revenueIntent = detectSparkRevenueIntent(text);
   const domain = detectSparkDomain(text);
   const businessType = detectSparkDealBusinessType(text);
-  const weightedPipelineIntent = SPARK_CHAT_KNOWLEDGE.compositeMetrics.weightedPipeline.pattern.test(text);
+  const weightedPipelineIntent = SPARK_CHAT_KNOWLEDGE.compositeMetrics.weightedPipeline.pattern.test(text) || plan.metricKind === "weighted_pipeline";
   const stageIntent = /\b(pipeline|aktif|acik\s+(firsat|order)|open|won|lost|kazanilan|kaybedilen|beklenen\s+fatura)\b/.test(text);
   const possessiveOwner = text.match(/\b([a-z]{2,30})['’]?(?:nin|nun|in|un)\s+(?:deal\w*|firsat\w*|fatura\w*|order\w*|siparis\w*)\b/)?.[1];
   const companyIntent = SPARK_CHAT_KNOWLEDGE.companies.triggerPattern.test(text);
@@ -388,7 +392,11 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
     aggregate = null;
     groupBy = null;
   }
-  const guarded = { ...plan, object, responseType, aggregate, groupBy, filters: uniqueFilters(filters), associatedDealFilters };
+  const detectedCompositeMetric = detectSparkCompositeRevenueMetric(question);
+  const metricKind = responseType === "metric"
+    ? weightedPipelineIntent ? "weighted_pipeline" : detectedCompositeMetric ?? plan.metricKind
+    : null;
+  const guarded = { ...plan, object, responseType, aggregate, groupBy, metricKind, filters: uniqueFilters(filters), associatedDealFilters };
   if (weightedPipelineIntent) guarded.title = SPARK_CHAT_KNOWLEDGE.compositeMetrics.weightedPipeline.label;
   if (range && responseType === "metric") {
     const subject = object === "invoices" ? "fatura" : object === "orders" ? "order" : "deal";
@@ -426,8 +434,9 @@ async function createPlan(question: string, catalogs: Record<ObjectType, HubSpot
 KESİN VERİ SÖZLEŞMESİ - HER SORGUDAN ÖNCE UYGULA:
 ${sparkPlannerKnowledge}
 Yalnızca JSON döndür. Şema:
-{"responseType":"metric|records|text","title":"kısa Türkçe başlık","object":"deals|invoices|orders","properties":[],"filters":[{"property":"","operator":"eq|neq|contains|not_contains|gt|gte|lt|lte|between|in|is_empty|not_empty","value":"","values":[]}],"associatedDealFilters":[],"aggregate":{"operation":"sum|count|average","property":""},"groupBy":"property veya null","answer":"text cevabı veya null","sort":{"property":"","direction":"asc|desc"},"limit":50}.
+{"responseType":"metric|records|text","title":"kısa Türkçe başlık","object":"deals|invoices|orders","metricKind":"guaranteed_revenue|expected_revenue|weighted_pipeline veya null","properties":[],"filters":[{"property":"","operator":"eq|neq|contains|not_contains|gt|gte|lt|lte|between|in|is_empty|not_empty","value":"","values":[]}],"associatedDealFilters":[],"aggregate":{"operation":"sum|count|average","property":""},"groupBy":"property veya null","answer":"text cevabı veya null","sort":{"property":"","direction":"asc|desc"},"limit":50}.
 Tek bir sayı/değer soruluyorsa metric, kayıtlar veya detaylar isteniyorsa records seç. Açıklama, yorum, selamlama veya "ne demek/nasıl hesaplanır" sorularında text seç ve yalnızca doğrulanmış sözleşmeye dayanan kısa Türkçe answer yaz. Metric için aggregate zorunlu. Tutar toplamında sum kullan. Kırılım istenirse metric ve groupBy kullan.
+Birleşik veya hesaplanmış iş metriği sorularında nesne kelimesine takılmadan metricKind seç; object alanını bileşen sorgusu için invoices yap. metricKind yalnız gerçekten bu iş anlamı varsa dolu olmalı.
 Sanal alanlar: _stage_label, _owner_name ve lisans/servis kırılımı için _revenue_group kullanılabilir. Tarih değerlerini YYYY-MM-DD yaz. "Bu ay", "geçen ay", "bu yıl", "geçen yıl", "bugün", "dün" ve "son 7/30 gün" ifadelerinde tam takvim aralığını uygula; tarih filtresini asla atlama.
 Bağlı faturanın/orderın deal özellikleri sorulursa associatedDealFilters kullan. Örneğin New Business için dealtype eq newbusiness.
 Kayıt görünümünde gerekli isim, tarih, tutar, owner ve şirket alanlarını properties içine ekle. Verilen katalog dışında gerçek property uydurma.`,
@@ -451,6 +460,7 @@ Kayıt görünümünde gerekli isim, tarih, tutar, owner ve şirket alanlarını
     text: "text", answer: "text", explanation: "text", narrative: "text",
   };
   raw.responseType = responseAliases[String(raw.responseType ?? "").toLowerCase()] ?? raw.responseType;
+  raw.metricKind = raw.metricKind == null || raw.metricKind === "" ? null : String(raw.metricKind).toLowerCase();
   const normalizeFilters = (filters: unknown) => {
     if (filters == null) return [];
     if (!Array.isArray(filters)) throw new Error("Filtre listesi geçersiz");
@@ -678,7 +688,7 @@ function queryContext(plan: QueryPlan): SparkChatQueryContext {
     associatedDealFilters: plan.associatedDealFilters,
     aggregate: plan.aggregate,
     groupBy: plan.groupBy,
-    metricKind: plan.aggregate?.property === SPARK_CHAT_KNOWLEDGE.compositeMetrics.weightedPipeline.property ? "weighted_pipeline" : undefined,
+    metricKind: plan.metricKind ?? (plan.aggregate?.property === SPARK_CHAT_KNOWLEDGE.compositeMetrics.weightedPipeline.property ? "weighted_pipeline" : undefined),
   };
 }
 
@@ -731,40 +741,29 @@ function aggregateRows(rows: FlatRecord[], operation: "sum" | "count" | "average
 }
 
 export async function executeSparkChatQuery(question: string, apiKey: string, context: SparkChatContextItem[] = []): Promise<SparkChatExecutionResult> {
-  const compositeMetricKind = detectSparkCompositeRevenueMetric(question);
-  if (compositeMetricKind) {
-    const metric = compositeMetricKind === "guaranteed_revenue"
-      ? SPARK_CHAT_KNOWLEDGE.compositeMetrics.guaranteedRevenue
-      : SPARK_CHAT_KNOWLEDGE.compositeMetrics.expectedRevenue;
-    const subquestions = sparkCompositeRevenueSubquestions(question, compositeMetricKind);
-    const invoiceQuestion = subquestions.invoices;
-    const orderQuestion = subquestions.orders;
-    const invoiceResult = await executeSparkChatQuery(invoiceQuestion, apiKey, []);
-    const orderResult = await executeSparkChatQuery(orderQuestion, apiKey, []);
-    if (invoiceResult.kind !== "metric" || orderResult.kind !== "metric") throw new SparkChatStageError("composite revenue", `${metric.label} bileşenleri metric üretmedi`);
-    const value = invoiceResult.value + orderResult.value;
-    const queriedAt = new Date().toISOString();
-    const period = invoiceResult.interpretation.split(" · ")[1] ?? "Aynı dönem";
-    return {
-      kind: "breakdown" as const,
-      title: metric.label,
-      groupLabel: "Gelir bileşeni",
-      items: [
-        { key: "invoiced", label: "Faturalanan", value: invoiceResult.value, formattedValue: formatMetric(invoiceResult.value, amountProperties.invoices), recordCount: invoiceResult.recordCount },
-        { key: "orders", label: "Açık order", value: orderResult.value, formattedValue: formatMetric(orderResult.value, amountProperties.orders), recordCount: orderResult.recordCount },
-      ],
-      summary: `${metric.label} ${formatMetric(value, amountProperties.invoices)}: faturalanan ${invoiceResult.formattedValue} + açık order ${orderResult.formattedValue}.`,
-      recordCount: invoiceResult.recordCount + orderResult.recordCount,
-      interpretation: `Fatura + açık order · ${period} · Toplam USD tutarı`,
-      queryContext: { ...invoiceResult.queryContext, metricKind: compositeMetricKind },
-      queriedAt,
-      source: "live_hubspot" as const,
-    };
-  }
+  const detectedCompositeMetric = detectSparkCompositeRevenueMetric(question);
   const [dealCatalog, invoiceCatalog, orderCatalog] = await stage("catalog", () => Promise.all([
     fetchHubSpotPropertyCatalog("deals"), fetchHubSpotPropertyCatalog("invoices"), fetchHubSpotPropertyCatalog("orders"),
   ]));
   const catalogs: Record<ObjectType, HubSpotProperty[]> = { deals: dealCatalog, invoices: invoiceCatalog, orders: orderCatalog };
+  if (detectedCompositeMetric) {
+    const object = explicitObject(question) ?? "invoices";
+    const basePlan = applySparkQueryGuardrails(planSchema.parse({
+      responseType: "metric",
+      title: detectedCompositeMetric === "guaranteed_revenue" ? "Garanti gelir" : "Beklenen gelir",
+      object,
+      metricKind: detectedCompositeMetric,
+      properties: [],
+      filters: [],
+      associatedDealFilters: [],
+      aggregate: { operation: "sum", property: amountProperties[object] },
+      groupBy: null,
+      answer: null,
+      sort: null,
+      limit: 50,
+    }), question, new Date(), context);
+    return executeCompositeRevenueFromPlan(question, detectedCompositeMetric, basePlan, catalogs);
+  }
   const plan = await stage("planner", async () => {
     const models = ["openai/gpt-oss-20b", "llama-3.1-8b-instant", "openai/gpt-oss-120b"];
     let lastError: unknown;
@@ -774,6 +773,9 @@ export async function executeSparkChatQuery(question: string, apiKey: string, co
     }
     throw lastError;
   });
+  if (plan.metricKind === "guaranteed_revenue" || plan.metricKind === "expected_revenue") {
+    return executeCompositeRevenueFromPlan(question, plan.metricKind, plan, catalogs);
+  }
   if (plan.responseType === "text") {
     return {
       kind: "text" as const,
@@ -783,6 +785,86 @@ export async function executeSparkChatQuery(question: string, apiKey: string, co
       source: "planner_knowledge" as const,
     };
   }
+  return executePlannedSparkQuery(plan, catalogs);
+}
+
+async function executeCompositeRevenueFromPlan(
+  question: string,
+  compositeMetricKind: "guaranteed_revenue" | "expected_revenue",
+  plan: QueryPlan,
+  catalogs: Record<ObjectType, HubSpotProperty[]>,
+): Promise<SparkChatExecutionResult> {
+  const commonFilters = plan.filters.filter((filter) => SPARK_CHAT_KNOWLEDGE.filterContracts.common.includes(filter.property as never));
+  const sourceDateFilters = plan.filters.filter((filter) => Object.values(dateProperties).includes(filter.property));
+  const componentPlan = (object: "invoices" | "orders"): QueryPlan => {
+    const dateProperty = dateProperties[object];
+    let filters: QueryPlan["filters"] = [
+      ...commonFilters,
+      ...sourceDateFilters.map((filter) => ({ ...filter, property: dateProperty })),
+    ];
+    if (object === "orders") {
+      if (compositeMetricKind === "expected_revenue" && /\bbu\s+ay\b/.test(semanticText(question))) {
+        const fullMonth = resolveSparkDateRange("bu ay sonuna kadar");
+        filters = filters.filter((filter) => filter.property !== dateProperty);
+        if (fullMonth) filters.push(
+          { property: dateProperty, operator: "gte", value: fullMonth.start },
+          { property: dateProperty, operator: "lt", value: fullMonth.endExclusive },
+        );
+      }
+      filters.push({ property: "_stage_label", operator: "eq", value: "Open" });
+    }
+    return planSchema.parse({
+      ...plan,
+      object,
+      metricKind: null,
+      responseType: "metric",
+      title: object === "invoices" ? "Faturalanan" : "Açık order",
+      properties: [],
+      filters: uniqueFilters(filters),
+      aggregate: { operation: "sum", property: amountProperties[object] },
+      groupBy: null,
+      answer: null,
+      sort: null,
+    });
+  };
+  const invoiceResult = await executePlannedSparkQuery(componentPlan("invoices"), catalogs);
+  const orderResult = await executePlannedSparkQuery(componentPlan("orders"), catalogs);
+  if (invoiceResult.kind !== "metric" || orderResult.kind !== "metric") throw new SparkChatStageError("composite revenue", "Birleşik metrik bileşenleri metric üretmedi");
+  return combineCompositeRevenueResults(compositeMetricKind, invoiceResult, orderResult);
+}
+
+function combineCompositeRevenueResults(
+  compositeMetricKind: "guaranteed_revenue" | "expected_revenue",
+  invoiceResult: Extract<SparkChatExecutionResult, { kind: "metric" }>,
+  orderResult: Extract<SparkChatExecutionResult, { kind: "metric" }>,
+): SparkChatExecutionResult {
+  const metric = compositeMetricKind === "guaranteed_revenue"
+    ? SPARK_CHAT_KNOWLEDGE.compositeMetrics.guaranteedRevenue
+    : SPARK_CHAT_KNOWLEDGE.compositeMetrics.expectedRevenue;
+  const value = invoiceResult.value + orderResult.value;
+  const invoicePeriod = invoiceResult.interpretation.split(" · ")[1] ?? "Aynı dönem";
+  const orderPeriod = orderResult.interpretation.split(" · ")[1] ?? "Aynı dönem";
+  const period = invoicePeriod === orderPeriod
+    ? invoicePeriod
+    : `Faturalar: ${invoicePeriod} · Açık order: ${orderPeriod}`;
+  return {
+    kind: "breakdown" as const,
+    title: metric.label,
+    groupLabel: "Gelir bileşeni",
+    items: [
+      { key: "invoiced", label: "Faturalanan", value: invoiceResult.value, formattedValue: formatMetric(invoiceResult.value, amountProperties.invoices), recordCount: invoiceResult.recordCount },
+      { key: "orders", label: "Açık order", value: orderResult.value, formattedValue: formatMetric(orderResult.value, amountProperties.orders), recordCount: orderResult.recordCount },
+    ],
+    summary: `${metric.label} ${formatMetric(value, amountProperties.invoices)}: faturalanan ${invoiceResult.formattedValue} + açık order ${orderResult.formattedValue}.`,
+    recordCount: invoiceResult.recordCount + orderResult.recordCount,
+    interpretation: `${period} · Toplam USD tutarı`,
+    queryContext: { ...invoiceResult.queryContext, metricKind: compositeMetricKind },
+    queriedAt: new Date().toISOString(),
+    source: "live_hubspot" as const,
+  };
+}
+
+async function executePlannedSparkQuery(plan: QueryPlan, catalogs: Record<ObjectType, HubSpotProperty[]>): Promise<SparkChatExecutionResult> {
   const valid = new Set(catalogs[plan.object].map((property) => property.name));
   const filterProperties = [...plan.filters, ...plan.associatedDealFilters].map((filter) => filter.property).filter((property) => !property.startsWith("_"));
   const selected = Array.from(new Set([...requiredProperties[plan.object], ...plan.properties, ...filterProperties, plan.aggregate?.property, plan.groupBy, plan.sort?.property]
