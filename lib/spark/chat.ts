@@ -9,7 +9,7 @@ import {
   type HubSpotObject,
   type HubSpotProperty,
 } from "./hubspot";
-import { generateChatResponse } from "@/lib/services/llmService";
+import { generateChatResponse, LlmApiError } from "@/lib/services/llmService";
 import {
   SPARK_CHAT_KNOWLEDGE,
   detectSparkCountries,
@@ -35,9 +35,12 @@ type ObjectType = SparkObjectType;
 type FlatRecord = Record<string, string> & { _id: string; _url: string; _object: ObjectType };
 
 export class SparkChatStageError extends Error {
+  public readonly retryAfterSeconds?: number;
+
   constructor(public readonly stage: string, cause: unknown) {
     super(cause instanceof Error ? cause.message : String(cause));
     this.name = "SparkChatStageError";
+    this.retryAfterSeconds = cause instanceof LlmApiError ? cause.retryAfterSeconds : undefined;
   }
 }
 
@@ -71,6 +74,62 @@ const planSchema = z.object({
   sort: z.object({ property: z.string(), direction: z.enum(["asc", "desc"]) }).nullish(),
   limit: z.number().int().min(1).max(100).default(50),
 });
+const strictFilterJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    property: { type: "string" },
+    operator: { type: "string", enum: ["eq", "neq", "contains", "not_contains", "gt", "gte", "lt", "lte", "between", "in", "is_empty", "not_empty"] },
+    value: { type: ["string", "null"] },
+    values: { type: ["array", "null"], items: { type: "string" } },
+  },
+  required: ["property", "operator", "value", "values"],
+} as const;
+export const sparkQueryPlanJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    responseType: { type: "string", enum: ["metric", "records", "text"] },
+    title: { type: "string" },
+    object: { type: "string", enum: ["deals", "invoices", "orders"] },
+    metricKind: { type: ["string", "null"], enum: ["guaranteed_revenue", "expected_revenue", "weighted_pipeline", null] },
+    properties: { type: "array", items: { type: "string" } },
+    filters: { type: "array", items: strictFilterJsonSchema },
+    associatedDealFilters: { type: "array", items: strictFilterJsonSchema },
+    aggregate: {
+      anyOf: [
+        {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            operation: { type: "string", enum: ["sum", "count", "average"] },
+            property: { type: ["string", "null"] },
+          },
+          required: ["operation", "property"],
+        },
+        { type: "null" },
+      ],
+    },
+    groupBy: { type: ["string", "null"] },
+    answer: { type: ["string", "null"] },
+    sort: {
+      anyOf: [
+        {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            property: { type: "string" },
+            direction: { type: "string", enum: ["asc", "desc"] },
+          },
+          required: ["property", "direction"],
+        },
+        { type: "null" },
+      ],
+    },
+    limit: { type: "integer", minimum: 1, maximum: 100 },
+  },
+  required: ["responseType", "title", "object", "metricKind", "properties", "filters", "associatedDealFilters", "aggregate", "groupBy", "answer", "sort", "limit"],
+} as const;
 const requiredProperties = Object.fromEntries(objectTypes.map((type) => [type, SPARK_CHAT_KNOWLEDGE.objects[type].requiredProperties])) as unknown as Record<ObjectType, readonly string[]>;
 const objectNames = Object.fromEntries(objectTypes.map((type) => [type, SPARK_CHAT_KNOWLEDGE.objects[type].label])) as unknown as Record<ObjectType, string>;
 const dateProperties = Object.fromEntries(objectTypes.map((type) => [type, SPARK_CHAT_KNOWLEDGE.objects[type].dateProperty])) as unknown as Record<ObjectType, string>;
@@ -393,8 +452,13 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
     groupBy = null;
   }
   const detectedCompositeMetric = detectSparkCompositeRevenueMetric(question);
+  const namesInvoiceAndOrder = /\b(fatura|faturalan|invoice)/.test(text) && /\b(order|siparis)/.test(text);
+  const plannerCompositeMetric = namesInvoiceAndOrder
+    && (plan.metricKind === "guaranteed_revenue" || plan.metricKind === "expected_revenue")
+    ? plan.metricKind
+    : null;
   const metricKind = responseType === "metric"
-    ? weightedPipelineIntent ? "weighted_pipeline" : detectedCompositeMetric ?? plan.metricKind
+    ? weightedPipelineIntent ? "weighted_pipeline" : detectedCompositeMetric ?? plannerCompositeMetric
     : null;
   const guarded = { ...plan, object, responseType, aggregate, groupBy, metricKind, filters: uniqueFilters(filters), associatedDealFilters };
   if (weightedPipelineIntent) guarded.title = SPARK_CHAT_KNOWLEDGE.compositeMetrics.weightedPipeline.label;
@@ -429,22 +493,28 @@ function catalogText(catalogs: Record<ObjectType, HubSpotProperty[]>, question: 
 
 async function createPlan(question: string, catalogs: Record<ObjectType, HubSpotProperty[]>, apiKey: string, context: SparkChatContextItem[], model: string, retry = false) {
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Istanbul", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-  const response = await generateChatResponse(
-    `Sen HubSpot için salt-okunur JSON sorgu planlayıcısısın. Bugün ${today}, saat dilimi Europe/Istanbul.
+  let response: string;
+  try {
+    response = await generateChatResponse(
+      `Sen HubSpot için salt-okunur JSON sorgu planlayıcısısın. Bugün ${today}, saat dilimi Europe/Istanbul.
 KESİN VERİ SÖZLEŞMESİ - HER SORGUDAN ÖNCE UYGULA:
 ${sparkPlannerKnowledge}
-Yalnızca JSON döndür. Şema:
-{"responseType":"metric|records|text","title":"kısa Türkçe başlık","object":"deals|invoices|orders","metricKind":"guaranteed_revenue|expected_revenue|weighted_pipeline veya null","properties":[],"filters":[{"property":"","operator":"eq|neq|contains|not_contains|gt|gte|lt|lte|between|in|is_empty|not_empty","value":"","values":[]}],"associatedDealFilters":[],"aggregate":{"operation":"sum|count|average","property":""},"groupBy":"property veya null","answer":"text cevabı veya null","sort":{"property":"","direction":"asc|desc"},"limit":50}.
+Yalnızca API tarafından zorunlu tutulan sorgu planını döndür. Kullanılmayan tekil alanları null, listeleri [] yap.
+Her yanıtta şu anahtarların tamamını yaz: responseType, title, object, metricKind, properties, filters, associatedDealFilters, aggregate, groupBy, answer, sort, limit.
 Tek bir sayı/değer soruluyorsa metric, kayıtlar veya detaylar isteniyorsa records seç. Açıklama, yorum, selamlama veya "ne demek/nasıl hesaplanır" sorularında text seç ve yalnızca doğrulanmış sözleşmeye dayanan kısa Türkçe answer yaz. Metric için aggregate zorunlu. Tutar toplamında sum kullan. Kırılım istenirse metric ve groupBy kullan.
 Birleşik veya hesaplanmış iş metriği sorularında nesne kelimesine takılmadan metricKind seç; object alanını bileşen sorgusu için invoices yap. metricKind yalnız gerçekten bu iş anlamı varsa dolu olmalı.
 Sanal alanlar: _stage_label, _owner_name ve lisans/servis kırılımı için _revenue_group kullanılabilir. Tarih değerlerini YYYY-MM-DD yaz. "Bu ay", "geçen ay", "bu yıl", "geçen yıl", "bugün", "dün" ve "son 7/30 gün" ifadelerinde tam takvim aralığını uygula; tarih filtresini asla atlama.
 Bağlı faturanın/orderın deal özellikleri sorulursa associatedDealFilters kullan. Örneğin New Business için dealtype eq newbusiness.
 Kayıt görünümünde gerekli isim, tarih, tutar, owner ve şirket alanlarını properties içine ekle. Verilen katalog dışında gerçek property uydurma.`,
-    [{ role: "user", content: `${context.length ? `SON 5 KONUŞMA ÖZETİ VE DOĞRULANMIŞ SORGU BAĞLAMI (detay kayıt içermez):\n${JSON.stringify(context)}\n\nTakip sorusunda önceki queryContext kapsamını koru; yalnızca kullanıcı yeni nesne, dönem veya filtre belirttiyse ilgili kısmı değiştir.\n\n` : ""}SORU:\n${question}\n\nİLGİLİ PROPERTY KATALOĞU:\n${catalogText(catalogs, question, context)}${retry ? "\n\nÖnceki plan şemaya uymadı. Bu kez hiçbir istenen filtreyi atlamadan tüm zorunlu alanlarla geçerli, sade JSON üret." : ""}` }],
-    apiKey,
-    "",
-    { model, temperature: 0, maxTokens: 900, jsonMode: true },
-  );
+      [{ role: "user", content: `${context.length ? `SON 5 KONUŞMA ÖZETİ VE DOĞRULANMIŞ SORGU BAĞLAMI (detay kayıt içermez):\n${JSON.stringify(context)}\n\nTakip sorusunda önceki queryContext kapsamını koru; yalnızca kullanıcı yeni nesne, dönem veya filtre belirttiyse ilgili kısmı değiştir.\n\n` : ""}SORU:\n${question}\n\nİLGİLİ PROPERTY KATALOĞU:\n${catalogText(catalogs, question, context)}${retry ? "\n\nÖnceki plan şemaya uymadı. Bu kez hiçbir istenen filtreyi atlamadan tüm zorunlu alanlarla geçerli, sade JSON üret." : ""}` }],
+      apiKey,
+      "",
+      { model, temperature: 0, maxTokens: 1_400, reasoningEffort: "low", jsonSchema: { name: "spark_query_plan", schema: sparkQueryPlanJsonSchema as unknown as Record<string, unknown> } },
+    );
+  } catch (error) {
+    if (!(error instanceof LlmApiError) || error.code !== "json_validate_failed" || !error.failedGeneration) throw error;
+    response = error.failedGeneration;
+  }
   const raw = parseJson(response);
   if (process.env.SPARK_CHAT_DEBUG === "1") console.log("Spark query plan:", JSON.stringify(raw));
   const objectAliases: Record<string, ObjectType> = { deal: "deals", deals: "deals", invoice: "invoices", invoices: "invoices", order: "orders", orders: "orders" };
@@ -765,7 +835,7 @@ export async function executeSparkChatQuery(question: string, apiKey: string, co
     return executeCompositeRevenueFromPlan(question, detectedCompositeMetric, basePlan, catalogs);
   }
   const plan = await stage("planner", async () => {
-    const models = ["openai/gpt-oss-20b", "llama-3.1-8b-instant", "openai/gpt-oss-120b"];
+    const models = ["openai/gpt-oss-120b", "openai/gpt-oss-20b"];
     let lastError: unknown;
     for (let index = 0; index < models.length; index += 1) {
       try { return await createPlan(question, catalogs, apiKey, context, models[index], index > 0); }

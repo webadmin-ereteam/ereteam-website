@@ -40,13 +40,24 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("Spark chat error:", message);
-    const publicError = error instanceof SparkChatStageError && error.stage === "owner"
+    const aiRateLimited = error instanceof SparkChatStageError
+      && error.stage === "planner"
+      && /rate.?limit|too many requests|429/i.test(message);
+    const retryAfterSeconds = error instanceof SparkChatStageError && error.retryAfterSeconds
+      ? Math.max(1, Math.ceil(error.retryAfterSeconds))
+      : null;
+    const publicError = aiRateLimited
+      ? `AI sorgu limiti şu anda dolu. ${retryAfterSeconds ? `${retryAfterSeconds} saniye` : "Kısa bir süre"} sonra tekrar deneyin; devam ederse soruyu tek dönem ve tek metrik olarak kısaltın.`
+      : error instanceof SparkChatStageError && error.stage === "owner"
       ? "Owner adını canlı HubSpot kullanıcılarında güvenle eşleştiremedim. Lütfen ad-soyadı biraz daha açık yazın."
       : error instanceof SparkChatStageError && error.stage === "planner"
       ? "Soruyu anlayamadım. Dönem, kayıt türü veya istediğiniz değeri biraz daha açık yazar mısınız?"
       : error instanceof SparkChatStageError
       ? `Canlı sorgu ${error.stage} aşamasında tamamlanamadı.`
       : error instanceof z.ZodError || error instanceof SyntaxError ? "Canlı sorgu planı oluşturulamadı." : "Asistan şu anda canlı veriyi sorgulayamıyor.";
-    return NextResponse.json({ error: publicError }, { status: 500 });
+    return NextResponse.json(
+      { error: publicError },
+      { status: aiRateLimited ? 429 : 500, headers: retryAfterSeconds ? { "Retry-After": String(retryAfterSeconds) } : undefined },
+    );
   }
 }

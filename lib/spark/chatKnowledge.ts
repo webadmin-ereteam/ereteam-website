@@ -189,6 +189,7 @@ export const SPARK_CHAT_KNOWLEDGE = {
   ],
   regressionCases: [
     { question: "Geçen ay ne kadar fatura kestik?", object: "invoices", expectedProperty: "hs_invoice_date" },
+    { question: "Geçen ay ABD servis faturalarının toplamı neydi?", object: "invoices", plannerMetricKind: "expected_revenue", expectedMetricKind: null, expectedProperty: "revenue_type", expectedValues: ["Cloud", "Outsource", "Project", "Training", "Maintenance & Support", "Eski_Backlog"] },
     { question: "Bu ay gerçekleşen faturalarla açık siparişleri beraber düşünürsek toplam ne eder?", object: "invoices", plannerMetricKind: "expected_revenue", expectedMetricKind: "expected_revenue", expectedResponseType: "metric" },
     { question: "Bu ay beklenen faturaların detaylarını göster", object: "orders", expectedResponseType: "records", expectedFilterProperties: ["hs_processed_date", "_stage_label"] },
     { question: "Türkiye faturaları ne kadar?", object: "invoices", expectedProperty: "country", expectedValues: ["Turkiye"] },

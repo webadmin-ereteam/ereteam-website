@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { applySparkQueryGuardrails, resolveSparkDateRange, resolveSparkOwnerFilter, resolveSparkOwnerName, sparkChatComparableValue, sparkChatMatchesFilter } from "../lib/spark/chat";
+import { applySparkQueryGuardrails, resolveSparkDateRange, resolveSparkOwnerFilter, resolveSparkOwnerName, sparkChatComparableValue, sparkChatMatchesFilter, sparkQueryPlanJsonSchema } from "../lib/spark/chat";
 import { SPARK_CHAT_KNOWLEDGE, detectSparkCompanyName, detectSparkCompositeRevenueMetric, sparkRevenueGroup, type SparkObjectType } from "../lib/spark/chatKnowledge";
 
 const amountProperties: Record<SparkObjectType, string> = {
@@ -7,6 +7,11 @@ const amountProperties: Record<SparkObjectType, string> = {
   invoices: "hs_amount_billed_in_company_currency",
   orders: "hs_homecurrency_amount",
 };
+
+assert.equal(sparkQueryPlanJsonSchema.additionalProperties, false);
+assert.deepEqual(sparkQueryPlanJsonSchema.required, Object.keys(sparkQueryPlanJsonSchema.properties));
+assert.equal(sparkQueryPlanJsonSchema.properties.filters.items.additionalProperties, false);
+assert.deepEqual(sparkQueryPlanJsonSchema.properties.filters.items.required, ["property", "operator", "value", "values"]);
 
 assert.equal(sparkChatComparableValue("2027-01-01"), Date.parse("2026-12-31T21:00:00Z"), "İstanbul takvim günü UTC sınırı yanlış");
 assert.ok(sparkChatComparableValue("2026-12-31T21:00:00Z") >= sparkChatComparableValue("2027-01-01"), "1 Ocak İstanbul kaydı 2026 aralığına girmemeli");

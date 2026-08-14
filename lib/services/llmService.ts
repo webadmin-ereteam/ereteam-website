@@ -3,14 +3,32 @@ export interface ChatMessage {
   content: string;
 }
 
+type JsonSchemaOption = {
+  name: string;
+  schema: Record<string, unknown>;
+};
+
+export class LlmApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly code?: string,
+    public readonly retryAfterSeconds?: number,
+    public readonly failedGeneration?: string,
+  ) {
+    super(message);
+    this.name = "LlmApiError";
+  }
+}
+
 export async function generateChatResponse(
   systemPrompt: string,
   messages: ChatMessage[],
   apiKey: string,
   pageContext: string = "",
-  options: { model?: string; temperature?: number; maxTokens?: number; jsonMode?: boolean } = {}
+  options: { model?: string; temperature?: number; maxTokens?: number; jsonMode?: boolean; jsonSchema?: JsonSchemaOption; reasoningEffort?: "low" | "medium" | "high" } = {}
 ): Promise<string> {
-  const { model = "llama-3.1-8b-instant", temperature = 0.7, maxTokens = 600, jsonMode = false } = options;
+  const { model = "llama-3.1-8b-instant", temperature = 0.7, maxTokens = 600, jsonMode = false, jsonSchema, reasoningEffort } = options;
 
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -26,7 +44,13 @@ export async function generateChatResponse(
       ],
       max_tokens: maxTokens,
       temperature,
-      ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
+      ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
+      ...(jsonSchema ? {
+        response_format: {
+          type: "json_schema",
+          json_schema: { name: jsonSchema.name, strict: true, schema: jsonSchema.schema },
+        },
+      } : jsonMode ? { response_format: { type: "json_object" } } : {}),
     }),
   });
 
@@ -34,7 +58,14 @@ export async function generateChatResponse(
 
   if (!res.ok) {
     console.error("LLM API error:", JSON.stringify(data));
-    throw new Error(data.error?.message || "LLM error");
+    const retryAfter = Number(res.headers.get("retry-after"));
+    throw new LlmApiError(
+      data.error?.message || "LLM error",
+      res.status,
+      data.error?.code,
+      Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined,
+      typeof data.error?.failed_generation === "string" ? data.error.failed_generation : undefined,
+    );
   }
 
   return data.choices?.[0]?.message?.content || "";

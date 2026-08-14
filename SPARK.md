@@ -42,9 +42,12 @@ single-value questions return a metric card, while record/detail questions retur
 a table with HubSpot links. HubSpot result rows are not sent back to Groq for answer
 generation. The last five questions and compact result metadata are sent as
 conversation context so follow-up questions work; detailed record rows are excluded.
-The planner uses Groq production models with automatic fallback (`gpt-oss-20b`,
-Llama 8B, then `gpt-oss-120b`) when a model is rate-limited or returns an invalid
-plan, and receives only question-relevant property catalog entries. The assistant is
+The planner uses Groq strict JSON Schema output with automatic fallback
+(`gpt-oss-120b`, then `gpt-oss-20b`) when a model is rate-limited or unavailable,
+and receives only question-relevant property catalog entries. Strict constrained
+output prevents malformed or schema-incomplete plans. If both free-tier models are
+rate-limited, the API returns an explicit `429` response telling the user to wait and
+retry with one period and one metric. The assistant is
 read-only, never exposes tokens to the browser, rate
 limits requests, and only works with a valid `spark_session`. Calculations use the
 approved USD fields. Common Turkish periods (`bu/geçen ay`, `bu/geçen yıl`,
