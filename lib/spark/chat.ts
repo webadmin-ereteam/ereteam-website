@@ -699,10 +699,19 @@ function interpretation(plan: QueryPlan, catalog: HubSpotProperty[]) {
   const measure = plan.responseType === "records" ? "Kayıt listesi"
     : plan.aggregate?.operation === "count" ? "Kayıt sayısı"
     : plan.aggregate?.operation === "average" ? "Ortalama USD tutarı" : "Toplam USD tutarı";
+  const filterValue = (filter: QueryPlan["filters"][number]) => {
+    const value = filter.value ?? filter.values?.join(", ") ?? "";
+    if (filter.operator === "neq") return `${value} değil`;
+    if (filter.operator === "not_contains") return `${value} hariç`;
+    if (filter.operator === "contains") return `${value} içerir`;
+    if (filter.operator === "is_empty") return "boş";
+    if (filter.operator === "not_empty") return "dolu";
+    return value || filter.operator;
+  };
   const otherFilters = plan.filters
     .filter((filter) => filter.property !== dateProperty)
     .slice(0, 3)
-    .map((filter) => `${labels.get(filter.property) ?? filter.property}: ${filter.value ?? filter.values?.join(", ") ?? filter.operator}`);
+    .map((filter) => `${labels.get(filter.property) ?? filter.property}: ${filterValue(filter)}`);
   if (plan.associatedDealFilters.length) otherFilters.push("Bağlı deal filtresi uygulandı");
   if (plan.groupBy) otherFilters.push(`Kırılım: ${labels.get(plan.groupBy) ?? plan.groupBy}`);
   return [objectNames[plan.object], period, measure, ...otherFilters].join(" · ");
