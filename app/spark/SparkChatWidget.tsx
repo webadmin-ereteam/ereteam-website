@@ -12,6 +12,7 @@ type QueryContext = {
   associatedDealFilters: Array<{ property: string; operator: string; value?: string | null; values?: string[] | null }>;
   aggregate?: { operation: "sum" | "count" | "average"; property?: string | null } | null;
   groupBy?: string | null;
+  metricKind?: "guaranteed_revenue" | "weighted_pipeline";
 };
 type QueryResult =
   | { kind: "metric"; title: string; formattedValue: string; recordCount: number; interpretation: string; queryContext: QueryContext; queriedAt: string }

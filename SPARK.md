@@ -58,6 +58,11 @@ of its object, period, measure and filters. Follow-ups also carry the previous v
 query context—not record data—so short period changes and `bunların toplamı?` retain
 the intended scope. Active pipeline, Won/Lost, open expected orders
 and New Business-linked records use the same deterministic definitions as the dashboard.
+`Garanti gelir` is a deterministic composite metric: invoiced revenue plus open
+orders in the same requested period. The answer shows both components and their total.
+`Weighted pipeline`, `ağırlıklı pipeline` and `weighted forecast` sum the live
+`hs_projected_amount_in_home_currency` field for active deals; the chatbot does not
+recalculate HubSpot's projected amount.
 Country intent uses the live `country` enum on deals, invoices and orders:
 `Türkiye`/`Turkey` map to `Turkiye`; `Amerika`/`ABD`/`USA`/`United States` map to
 `USA`. Country-only follow-ups retain the prior validated object and scope.
@@ -134,6 +139,8 @@ header. `SPARK_CRON_SECRET` is legacy and can be removed.
 - Invoice amount/date: `hs_amount_billed_in_company_currency`, `hs_invoice_date`
 - Order amount/date: `hs_homecurrency_amount`, `hs_processed_date` (internal only)
 - Deal amount: `amount_in_home_currency`
+- Guaranteed revenue: period invoices + period open orders
+- Weighted pipeline: sum `hs_projected_amount_in_home_currency` over active deals
 - Country: `country` with enum values `Turkiye` and `USA` on deals, invoices and orders
 - Vendor: `vendor_name` on deals, invoices and orders
 - Customer/company: virtual `_company_name`; direct HubSpot company association first, then invoice latest company name, deal name, or an order's associated deal names

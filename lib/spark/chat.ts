@@ -23,6 +23,7 @@ import {
   normalizeSparkChatText,
   sparkObjectTypes,
   sparkBreakdownValueLabel,
+  sparkGuaranteedRevenueSubquestions,
   sparkMultiValueTokens,
   sparkPlannerKnowledge,
   sparkRevenueGroup,
@@ -75,11 +76,19 @@ const dateProperties = Object.fromEntries(objectTypes.map((type) => [type, SPARK
 const amountProperties = Object.fromEntries(objectTypes.map((type) => [type, SPARK_CHAT_KNOWLEDGE.objects[type].amountProperty])) as unknown as Record<ObjectType, string>;
 
 type QueryPlan = z.infer<typeof planSchema>;
-export type SparkChatQueryContext = Pick<QueryPlan, "object" | "filters" | "associatedDealFilters" | "aggregate"> & { groupBy?: string | null };
+export type SparkChatQueryContext = Pick<QueryPlan, "object" | "filters" | "associatedDealFilters" | "aggregate"> & {
+  groupBy?: string | null;
+  metricKind?: "guaranteed_revenue" | "weighted_pipeline";
+};
 export type SparkChatContextItem = {
   question: string;
   result: ({ kind: "metric" | "breakdown"; title: string; value: string; recordCount: number } | { kind: "records"; title: string; recordCount: number; objectLabel: string } | { kind: "text"; title: string; value: string; recordCount: number }) & { queryContext?: SparkChatQueryContext };
 };
+export type SparkChatExecutionResult =
+  | { kind: "metric"; title: string; value: number; formattedValue: string; recordCount: number; interpretation: string; queryContext: SparkChatQueryContext; queriedAt: string; source: "live_hubspot" }
+  | { kind: "breakdown"; title: string; groupLabel: string; items: Array<{ key: string; label: string; value: number; formattedValue: string; recordCount: number }>; summary: string; recordCount: number; interpretation: string; queryContext: SparkChatQueryContext; queriedAt: string; source: "live_hubspot" }
+  | { kind: "text"; title: string; text: string; queriedAt: string; source: "planner_knowledge" }
+  | { kind: "records"; title: string; objectLabel: string; totalRecords: number; shownRecords: number; interpretation: string; queryContext: SparkChatQueryContext; columns: Array<{ key: string; label: string; format: "currency" | "date" | "text" }>; records: Array<{ id: string; url: string; values: Record<string, string> }>; queriedAt: string; source: "live_hubspot" };
 type DateRange = { start: string; endExclusive: string; label: string };
 
 function dateParts(date: Date) {
@@ -184,6 +193,7 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
   const revenueIntent = detectSparkRevenueIntent(text);
   const domain = detectSparkDomain(text);
   const businessType = detectSparkDealBusinessType(text);
+  const weightedPipelineIntent = SPARK_CHAT_KNOWLEDGE.compositeMetrics.weightedPipeline.pattern.test(text);
   const stageIntent = /\b(pipeline|aktif|acik\s+(firsat|order)|open|won|lost|kazanilan|kaybedilen|beklenen\s+fatura)\b/.test(text);
   const possessiveOwner = text.match(/\b([a-z]{2,30})['’]?(?:nin|nun|in|un)\s+(?:deal\w*|firsat\w*|fatura\w*|order\w*|siparis\w*)\b/)?.[1];
   const companyIntent = SPARK_CHAT_KNOWLEDGE.companies.triggerPattern.test(text);
@@ -194,7 +204,7 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
     || /^(toplami|tutari|kac(\s+tane(si)?)?|detaylari|listele|goster)[?!.]*$/.test(text)
     || Boolean(range || countries.length || revenueIntent || domain || businessType || requestedGroupBy || companyIntent || SPARK_CHAT_KNOWLEDGE.vendors.triggerPattern.test(text));
   const followsPrevious = Boolean(!explicit && previous && referencesPrevious);
-  const object = explicit ?? (followsPrevious ? previous!.object : plan.object);
+  const object = weightedPipelineIntent ? "deals" : explicit ?? (followsPrevious ? previous!.object : plan.object);
   const vendor = detectSparkVendor(text, object);
   let companyName = detectSparkCompanyName(text);
   const collapsesBreakdown = /^(bunlarin\s+|onlarin\s+)?(toplami|tutari)[?!.]*$/.test(text);
@@ -221,6 +231,11 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
       : { operation: asksAverage ? "average" as const : "sum" as const, property: amountProperties[object] };
   } else if (responseType === "metric" && aggregate && aggregate.operation !== "count") {
     aggregate = { ...aggregate, property: amountProperties[object] };
+  }
+  if (weightedPipelineIntent) {
+    responseType = "metric";
+    aggregate = { operation: "sum", property: SPARK_CHAT_KNOWLEDGE.compositeMetrics.weightedPipeline.property };
+    groupBy = null;
   }
 
   let filters = [...plan.filters];
@@ -299,7 +314,7 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
   }
   if (object === "deals") {
     if (/\b(pipeline|aktif|acik\s+firsat)/.test(text)) {
-      filters = filters.filter((filter) => filter.property !== "_stage_label");
+      filters = filters.filter((filter) => !["dealstage", "hs_is_closed_won", "_stage_label"].includes(filter.property));
       filters.push(
         { property: "_stage_label", operator: "not_contains", value: "won" },
         { property: "_stage_label", operator: "not_contains", value: "lost" },
@@ -373,6 +388,7 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
     groupBy = null;
   }
   const guarded = { ...plan, object, responseType, aggregate, groupBy, filters: uniqueFilters(filters), associatedDealFilters };
+  if (weightedPipelineIntent) guarded.title = SPARK_CHAT_KNOWLEDGE.compositeMetrics.weightedPipeline.label;
   if (range && responseType === "metric") {
     const subject = object === "invoices" ? "fatura" : object === "orders" ? "order" : "deal";
     const measure = aggregate?.operation === "count" ? "sayısı" : aggregate?.operation === "average" ? "ortalama tutarı" : "tutarı";
@@ -661,6 +677,7 @@ function queryContext(plan: QueryPlan): SparkChatQueryContext {
     associatedDealFilters: plan.associatedDealFilters,
     aggregate: plan.aggregate,
     groupBy: plan.groupBy,
+    metricKind: plan.aggregate?.property === SPARK_CHAT_KNOWLEDGE.compositeMetrics.weightedPipeline.property ? "weighted_pipeline" : undefined,
   };
 }
 
@@ -703,7 +720,34 @@ function aggregateRows(rows: FlatRecord[], operation: "sum" | "count" | "average
   return { value, recordCount: operation === "count" ? rows.length : values.length };
 }
 
-export async function executeSparkChatQuery(question: string, apiKey: string, context: SparkChatContextItem[] = []) {
+export async function executeSparkChatQuery(question: string, apiKey: string, context: SparkChatContextItem[] = []): Promise<SparkChatExecutionResult> {
+  const guaranteedRevenuePattern = SPARK_CHAT_KNOWLEDGE.compositeMetrics.guaranteedRevenue.pattern;
+  if (guaranteedRevenuePattern.test(normalizeSparkChatText(question))) {
+    const subquestions = sparkGuaranteedRevenueSubquestions(question);
+    const invoiceQuestion = subquestions.invoices;
+    const orderQuestion = subquestions.orders;
+    const invoiceResult = await executeSparkChatQuery(invoiceQuestion, apiKey, []);
+    const orderResult = await executeSparkChatQuery(orderQuestion, apiKey, []);
+    if (invoiceResult.kind !== "metric" || orderResult.kind !== "metric") throw new SparkChatStageError("guaranteed revenue", "Garanti gelir bileşenleri metric üretmedi");
+    const value = invoiceResult.value + orderResult.value;
+    const queriedAt = new Date().toISOString();
+    const period = invoiceResult.interpretation.split(" · ")[1] ?? "Aynı dönem";
+    return {
+      kind: "breakdown" as const,
+      title: SPARK_CHAT_KNOWLEDGE.compositeMetrics.guaranteedRevenue.label,
+      groupLabel: "Gelir bileşeni",
+      items: [
+        { key: "invoiced", label: "Faturalanan", value: invoiceResult.value, formattedValue: formatMetric(invoiceResult.value, amountProperties.invoices), recordCount: invoiceResult.recordCount },
+        { key: "orders", label: "Açık order", value: orderResult.value, formattedValue: formatMetric(orderResult.value, amountProperties.orders), recordCount: orderResult.recordCount },
+      ],
+      summary: `Garanti gelir ${formatMetric(value, amountProperties.invoices)}: faturalanan ${invoiceResult.formattedValue} + açık order ${orderResult.formattedValue}.`,
+      recordCount: invoiceResult.recordCount + orderResult.recordCount,
+      interpretation: `Fatura + açık order · ${period} · Toplam USD tutarı`,
+      queryContext: { ...invoiceResult.queryContext, metricKind: "guaranteed_revenue" as const },
+      queriedAt,
+      source: "live_hubspot" as const,
+    };
+  }
   const [dealCatalog, invoiceCatalog, orderCatalog] = await stage("catalog", () => Promise.all([
     fetchHubSpotPropertyCatalog("deals"), fetchHubSpotPropertyCatalog("invoices"), fetchHubSpotPropertyCatalog("orders"),
   ]));

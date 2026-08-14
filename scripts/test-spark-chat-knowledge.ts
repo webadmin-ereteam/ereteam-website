@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { applySparkQueryGuardrails, resolveSparkDateRange, resolveSparkOwnerFilter, resolveSparkOwnerName, sparkChatComparableValue, sparkChatMatchesFilter } from "../lib/spark/chat";
-import { SPARK_CHAT_KNOWLEDGE, detectSparkCompanyName, sparkRevenueGroup, type SparkObjectType } from "../lib/spark/chatKnowledge";
+import { SPARK_CHAT_KNOWLEDGE, detectSparkCompanyName, sparkGuaranteedRevenueSubquestions, sparkRevenueGroup, type SparkObjectType } from "../lib/spark/chatKnowledge";
 
 const amountProperties: Record<SparkObjectType, string> = {
   deals: "amount_in_home_currency",
@@ -34,6 +34,11 @@ assert.equal(sparkChatMatchesFilter({ vendor_name: "IBMX" }, { property: "vendor
 assert.equal(sparkChatMatchesFilter({ revenue_type: "License;Project" }, { property: "revenue_type", operator: "in", values: ["License", "SNS"] }), true);
 assert.equal(sparkRevenueGroup("License;Project"), "license");
 assert.equal(sparkRevenueGroup("Project"), "service");
+assert.equal(SPARK_CHAT_KNOWLEDGE.compositeMetrics.guaranteedRevenue.pattern.test("2026 toplam garanti gelirim"), true);
+assert.deepEqual(sparkGuaranteedRevenueSubquestions("2026 toplam garanti gelirim ne olacak?"), {
+  invoices: "2026 toplam fatura tutarı ne olacak?",
+  orders: "2026 toplam açık order tutarı ne olacak?",
+});
 
 for (const testCase of SPARK_CHAT_KNOWLEDGE.regressionCases) {
   const plan = applySparkQueryGuardrails({
@@ -56,6 +61,7 @@ for (const testCase of SPARK_CHAT_KNOWLEDGE.regressionCases) {
     if ("excludedValues" in testCase) assert.ok(testCase.excludedValues.every((value) => !values.includes(value)), `${testCase.question}: hariç tutulan revenue type bulundu`);
   }
   if ("expectedResponseType" in testCase) assert.equal(plan.responseType, testCase.expectedResponseType, `${testCase.question}: sonuç tipi yanlış`);
+  if ("expectedAggregateProperty" in testCase) assert.equal(plan.aggregate?.property, testCase.expectedAggregateProperty, `${testCase.question}: hesaplama alanı yanlış`);
   if ("expectedAssociatedProperty" in testCase) {
     const filter = plan.associatedDealFilters.find((item) => item.property === testCase.expectedAssociatedProperty);
     assert.ok(filter, `${testCase.question}: bağlı deal ${testCase.expectedAssociatedProperty} filtresi eksik`);
@@ -72,7 +78,7 @@ for (const testCase of SPARK_CHAT_KNOWLEDGE.regressionCases) {
     assert.equal(plan.filters.find((filter) => filter.property === dateProperty && filter.operator === "gte")?.value, testCase.expectedDateRange[0], `${testCase.question}: dönem başlangıcı yanlış`);
     assert.equal(plan.filters.find((filter) => filter.property === dateProperty && filter.operator === "lt")?.value, testCase.expectedDateRange[1], `${testCase.question}: dönem bitişi yanlış`);
   }
-  if (/ne\s+kadar/i.test(testCase.question)) {
+  if (/ne\s+kadar/i.test(testCase.question) && !("expectedAggregateProperty" in testCase)) {
     assert.equal(plan.responseType, "metric", `${testCase.question}: metric olmalı`);
     assert.deepEqual(plan.aggregate, { operation: "sum", property: amountProperties[testCase.object] }, `${testCase.question}: tutar alanı yanlış`);
   }

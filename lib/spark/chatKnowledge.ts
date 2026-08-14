@@ -14,6 +14,18 @@ export function normalizeSparkChatText(value?: string | null) {
 }
 
 export const SPARK_CHAT_KNOWLEDGE = {
+  compositeMetrics: {
+    guaranteedRevenue: {
+      pattern: /\b(garanti|garantili)\s+gelir\w*\b/,
+      label: "Garanti gelir",
+      definition: "Aynı dönemde faturalanan gelir ile açık order toplamı",
+    },
+    weightedPipeline: {
+      pattern: /\b(weighted|agirlikli)\s+(pipeline|forecast)\b/,
+      label: "Weighted pipeline",
+      property: "hs_projected_amount_in_home_currency",
+    },
+  },
   filterContracts: {
     common: ["_company_name", "country", "vendor_name", "revenue_type", "ereteam_domain", "_owner_name"],
     deals: ["createdate", "closedate", "_stage_label", "dealtype"],
@@ -27,7 +39,7 @@ export const SPARK_CHAT_KNOWLEDGE = {
       label: "Deal",
       dateProperty: "closedate",
       amountProperty: "amount_in_home_currency",
-      requiredProperties: ["dealname", "dealstage", "createdate", "closedate", "amount_in_home_currency", "hs_is_closed_won", "dealtype", "country", "vendor_name", "revenue_type", "ereteam_domain", "hubspot_owner_id"],
+      requiredProperties: ["dealname", "dealstage", "createdate", "closedate", "amount_in_home_currency", "hs_projected_amount_in_home_currency", "hs_is_closed_won", "dealtype", "country", "vendor_name", "revenue_type", "ereteam_domain", "hubspot_owner_id"],
       coreFields: ["dealname", "_company_name", "closedate", "amount_in_home_currency", "country", "vendor_name", "revenue_type", "ereteam_domain", "dealtype", "_owner_name", "_stage_label"],
     },
     invoices: {
@@ -145,6 +157,8 @@ export const SPARK_CHAT_KNOWLEDGE = {
     '"Beklenen fatura" açık order demektir: hs_processed_date, hs_homecurrency_amount ve _stage_label eq Open.',
     '"Faturalanan/kesilen fatura" object invoices demektir.',
     '"Aktif pipeline/açık fırsat" Closed Won ve Closed Lost olmayan deal kayıtlarıdır. Won/Lost sorularında closedate kullan.',
+    '"Garanti gelir" aynı dönem için faturalanan gelir ile açık order toplamıdır. Fatura tarafında hs_invoice_date + hs_amount_billed_in_company_currency; order tarafında hs_processed_date + hs_homecurrency_amount + Open stage kullan.',
+    '"Weighted pipeline/ağırlıklı pipeline/weighted forecast" yalnızca aktif deallardaki hazır hs_projected_amount_in_home_currency alanının toplamıdır. Bu alan HubSpot tarafından deal tutarı ve kapanma olasılığıyla hesaplanır; chatbot yeniden hesaplama yapmaz.',
     "Fatura veya order için yeni iş/New Business sorusunda bağlı deal üzerinde dealtype eq newbusiness ve Closed Won filtresini associatedDealFilters ile uygula. Mevcut iş/Existing Business için bağlı deal üzerinde dealtype eq existingbusiness kullan.",
     "country enumları Turkiye ve USA: Türkiye/Turkey -> Turkiye; Amerika/ABD/USA/United States -> USA.",
     'Müşteri/firma sorularında tüm nesnelerde sanal _company_name alanını kullan. Önce HubSpot company ilişkisini, ilişki yoksa nesnenin kontrollü müşteri adı yedeğini kullan. "Migros\'a kestiğimiz faturalar" müşteri Migros filtresidir; vendor değildir.',
@@ -165,6 +179,7 @@ export const SPARK_CHAT_KNOWLEDGE = {
     { question: "Geçen ay ne kadar fatura kestik?", object: "invoices", expectedProperty: "hs_invoice_date" },
     { question: "Türkiye faturaları ne kadar?", object: "invoices", expectedProperty: "country", expectedValues: ["Turkiye"] },
     { question: "IBM vendor aktif pipeline ne kadar?", object: "deals", expectedProperty: "vendor_name", expectedValues: ["IBM"] },
+    { question: "Weighted pipeline değerimiz ne kadar?", object: "deals", plannerFilters: [{ property: "hs_is_closed_won", operator: "neq", value: "true" }, { property: "dealstage", operator: "not_contains", value: "lost" }], expectedResponseType: "metric", expectedAggregateProperty: "hs_projected_amount_in_home_currency", expectedFilterProperties: ["_stage_label"], expectedForbiddenProperties: ["hs_is_closed_won", "dealstage"] },
     { question: "Partneri IBM olan faturalar ne kadar?", object: "invoices", expectedProperty: "vendor_name", expectedValues: ["IBM"] },
     { question: "Migros'a kestiğimiz faturalar ne kadar?", object: "invoices", plannerFilters: [{ property: "vendor_name", operator: "eq", value: "Migros" }], expectedProperty: "_company_name", expectedValues: ["migros"], unexpectedProperty: "vendor_name" },
     { question: "Migros firmasına ait siparişleri göster", object: "orders", expectedProperty: "_company_name", expectedValues: ["migros"], expectedResponseType: "records" },
@@ -212,6 +227,14 @@ export function sparkMultiValueTokens(value?: string | null) {
 export function sparkRevenueGroup(value?: string | null) {
   const licenseValues = new Set(SPARK_CHAT_KNOWLEDGE.revenue.licenseValues.map(normalizeSparkChatText));
   return sparkMultiValueTokens(value).some((item) => licenseValues.has(normalizeSparkChatText(item))) ? "license" : "service";
+}
+
+export function sparkGuaranteedRevenueSubquestions(question: string) {
+  const pattern = /garanti(?:li)?\s+gelir\w*/i;
+  return {
+    invoices: question.replace(pattern, "fatura tutarı"),
+    orders: question.replace(pattern, "açık order tutarı"),
+  };
 }
 
 export function detectSparkRevenueIntent(text: string): SparkRevenueIntent | null {
