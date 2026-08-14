@@ -460,7 +460,8 @@ function flatten(type: ObjectType, row: HubSpotObject, owners: Map<string, strin
     _object: type,
     ...Object.fromEntries(Object.entries(row.properties).map(([key, value]) => [key, value ?? ""])),
     _owner_name: owners.get(row.properties.hubspot_owner_id ?? "") ?? "",
-    _company_name: type === "invoices" ? row.properties.hs_invoice_latest_company_name ?? "" : "",
+    _company_name: type === "invoices" ? row.properties.hs_invoice_latest_company_name ?? ""
+      : type === "deals" ? row.properties.dealname ?? "" : "",
     _stage_label: stageKey ? stages.get(row.properties[stageKey] ?? "")?.label ?? "" : "",
   };
   return {
@@ -682,19 +683,19 @@ export async function executeSparkChatQuery(question: string, apiKey: string, co
   const resolvedPlan = resolveOwnerFilters(plan, owners);
   const stages = resolvedPlan.object === "deals" ? dealStages : resolvedPlan.object === "orders" ? orderStages : new Map();
   let flattenedRows = rows.map((row) => flatten(resolvedPlan.object, row, owners, stages));
-  const needsCompany = resolvedPlan.object !== "invoices" && (resolvedPlan.responseType === "records"
+  const needsOrderCompany = resolvedPlan.object === "orders" && (resolvedPlan.responseType === "records"
     || resolvedPlan.properties.includes("_company_name")
     || resolvedPlan.filters.some((filter) => filter.property === "_company_name")
     || resolvedPlan.groupBy === "_company_name");
-  if (needsCompany) {
-    const [companies, associations] = await stage("company associations", () => Promise.all([
-      fetchHubSpotObjects("companies", ["name"]),
-      fetchHubSpotAssociations(resolvedPlan.object, flattenedRows.map((row) => row._id), "companies"),
+  if (needsOrderCompany) {
+    const [deals, associations] = await stage("customer deal associations", () => Promise.all([
+      fetchHubSpotObjects("deals", ["dealname"]),
+      fetchHubSpotAssociations("orders", flattenedRows.map((row) => row._id)),
     ]));
-    const companyNames = new Map(companies.map((company) => [company.id, company.properties.name ?? ""]));
+    const dealNames = new Map(deals.map((deal) => [deal.id, deal.properties.dealname ?? ""]));
     flattenedRows = flattenedRows.map((row) => ({
       ...row,
-      _company_name: (associations.get(row._id) ?? []).map((companyId) => companyNames.get(companyId)).filter(Boolean).join(" | "),
+      _company_name: (associations.get(row._id) ?? []).map((dealId) => dealNames.get(dealId)).filter(Boolean).join(" | "),
     }));
   }
   let filtered = flattenedRows.filter((row) => resolvedPlan.filters.every((filter) => matches(row, filter)));

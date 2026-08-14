@@ -62,8 +62,9 @@ Country intent uses the live `country` enum on deals, invoices and orders:
 `Türkiye`/`Turkey` map to `Turkiye`; `Amerika`/`ABD`/`USA`/`United States` map to
 `USA`. Country-only follow-ups retain the prior validated object and scope.
 Customer/company intent such as `Migros'a kestiğimiz faturalar`, `Migros firmasının
-siparişleri` or equivalent deal questions uses the associated HubSpot company name
-through the virtual `_company_name` field on all three objects. Vendor filtering is
+siparişleri` or equivalent deal questions uses the virtual `_company_name` field on
+all three objects. It is sourced from invoice latest company name, deal name, or an
+order's associated deal names without requiring company-object access. Vendor filtering is
 reserved for explicit vendor/seller/producer/partner wording and uses `vendor_name`;
 for example, `vendorı IBM` or `partneri IBM olan` means vendor IBM. Revenue-type questions
 use `revenue_type`; `License` and `SNS` together form license revenue, while the
@@ -128,7 +129,7 @@ header. `SPARK_CRON_SECRET` is legacy and can be removed.
 - Deal amount: `amount_in_home_currency`
 - Country: `country` with enum values `Turkiye` and `USA` on deals, invoices and orders
 - Vendor: `vendor_name` on deals, invoices and orders
-- Customer/company: virtual `_company_name`; invoice latest company name or live HubSpot company association on deals and orders
+- Customer/company: virtual `_company_name`; invoice latest company name, deal name, or an order's live associated deal names
 - Revenue classification: `revenue_type`; license revenue = `License` + `SNS`, service revenue = all other values
 - Deal business type: `dealtype = newbusiness|existingbusiness`
 - Ereteam expertise: `ereteam_domain` with `Data, Cloud & AI (DC&AI)`, `Enterprise Planning (EP)`, and `Intelligent MarTech (IM)`
