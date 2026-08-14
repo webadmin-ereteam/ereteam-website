@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { applySparkQueryGuardrails, resolveSparkDateRange, resolveSparkOwnerFilter, resolveSparkOwnerName, sparkChatComparableValue } from "../lib/spark/chat";
-import { SPARK_CHAT_KNOWLEDGE, detectSparkCompanyName, type SparkObjectType } from "../lib/spark/chatKnowledge";
+import { applySparkQueryGuardrails, resolveSparkDateRange, resolveSparkOwnerFilter, resolveSparkOwnerName, sparkChatComparableValue, sparkChatMatchesFilter } from "../lib/spark/chat";
+import { SPARK_CHAT_KNOWLEDGE, detectSparkCompanyName, sparkRevenueGroup, type SparkObjectType } from "../lib/spark/chatKnowledge";
 
 const amountProperties: Record<SparkObjectType, string> = {
   deals: "amount_in_home_currency",
@@ -29,6 +29,11 @@ assert.equal(detectSparkCompanyName("Migrosa kestiğimiz faturalar"), "migros");
 assert.equal(detectSparkCompanyName("2026 yılında Coca Cola'ya kestiğimiz faturalar"), "coca cola");
 assert.equal(detectSparkCompanyName("Migros firmasına ait siparişler"), "migros");
 assert.equal(detectSparkCompanyName("Partneri IBM olan faturalar"), null);
+assert.equal(sparkChatMatchesFilter({ vendor_name: "Ereteam;IBM" }, { property: "vendor_name", operator: "eq", value: "IBM" }), true);
+assert.equal(sparkChatMatchesFilter({ vendor_name: "IBMX" }, { property: "vendor_name", operator: "eq", value: "IBM" }), false);
+assert.equal(sparkChatMatchesFilter({ revenue_type: "License;Project" }, { property: "revenue_type", operator: "in", values: ["License", "SNS"] }), true);
+assert.equal(sparkRevenueGroup("License;Project"), "license");
+assert.equal(sparkRevenueGroup("Project"), "service");
 
 for (const testCase of SPARK_CHAT_KNOWLEDGE.regressionCases) {
   const plan = applySparkQueryGuardrails({
@@ -51,7 +56,15 @@ for (const testCase of SPARK_CHAT_KNOWLEDGE.regressionCases) {
     if ("excludedValues" in testCase) assert.ok(testCase.excludedValues.every((value) => !values.includes(value)), `${testCase.question}: hariç tutulan revenue type bulundu`);
   }
   if ("expectedResponseType" in testCase) assert.equal(plan.responseType, testCase.expectedResponseType, `${testCase.question}: sonuç tipi yanlış`);
+  if ("expectedAssociatedProperty" in testCase) {
+    const filter = plan.associatedDealFilters.find((item) => item.property === testCase.expectedAssociatedProperty);
+    assert.ok(filter, `${testCase.question}: bağlı deal ${testCase.expectedAssociatedProperty} filtresi eksik`);
+    const values = filter.values ?? (filter.value ? [filter.value] : []);
+    if ("expectedAssociatedValues" in testCase) assert.deepEqual([...values].sort(), [...testCase.expectedAssociatedValues].sort(), `${testCase.question}: bağlı deal değerleri yanlış`);
+  }
+  if ("expectedAssociatedStage" in testCase) assert.equal(plan.associatedDealFilters.find((filter) => filter.property === "_stage_label")?.value, testCase.expectedAssociatedStage, `${testCase.question}: bağlı deal stage filtresi yanlış`);
   if ("unexpectedProperty" in testCase) assert.ok(!plan.filters.some((filter) => filter.property === testCase.unexpectedProperty), `${testCase.question}: ${testCase.unexpectedProperty} filtresi kullanılmamalı`);
+  if ("expectedForbiddenProperties" in testCase) assert.ok(testCase.expectedForbiddenProperties.every((property) => !plan.filters.some((filter) => filter.property === property)), `${testCase.question}: istenmeyen boyut filtresi temizlenmedi`);
   if ("expectedGroupBy" in testCase) assert.equal(plan.groupBy, testCase.expectedGroupBy, `${testCase.question}: kırılım alanı yanlış`);
   if ("expectedFilterProperties" in testCase) assert.ok(testCase.expectedFilterProperties.every((property) => plan.filters.some((filter) => filter.property === property)), `${testCase.question}: zorunlu filtrelerden biri eksik`);
   if ("expectedDateRange" in testCase) {

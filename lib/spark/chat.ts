@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   fetchHubSpotAssociations,
   fetchHubSpotObjects,
+  fetchHubSpotObjectsByIds,
   fetchHubSpotOwners,
   fetchHubSpotPropertyCatalog,
   fetchHubSpotStages,
@@ -22,7 +23,9 @@ import {
   normalizeSparkChatText,
   sparkObjectTypes,
   sparkBreakdownValueLabel,
+  sparkMultiValueTokens,
   sparkPlannerKnowledge,
+  sparkRevenueGroup,
   sparkRevenueValues,
   type SparkObjectType,
 } from "./chatKnowledge";
@@ -181,6 +184,8 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
   const revenueIntent = detectSparkRevenueIntent(text);
   const domain = detectSparkDomain(text);
   const businessType = detectSparkDealBusinessType(text);
+  const stageIntent = /\b(pipeline|aktif|acik\s+(firsat|order)|open|won|lost|kazanilan|kaybedilen|beklenen\s+fatura)\b/.test(text);
+  const possessiveOwner = text.match(/\b([a-z]{2,30})['’]?(?:nin|nun|in|un)\s+(?:deal\w*|firsat\w*|fatura\w*|order\w*|siparis\w*)\b/)?.[1];
   const companyIntent = SPARK_CHAT_KNOWLEDGE.companies.triggerPattern.test(text);
   const requestedGroupBy = detectSparkGroupBy(text);
   const previous = context.at(-1)?.result.queryContext;
@@ -220,6 +225,19 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
 
   let filters = [...plan.filters];
   let associatedDealFilters = [...plan.associatedDealFilters];
+  const plannedOwnerValues = [...filters, ...associatedDealFilters]
+    .filter((filter) => ["_owner_name", "hubspot_owner_id"].includes(filter.property))
+    .flatMap((filter) => filter.operator === "in" ? filter.values ?? [] : filter.value ? [filter.value] : []);
+  const ownerIntent = Boolean(possessiveOwner || /\b(owner|satisci|sorumlu)\b/.test(text)
+    || plannedOwnerValues.some((value) => normalizeSparkChatText(value).split(/[^a-z0-9]+/).some((part) => part.length >= 3 && text.includes(part))));
+  const normalizeOwnerProperty = (filter: QueryPlan["filters"][number]) => filter.property === "hubspot_owner_id"
+    && (filter.value ? !/^\d+$/.test(filter.value) : Boolean(filter.values?.some((value) => !/^\d+$/.test(value))))
+    ? { ...filter, property: "_owner_name" }
+    : filter;
+  if (ownerIntent) {
+    filters = filters.map(normalizeOwnerProperty);
+    associatedDealFilters = associatedDealFilters.map(normalizeOwnerProperty);
+  }
   if (followsPrevious && previous) {
     const previousNonDate = previous.filters.filter((filter) => !Object.values(dateProperties).includes(filter.property));
     const plannedNonDate = filters.filter((filter) => !Object.values(dateProperties).includes(filter.property));
@@ -241,6 +259,27 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
       associatedDealFilters = previous.associatedDealFilters;
     }
   }
+  if (!followsPrevious) {
+    if (!countries.length) filters = filters.filter((filter) => filter.property !== "country");
+    if (!revenueIntent) filters = filters.filter((filter) => filter.property !== "revenue_type");
+    if (!domain) filters = filters.filter((filter) => filter.property !== "ereteam_domain");
+    if (!businessType) {
+      filters = filters.filter((filter) => filter.property !== "dealtype");
+      associatedDealFilters = associatedDealFilters.filter((filter) => filter.property !== "dealtype");
+    }
+    if (!stageIntent) filters = filters.filter((filter) => !["dealstage", "hs_is_closed_won", "hs_pipeline_stage", "_stage_label"].includes(filter.property));
+    if (!ownerIntent) {
+      filters = filters.filter((filter) => !["_owner_name", "hubspot_owner_id"].includes(filter.property));
+      associatedDealFilters = associatedDealFilters.filter((filter) => !["_owner_name", "hubspot_owner_id"].includes(filter.property));
+    }
+  }
+  if (possessiveOwner) {
+    filters = filters.filter((filter) => !["_owner_name", "hubspot_owner_id"].includes(filter.property));
+    filters.push({ property: "_owner_name", operator: "contains", value: possessiveOwner });
+  }
+  if (groupBy === "_revenue_group" || groupBy === "revenue_type") filters = filters.filter((filter) => filter.property !== "revenue_type");
+  if (groupBy === "ereteam_domain" && !domain) filters = filters.filter((filter) => filter.property !== "ereteam_domain");
+  if (groupBy === "dealtype" && !businessType) filters = filters.filter((filter) => filter.property !== "dealtype");
   if (range) {
     const knownDateProperties = new Set(Object.values(dateProperties));
     const plannedDealDate = plan.filters.find((filter) => filter.property === "createdate" || filter.property === "closedate")?.property;
@@ -273,12 +312,18 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
       filters.push({ property: "_stage_label", operator: "contains", value: "lost" });
     }
   }
-  if (object !== "deals" && /\bnew\s+business\b/.test(text)) {
+  if (object !== "deals") {
+    const plannedDealType = filters.find((filter) => filter.property === "dealtype");
+    filters = filters.filter((filter) => filter.property !== "dealtype");
+    if (plannedDealType && !businessType) {
+      associatedDealFilters = associatedDealFilters.filter((filter) => filter.property !== "dealtype");
+      associatedDealFilters.push(plannedDealType);
+    }
+  }
+  if (object !== "deals" && businessType) {
     associatedDealFilters = associatedDealFilters.filter((filter) => !["dealtype", "_stage_label"].includes(filter.property));
-    associatedDealFilters.push(
-      { property: "dealtype", operator: "eq", value: "newbusiness" },
-      { property: "_stage_label", operator: "contains", value: "won" },
-    );
+    associatedDealFilters.push({ property: "dealtype", operator: "eq", value: businessType });
+    if (businessType === "newbusiness") associatedDealFilters.push({ property: "_stage_label", operator: "contains", value: "won" });
   }
   if (groupBy === "country" && countries.length) {
     filters = filters.filter((filter) => filter.property !== "country");
@@ -466,7 +511,7 @@ function flatten(type: ObjectType, row: HubSpotObject, owners: Map<string, strin
   };
   return {
     ...flat,
-    _revenue_group: SPARK_CHAT_KNOWLEDGE.revenue.licenseValues.includes(row.properties.revenue_type as "License" | "SNS") ? "license" : "service",
+    _revenue_group: sparkRevenueGroup(row.properties.revenue_type),
   };
 }
 
@@ -534,6 +579,10 @@ export function resolveSparkOwnerFilter(filter: z.infer<typeof filterSchema>, ow
 
 function resolveOwnerFilters(plan: QueryPlan, owners: Map<string, string>): QueryPlan {
   const ownerNames = Array.from(owners.values());
+  const ownerFilters = [...plan.filters, ...plan.associatedDealFilters].filter((filter) => filter.property === "_owner_name");
+  const unresolved = ownerFilters.flatMap((filter) => filter.operator === "in" ? filter.values ?? [] : filter.value ? [filter.value] : [])
+    .find((value) => !resolveSparkOwnerName(value, ownerNames));
+  if (unresolved) throw new SparkChatStageError("owner", `Owner eşleşmedi: ${unresolved}`);
   return {
     ...plan,
     filters: plan.filters.map((filter) => resolveSparkOwnerFilter(filter, ownerNames)),
@@ -550,17 +599,22 @@ export function sparkChatComparableValue(value?: string | null) {
   return Number.isFinite(date) ? date : normalized(value);
 }
 
-function matches(record: FlatRecord, filter: z.infer<typeof filterSchema>) {
+export function sparkChatMatchesFilter(record: Record<string, string>, filter: z.infer<typeof filterSchema>) {
   const raw = record[filter.property] ?? "";
+  const multiValue = SPARK_CHAT_KNOWLEDGE.filterContracts.multiValueProperties.includes(filter.property as "vendor_name" | "revenue_type");
+  const tokens = multiValue ? sparkMultiValueTokens(raw) : [raw];
+  const tokenMatches = (value?: string | null) => normalized(value) === "" && raw.trim() === ""
+    ? true
+    : tokens.some((token) => normalized(token) === normalized(value));
   const left = sparkChatComparableValue(raw);
   const right = sparkChatComparableValue(filter.value ?? "");
   if (filter.operator === "is_empty") return raw.trim() === "";
   if (filter.operator === "not_empty") return raw.trim() !== "";
   if (filter.operator === "contains") return normalized(raw).includes(normalized(filter.value));
   if (filter.operator === "not_contains") return !normalized(raw).includes(normalized(filter.value));
-  if (filter.operator === "eq") return normalized(raw) === normalized(filter.value);
-  if (filter.operator === "neq") return normalized(raw) !== normalized(filter.value);
-  if (filter.operator === "in") return (filter.values ?? []).some((value) => normalized(raw) === normalized(value));
+  if (filter.operator === "eq") return tokenMatches(filter.value);
+  if (filter.operator === "neq") return !tokenMatches(filter.value);
+  if (filter.operator === "in") return (filter.values ?? []).some(tokenMatches);
   if (filter.operator === "between") {
     const [min, max] = filter.values ?? [];
     return min !== undefined && max !== undefined && left >= sparkChatComparableValue(min) && left <= sparkChatComparableValue(max);
@@ -683,30 +737,41 @@ export async function executeSparkChatQuery(question: string, apiKey: string, co
   const resolvedPlan = resolveOwnerFilters(plan, owners);
   const stages = resolvedPlan.object === "deals" ? dealStages : resolvedPlan.object === "orders" ? orderStages : new Map();
   let flattenedRows = rows.map((row) => flatten(resolvedPlan.object, row, owners, stages));
-  const needsOrderCompany = resolvedPlan.object === "orders" && (resolvedPlan.responseType === "records"
+  const needsCompany = resolvedPlan.responseType === "records"
     || resolvedPlan.properties.includes("_company_name")
     || resolvedPlan.filters.some((filter) => filter.property === "_company_name")
-    || resolvedPlan.groupBy === "_company_name");
-  if (needsOrderCompany) {
-    const [deals, associations] = await stage("customer deal associations", () => Promise.all([
-      fetchHubSpotObjects("deals", ["dealname"]),
-      fetchHubSpotAssociations("orders", flattenedRows.map((row) => row._id)),
-    ]));
-    const dealNames = new Map(deals.map((deal) => [deal.id, deal.properties.dealname ?? ""]));
+    || resolvedPlan.groupBy === "_company_name";
+  if (needsCompany) {
+    const ids = flattenedRows.map((row) => row._id);
+    const companyAssociations = await stage("customer company associations", () => fetchHubSpotAssociations(resolvedPlan.object, ids, "companies"));
+    const companyIds = Array.from(new Set(Array.from(companyAssociations.values()).flat()));
+    const companies = await stage("customer companies", () => fetchHubSpotObjectsByIds("companies", companyIds, ["name"]));
+    const companyNames = new Map(companies.map((company) => [company.id, company.properties.name ?? ""]));
+    let orderDealAssociations = new Map<string, string[]>();
+    let dealNames = new Map<string, string>();
+    if (resolvedPlan.object === "orders") {
+      orderDealAssociations = await stage("customer deal associations", () => fetchHubSpotAssociations("orders", ids));
+      const dealIds = Array.from(new Set(Array.from(orderDealAssociations.values()).flat()));
+      const deals = await stage("customer deals", () => fetchHubSpotObjectsByIds("deals", dealIds, ["dealname"]));
+      dealNames = new Map(deals.map((deal) => [deal.id, deal.properties.dealname ?? ""]));
+    }
     flattenedRows = flattenedRows.map((row) => ({
       ...row,
-      _company_name: (associations.get(row._id) ?? []).map((dealId) => dealNames.get(dealId)).filter(Boolean).join(" | "),
+      _company_name: (companyAssociations.get(row._id) ?? []).map((companyId) => companyNames.get(companyId)).filter(Boolean).join(" | ")
+        || (resolvedPlan.object === "orders"
+          ? (orderDealAssociations.get(row._id) ?? []).map((dealId) => dealNames.get(dealId)).filter(Boolean).join(" | ") || row.hs_order_name
+          : row._company_name),
     }));
   }
-  let filtered = flattenedRows.filter((row) => resolvedPlan.filters.every((filter) => matches(row, filter)));
+  let filtered = flattenedRows.filter((row) => resolvedPlan.filters.every((filter) => sparkChatMatchesFilter(row, filter)));
 
   if (resolvedPlan.associatedDealFilters.length && resolvedPlan.object !== "deals") {
     const associatedObject: "invoices" | "orders" = resolvedPlan.object;
     const dealProperties = Array.from(new Set([...requiredProperties.deals, ...resolvedPlan.associatedDealFilters.map((filter) => filter.property).filter((property) => !property.startsWith("_"))]));
-    const [deals, associations] = await stage("associations", () => Promise.all([
-      fetchHubSpotObjects("deals", dealProperties), fetchHubSpotAssociations(associatedObject, filtered.map((row) => row._id)),
-    ]));
-    const allowedDeals = new Set(deals.map((row) => flatten("deals", row, owners, dealStages)).filter((row) => resolvedPlan.associatedDealFilters.every((filter) => matches(row, filter))).map((row) => row._id));
+    const associations = await stage("associations", () => fetchHubSpotAssociations(associatedObject, filtered.map((row) => row._id)));
+    const dealIds = Array.from(new Set(Array.from(associations.values()).flat()));
+    const deals = await stage("associated deals", () => fetchHubSpotObjectsByIds("deals", dealIds, dealProperties));
+    const allowedDeals = new Set(deals.map((row) => flatten("deals", row, owners, dealStages)).filter((row) => resolvedPlan.associatedDealFilters.every((filter) => sparkChatMatchesFilter(row, filter))).map((row) => row._id));
     filtered = filtered.filter((row) => (associations.get(row._id) ?? []).some((dealId) => allowedDeals.has(dealId)));
   }
 
@@ -729,9 +794,14 @@ export async function executeSparkChatQuery(question: string, apiKey: string, co
       const groupFilter = resolvedPlan.filters.find((filter) => filter.property === resolvedPlan.groupBy && ["eq", "in"].includes(filter.operator));
       const requestedGroups = groupFilter?.operator === "in" ? groupFilter.values ?? [] : groupFilter?.value ? [groupFilter.value] : [];
       const defaultGroups = resolvedPlan.groupBy === "_revenue_group" ? ["license", "service"] : [];
-      const groupValues = requestedGroups.length ? requestedGroups : defaultGroups.length ? defaultGroups : Array.from(new Set(filtered.map((row) => row[resolvedPlan.groupBy!] ?? ""))).filter(Boolean);
+      const multiValueGroup = SPARK_CHAT_KNOWLEDGE.filterContracts.multiValueProperties.includes(resolvedPlan.groupBy as "vendor_name" | "revenue_type");
+      const discoveredGroups = filtered.flatMap((row) => {
+        const values = multiValueGroup ? sparkMultiValueTokens(row[resolvedPlan.groupBy!]) : [row[resolvedPlan.groupBy!] ?? ""];
+        return values.length ? values : [""];
+      });
+      const groupValues = requestedGroups.length ? requestedGroups : defaultGroups.length ? defaultGroups : Array.from(new Set(discoveredGroups));
       const items = groupValues.map((groupValue) => {
-        const groupRows = filtered.filter((row) => normalized(row[resolvedPlan.groupBy!]) === normalized(groupValue));
+        const groupRows = filtered.filter((row) => sparkChatMatchesFilter(row, { property: resolvedPlan.groupBy!, operator: "eq", value: groupValue }));
         const metric = aggregateRows(groupRows, operation, property);
         return { key: groupValue, label: sparkBreakdownValueLabel(groupValue), ...metric, formattedValue: formatMetric(metric.value, property) };
       });
@@ -742,7 +812,7 @@ export async function executeSparkChatQuery(question: string, apiKey: string, co
           ? `${ranked[0].label} ve ${ranked[1].label} sonuçları ${ranked[0].formattedValue} ile eşit.`
           : `${ranked[0].label} ${ranked[0].formattedValue}, ${ranked[1].label} ${ranked[1].formattedValue}. ${ranked[0].label}, ${formatMetric(difference, property)} daha yüksek.`
         : ranked.length === 1 ? `${ranked[0].label} sonucu ${ranked[0].formattedValue}.` : "Bu kırılımda eşleşen kayıt bulunamadı.";
-      return { kind: "breakdown" as const, title: resolvedPlan.title, groupLabel: labelMap(catalogs[resolvedPlan.object]).get(resolvedPlan.groupBy) ?? resolvedPlan.groupBy, items, summary, recordCount: items.reduce((sum, item) => sum + item.recordCount, 0), interpretation: planInterpretation, queryContext: compactQuery, queriedAt, source: "live_hubspot" as const };
+      return { kind: "breakdown" as const, title: resolvedPlan.title, groupLabel: labelMap(catalogs[resolvedPlan.object]).get(resolvedPlan.groupBy) ?? resolvedPlan.groupBy, items, summary, recordCount: filtered.length, interpretation: planInterpretation, queryContext: compactQuery, queriedAt, source: "live_hubspot" as const };
     }
     const { value, recordCount } = aggregateRows(filtered, operation, property);
     return { kind: "metric" as const, title: resolvedPlan.title, value, formattedValue: formatMetric(value, property), recordCount, interpretation: planInterpretation, queryContext: compactQuery, queriedAt, source: "live_hubspot" as const };

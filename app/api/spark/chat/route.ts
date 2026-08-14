@@ -39,7 +39,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("Spark chat error:", message);
-    const publicError = error instanceof SparkChatStageError && error.stage === "planner"
+    const publicError = error instanceof SparkChatStageError && error.stage === "owner"
+      ? "Owner adını canlı HubSpot kullanıcılarında güvenle eşleştiremedim. Lütfen ad-soyadı biraz daha açık yazın."
+      : error instanceof SparkChatStageError && error.stage === "planner"
       ? "Soruyu anlayamadım. Dönem, kayıt türü veya istediğiniz değeri biraz daha açık yazar mısınız?"
       : error instanceof SparkChatStageError
       ? `Canlı sorgu ${error.stage} aşamasında tamamlanamadı.`

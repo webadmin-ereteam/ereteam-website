@@ -64,19 +64,26 @@ Country intent uses the live `country` enum on deals, invoices and orders:
 Customer/company intent such as `Migros'a kestiğimiz faturalar`, `Migros firmasının
 siparişleri` or equivalent deal questions uses the virtual `_company_name` field on
 all three objects. It is sourced from invoice latest company name, deal name, or an
-order's associated deal names without requiring company-object access. Vendor filtering is
-reserved for explicit vendor/seller/producer/partner wording and uses `vendor_name`;
+order's associated deal names. When company-object access is available, the live HubSpot
+company association is primary; those object-name fields remain controlled fallbacks for
+records without an association. Vendor filtering is reserved for explicit
+vendor/seller/producer/partner/business-partner wording and uses `vendor_name`;
 for example, `vendorı IBM` or `partneri IBM olan` means vendor IBM. Revenue-type questions
 use `revenue_type`; `License` and `SNS` together form license revenue, while the
 remaining enum values form service/consulting revenue. Turkish questions such as
 `ne kadarı lisanstı?` and `ne kadarı servisti?` use these grouped definitions. On deals, New Business and
-Existing Business map to `dealtype = newbusiness|existingbusiness`.
+Existing Business map to `dealtype = newbusiness|existingbusiness`; invoice and order
+questions apply that classification through their associated deals. `vendor_name` and
+`revenue_type` are multi-select fields, so a semicolon-separated value matches each of
+its selected enums rather than behaving like one combined label.
 Ereteam expertise questions use `ereteam_domain` on all three objects: data work
 maps to `Data, Cloud & AI (DC&AI)`, finance work to `Enterprise Planning (EP)`,
 and marketing work to `Intelligent MarTech (IM)`.
 Owner questions use the live HubSpot owner directory. A first name or minor typo is
 matched to the nearest unambiguous active owner name before records are filtered;
 ambiguous low-confidence names are not guessed.
+Breakdowns retain missing classifications as `Belirtilmemiş`, so category totals do
+not silently omit records with sparse country, domain or business-type data.
 
 All chatbot business vocabulary is maintained centrally in
 `lib/spark/chatKnowledge.ts`: HubSpot field contracts, enum values, Turkish/English
@@ -129,8 +136,9 @@ header. `SPARK_CRON_SECRET` is legacy and can be removed.
 - Deal amount: `amount_in_home_currency`
 - Country: `country` with enum values `Turkiye` and `USA` on deals, invoices and orders
 - Vendor: `vendor_name` on deals, invoices and orders
-- Customer/company: virtual `_company_name`; invoice latest company name, deal name, or an order's live associated deal names
+- Customer/company: virtual `_company_name`; direct HubSpot company association first, then invoice latest company name, deal name, or an order's associated deal names
 - Revenue classification: `revenue_type`; license revenue = `License` + `SNS`, service revenue = all other values
+- Multi-select matching: `vendor_name` and `revenue_type` split HubSpot `;` values and match individual selected enums
 - Deal business type: `dealtype = newbusiness|existingbusiness`
 - Ereteam expertise: `ereteam_domain` with `Data, Cloud & AI (DC&AI)`, `Enterprise Planning (EP)`, and `Intelligent MarTech (IM)`
 - New Business: `dealtype = newbusiness` and Closed Won
