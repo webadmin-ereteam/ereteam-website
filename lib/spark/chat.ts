@@ -359,7 +359,10 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
   if (groupBy === "_revenue_group" || groupBy === "revenue_type") filters = filters.filter((filter) => filter.property !== "revenue_type");
   if (groupBy === "ereteam_domain" && !domain) filters = filters.filter((filter) => filter.property !== "ereteam_domain");
   if (groupBy === "dealtype" && !businessType) filters = filters.filter((filter) => filter.property !== "dealtype");
-  if (range) {
+  const enforcedRange = object === "orders" && /\bbeklenen\s+fatura/.test(text) && /\bbu\s+ay\b/.test(text)
+    ? resolveSparkDateRange("bu ay sonuna kadar", now)
+    : range;
+  if (enforcedRange) {
     const knownDateProperties = new Set(Object.values(dateProperties));
     const plannedDealDate = plan.filters.find((filter) => filter.property === "createdate" || filter.property === "closedate")?.property;
     const dealDate = /\b(acilan|yeni|olusturulan)\b/.test(text) ? "createdate"
@@ -368,8 +371,8 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
     const dateProperty = object === "deals" ? dealDate : dateProperties[object];
     filters = filters.filter((filter) => !knownDateProperties.has(filter.property));
     filters.push(
-      { property: dateProperty, operator: "gte", value: range.start },
-      { property: dateProperty, operator: "lt", value: range.endExclusive },
+      { property: dateProperty, operator: "gte", value: enforcedRange.start },
+      { property: dateProperty, operator: "lt", value: enforcedRange.endExclusive },
     );
   }
   if (object === "orders" && (/\bbeklenen\s+fatura/.test(text) || /\b(open|acik)\s+order\w*/.test(text))) {
@@ -460,8 +463,15 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
   const metricKind = responseType === "metric"
     ? weightedPipelineIntent ? "weighted_pipeline" : detectedCompositeMetric ?? plannerCompositeMetric
     : null;
-  const guarded = { ...plan, object, responseType, aggregate, groupBy, metricKind, filters: uniqueFilters(filters), associatedDealFilters };
+  const properties = object === plan.object ? plan.properties : [];
+  const guarded = { ...plan, object, responseType, aggregate, groupBy, metricKind, properties, filters: uniqueFilters(filters), associatedDealFilters };
   if (weightedPipelineIntent) guarded.title = SPARK_CHAT_KNOWLEDGE.compositeMetrics.weightedPipeline.label;
+  if (enforcedRange && responseType === "records") {
+    const subject = object === "orders" && /\bbeklenen\s+fatura/.test(text)
+      ? "beklenen fatura"
+      : object === "invoices" ? "fatura" : object === "orders" ? "order" : "deal";
+    guarded.title = `${enforcedRange.label} ${subject} detayları`;
+  }
   if (range && responseType === "metric") {
     const subject = object === "invoices" ? "fatura" : object === "orders" ? "order" : "deal";
     const measure = aggregate?.operation === "count" ? "sayısı" : aggregate?.operation === "average" ? "ortalama tutarı" : "tutarı";
@@ -473,6 +483,17 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
 function parseJson(value: string) {
   const fenced = value.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1];
   return JSON.parse(fenced || value.match(/\{[\s\S]*\}/)?.[0] || value);
+}
+
+export function normalizeSparkPlanProperties(value: unknown): string[] {
+  if (value == null) return [];
+  const items = Array.isArray(value)
+    ? value
+    : value && typeof value === "object" && Array.isArray((value as { items?: unknown }).items)
+      ? (value as { items: unknown[] }).items
+      : null;
+  if (!items) throw new Error("Property listesi geçersiz");
+  return items.map(String).slice(0, 16);
 }
 
 function catalogText(catalogs: Record<ObjectType, HubSpotProperty[]>, question: string, context: SparkChatContextItem[]) {
@@ -499,7 +520,7 @@ async function createPlan(question: string, catalogs: Record<ObjectType, HubSpot
       `Sen HubSpot için salt-okunur JSON sorgu planlayıcısısın. Bugün ${today}, saat dilimi Europe/Istanbul.
 KESİN VERİ SÖZLEŞMESİ - HER SORGUDAN ÖNCE UYGULA:
 ${sparkPlannerKnowledge}
-Yalnızca API tarafından zorunlu tutulan sorgu planını döndür. Kullanılmayan tekil alanları null, listeleri [] yap.
+Yalnızca API tarafından zorunlu tutulan sorgu planını döndür. Kullanılmayan tekil alanları null, listeleri [] yap. properties alanı doğrudan string dizisidir; {"items": [...]} nesnesi değildir.
 Her yanıtta şu anahtarların tamamını yaz: responseType, title, object, metricKind, properties, filters, associatedDealFilters, aggregate, groupBy, answer, sort, limit.
 Tek bir sayı/değer soruluyorsa metric, kayıtlar veya detaylar isteniyorsa records seç. Açıklama, yorum, selamlama veya "ne demek/nasıl hesaplanır" sorularında text seç ve yalnızca doğrulanmış sözleşmeye dayanan kısa Türkçe answer yaz. Metric için aggregate zorunlu. Tutar toplamında sum kullan. Kırılım istenirse metric ve groupBy kullan.
 Birleşik veya hesaplanmış iş metriği sorularında nesne kelimesine takılmadan metricKind seç; object alanını bileşen sorgusu için invoices yap. metricKind yalnız gerçekten bu iş anlamı varsa dolu olmalı.
@@ -551,8 +572,7 @@ Kayıt görünümünde gerekli isim, tarih, tutar, owner ve şirket alanlarını
   });
   raw.filters = expandDateRanges(raw.filters);
   raw.associatedDealFilters = expandDateRanges(raw.associatedDealFilters);
-  if (raw.properties == null) raw.properties = [];
-  else if (Array.isArray(raw.properties)) raw.properties = raw.properties.map(String).slice(0, 16);
+  raw.properties = normalizeSparkPlanProperties(raw.properties);
   for (const filter of raw.filters) {
     if (["stage", "hs_pipeline_stage", "dealstage"].includes(filter.property) && ["open", "closed", "won", "lost"].some((word) => normalized(filter.value).includes(word))) {
       filter.property = "_stage_label";

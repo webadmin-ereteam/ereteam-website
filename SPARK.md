@@ -45,7 +45,12 @@ conversation context so follow-up questions work; detailed record rows are exclu
 The planner uses Groq strict JSON Schema output with automatic fallback
 (`gpt-oss-120b`, then `gpt-oss-20b`) when a model is rate-limited or unavailable,
 and receives only question-relevant property catalog entries. Strict constrained
-output prevents malformed or schema-incomplete plans. If both free-tier models are
+output prevents malformed or schema-incomplete plans. A known Groq shape drift that
+wraps the `properties` array in an `items` object is normalized only before the same
+Zod, property-catalog and business guardrail validation; other unknown shapes remain
+rejected. If a deterministic intent guardrail changes the planned HubSpot object,
+fields from the superseded object are discarded and the approved core fields are used.
+If both free-tier models are
 rate-limited, the API returns an explicit `429` response telling the user to wait and
 retry with one period and one metric. The assistant is
 read-only, never exposes tokens to the browser, rate
@@ -65,7 +70,8 @@ and New Business-linked records use the same deterministic definitions as the da
 orders in the same requested period. The answer shows both components and their total.
 `Beklenen fatura/gelir toplamı` uses the same period-based composite calculation:
 invoices already issued plus open orders. A request to list or show expected invoice
-details remains an open-order record query rather than a composite total.
+details remains an open-order record query rather than a composite total. Current-month
+expected-invoice detail requests cover the full calendar month, not only month-to-date.
 For the current month, issued invoices use the month-to-date cutoff while open orders
 use the full calendar month through month-end. Composite business intent is represented
 explicitly in the LLM query plan (`metricKind`), so natural paraphrases are not limited

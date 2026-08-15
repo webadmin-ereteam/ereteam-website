@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { applySparkQueryGuardrails, resolveSparkDateRange, resolveSparkOwnerFilter, resolveSparkOwnerName, sparkChatComparableValue, sparkChatMatchesFilter, sparkQueryPlanJsonSchema } from "../lib/spark/chat";
+import { applySparkQueryGuardrails, normalizeSparkPlanProperties, resolveSparkDateRange, resolveSparkOwnerFilter, resolveSparkOwnerName, sparkChatComparableValue, sparkChatMatchesFilter, sparkQueryPlanJsonSchema } from "../lib/spark/chat";
 import { SPARK_CHAT_KNOWLEDGE, detectSparkCompanyName, detectSparkCompositeRevenueMetric, sparkRevenueGroup, type SparkObjectType } from "../lib/spark/chatKnowledge";
 
 const amountProperties: Record<SparkObjectType, string> = {
@@ -12,6 +12,28 @@ assert.equal(sparkQueryPlanJsonSchema.additionalProperties, false);
 assert.deepEqual(sparkQueryPlanJsonSchema.required, Object.keys(sparkQueryPlanJsonSchema.properties));
 assert.equal(sparkQueryPlanJsonSchema.properties.filters.items.additionalProperties, false);
 assert.deepEqual(sparkQueryPlanJsonSchema.properties.filters.items.required, ["property", "operator", "value", "values"]);
+assert.deepEqual(normalizeSparkPlanProperties({ items: ["hs_invoice_date", "hubspot_owner_id"] }), ["hs_invoice_date", "hubspot_owner_id"]);
+assert.throws(() => normalizeSparkPlanProperties({ values: ["hs_invoice_date"] }), /Property listesi geçersiz/);
+
+const recoveredExpectedDetails = applySparkQueryGuardrails({
+  responseType: "metric",
+  title: "Bu ay beklenen faturaların toplamı",
+  object: "invoices",
+  metricKind: "expected_revenue",
+  properties: ["hs_invoice_date", "hs_amount_billed_in_company_currency"],
+  filters: [],
+  associatedDealFilters: [],
+  aggregate: { operation: "sum", property: "hs_amount_billed_in_company_currency" },
+  groupBy: null,
+  answer: null,
+  sort: null,
+  limit: 100,
+}, "Bu ay beklenen faturaların detaylarını göster", new Date("2026-08-15T12:00:00Z"), []);
+assert.equal(recoveredExpectedDetails.object, "orders");
+assert.equal(recoveredExpectedDetails.responseType, "records");
+assert.deepEqual(recoveredExpectedDetails.properties, []);
+assert.equal(recoveredExpectedDetails.metricKind, null);
+assert.equal(recoveredExpectedDetails.filters.find((filter) => filter.property === "_stage_label")?.value, "Open");
 
 assert.equal(sparkChatComparableValue("2027-01-01"), Date.parse("2026-12-31T21:00:00Z"), "İstanbul takvim günü UTC sınırı yanlış");
 assert.ok(sparkChatComparableValue("2026-12-31T21:00:00Z") >= sparkChatComparableValue("2027-01-01"), "1 Ocak İstanbul kaydı 2026 aralığına girmemeli");
