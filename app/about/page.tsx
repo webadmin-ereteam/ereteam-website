@@ -14,7 +14,7 @@ const sections = [
     title: "Company",
     href: "/about/company",
     description:
-      "Our story, mission, values, approach, and leadership team. 25 years of building enterprise data and analytics excellence.",
+      "Our story, mission, values, approach, and partners. 25 years of building enterprise data and analytics excellence.",
     cta: "Meet Ereteam",
   },
   {

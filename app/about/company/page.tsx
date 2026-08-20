@@ -2,14 +2,14 @@ export const revalidate = 60;
 
 import { Metadata } from "next";
 import Link from "next/link";
-import { getLeadershipTeam, getPartnersBoard, SanityTeamMember } from "@/lib/sanity/queries";
+import { getPartnersBoard, SanityTeamMember } from "@/lib/sanity/queries";
 import { urlFor } from "@/lib/sanity/client";
 import Image from "next/image";
 
 export const metadata: Metadata = {
   title: "Company – About Ereteam",
   description:
-    "Learn about Ereteam: our story, mission, approach, and leadership team. 25 years of enterprise data & analytics expertise.",
+    "Learn about Ereteam: our story, mission, approach, and partners. 25 years of enterprise data & analytics expertise.",
 };
 
 const stats = [
@@ -46,14 +46,10 @@ const LinkedInIcon = () => (
 );
 
 export default async function CompanyPage() {
-  const [leadershipTeam, partnersBoard] = await Promise.all([
-    getLeadershipTeam(),
-    getPartnersBoard(),
-  ]);
+  const partnersBoard = await getPartnersBoard();
 
   return (
     <>
-      {/* Hero */}
       {/* Hero */}
       <section
         className="site-overview-hero"
@@ -171,46 +167,50 @@ export default async function CompanyPage() {
       </section>
 
       {/* Partners Board */}
-      <section className="py-20 bg-white">
+      <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
+          <div className="max-w-2xl mx-auto text-center mb-14">
             <p className="text-sm font-medium text-brand-magenta uppercase tracking-widest mb-2">
               Ownership
             </p>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-brand-dark">
               Partners Board
             </h2>
+            <p className="mt-4 text-text-muted leading-relaxed">
+              The partners shaping Ereteam&apos;s long-term direction, client commitment,
+              and specialist culture.
+            </p>
           </div>
           {partnersBoard.length === 0 ? (
             <p className="text-center text-gray-400">Partners Board information coming soon.</p>
           ) : (
-            <div className="max-w-4xl mx-auto">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            <div className="max-w-6xl mx-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 {partnersBoard.map((person: SanityTeamMember) => (
                   <div
                     key={person._id}
-                    className="bg-brand-light rounded-xl p-4 text-center border border-gray-200 hover:border-brand-primary hover:shadow-sm transition-all flex flex-col items-center"
+                    className="group bg-brand-light rounded-2xl p-5 text-center border border-gray-200 hover:border-brand-primary/60 hover:shadow-lg transition-all flex flex-col items-center"
                   >
                     {person.imagePartners || person.image ? (
-                      <div className="w-full aspect-square mb-3 overflow-hidden rounded-lg">
+                      <div className="w-full aspect-[4/5] mb-5 overflow-hidden rounded-xl bg-white">
                         <Image
-                          src={urlFor(person.imagePartners || person.image).width(400).height(400).fit('crop').url()}
+                          src={urlFor(person.imagePartners || person.image).width(600).height(750).fit('crop').url()}
                           alt={person.name}
-                          width={400}
-                          height={400}
-                          className="w-full h-full object-cover"
+                          width={600}
+                          height={750}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.025]"
                         />
                       </div>
                     ) : (
-                      <div className="w-full aspect-square bg-brand-primary/10 rounded-lg flex items-center justify-center mb-3 text-4xl font-bold text-brand-primary">
+                      <div className="w-full aspect-[4/5] bg-brand-primary/10 rounded-xl flex items-center justify-center mb-5 text-5xl font-bold text-brand-primary">
                         {person.name.charAt(0)}
                       </div>
                     )}
-                    <p className="text-sm font-bold text-brand-dark leading-tight mb-1">
+                    <p className="text-lg font-bold text-brand-dark leading-tight mb-1">
                       {person.name}
                     </p>
                     {person.title && (
-                      <p className="text-xs font-medium text-brand-primary mb-3">
+                      <p className="text-sm font-medium text-brand-primary mb-4">
                         {person.title}
                       </p>
                     )}
@@ -219,7 +219,7 @@ export default async function CompanyPage() {
                         href={person.linkedIn}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center text-[#0A66C2] hover:text-[#004182] transition-colors mt-auto"
+                        className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-[#0A66C2]/20 text-[#0A66C2] hover:bg-[#0A66C2] hover:text-white transition-colors mt-auto"
                         aria-label={`${person.name} LinkedIn`}
                       >
                         <LinkedInIcon />
@@ -233,22 +233,9 @@ export default async function CompanyPage() {
         </div>
       </section>
 
-      {/* Executive Leadership Team */}
-      <section className="py-20 bg-brand-light">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
-            <p className="text-sm font-medium text-brand-magenta uppercase tracking-widest mb-2">
-              Leadership
-            </p>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-brand-dark">
-              Executive Leadership Team
-            </h2>
-          </div>
-          {leadershipTeam.length === 0 ? (
-            <p className="text-center text-gray-400">Team information coming soon.</p>
-          ) : (
+          {false && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {leadershipTeam.map((person: SanityTeamMember) => (
+              {partnersBoard.map((person: SanityTeamMember) => (
                 <div
                   key={person._id}
                   className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-brand-primary hover:shadow-lg transition-all flex flex-col"
@@ -296,16 +283,11 @@ export default async function CompanyPage() {
                         </a>
                       )}
                     </div>
-                    {person.bio && (
-                      <p className="text-sm text-text-body mt-2 leading-relaxed">{person.bio}</p>
-                    )}
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </div>
-      </section>
 
       {/* CTA */}
       <section className="relative py-24 overflow-hidden">

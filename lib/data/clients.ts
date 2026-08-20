@@ -56,6 +56,7 @@ export const clients: Client[] = [
   { name: "OYAK", localLogo: "Asset 137.png" },
   { name: "Enerjisa", localLogo: "Asset 138.png" },
   { name: "Balparmak", localLogo: "Asset 139.png" },
+  { name: "CFN Kimya", localLogo: "cfn-kimya.png" },
   // Media & Other
   { name: "Digiturk", localLogo: "Asset 161.png" },
   { name: "SiriusXM", localLogo: "SiriusXM.tif (3).png" },

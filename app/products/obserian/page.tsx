@@ -135,7 +135,7 @@ export default function OberianPage() {
               { team: "Executive BI", field: "Revenue", value: "$49.1M", note: "Unknown transformation, undocumented" },
             ].map((row) => (
               <div key={row.team} className="flex items-center gap-3 rounded-xl overflow-hidden border border-gray-200">
-                <div className="bg-[#2d1a4a] text-white text-xs font-semibold px-4 py-3 w-28 flex-shrink-0">{row.team}</div>
+                <div className="w-32 flex-shrink-0 whitespace-nowrap bg-[#2d1a4a] px-4 py-3 text-[11px] font-semibold text-white sm:w-36 sm:text-xs">{row.team}</div>
                 <div className="bg-[#7454A2] text-white text-xs font-bold px-3 py-3 w-24 flex-shrink-0">{row.value}</div>
                 <div className="bg-[#1e1e3f] text-white text-xs px-4 py-3 flex-1">{row.note}</div>
               </div>

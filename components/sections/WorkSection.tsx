@@ -26,8 +26,8 @@ export default function WorkSection() {
               </div>
               <div className="flex min-h-[260px] flex-col p-7 lg:p-8">
                 <div className="text-[10px] font-bold uppercase tracking-[.14em] text-[#D69A6E]">{work.industry}</div>
-                <h3 className="site-display mt-8 text-2xl leading-tight text-white lg:text-3xl">{work.project}</h3>
-                <p className="mt-auto pt-8 text-sm leading-6 text-white/60">{work.result}</p>
+                <h3 className="site-display mt-8 min-h-[3.75rem] text-2xl leading-tight text-white lg:min-h-[4.5rem] lg:text-3xl">{work.project}</h3>
+                <p className="mt-8 text-sm leading-6 text-white/60">{work.result}</p>
               </div>
             </Link>
           ))}

@@ -26,7 +26,7 @@ export default function ProductsSection() {
               <div className="relative my-auto h-20 w-full">
                 <Image src={product.logo} alt={product.name} fill sizes="280px" className="object-contain object-left" />
               </div>
-              <div>
+              <div className="md:min-h-[210px] lg:min-h-[180px] xl:min-h-[150px]">
                 <p className="mb-3 text-[10px] font-bold uppercase tracking-[.14em]" style={{ color: product.color }}>{product.tagline}</p>
                 <p className="text-base leading-7 text-text-muted">{product.description}</p>
               </div>

@@ -19,8 +19,8 @@ export default defineConfig({
               .title("Success Stories")
               .child(S.documentTypeList("successStory").title("Success Stories")),
             S.listItem()
-              .title("Team Members")
-              .child(S.documentTypeList("teamMember").title("Team Members")),
+              .title("Partners Board")
+              .child(S.documentTypeList("teamMember").title("Partners Board")),
             S.listItem()
               .title("Job Postings")
               .child(S.documentTypeList("jobPosting").title("Job Postings")),

@@ -52,7 +52,11 @@ export async function POST(req: NextRequest) {
       content: m.content,
     }));
 
-    const text = await generateChatResponse(systemPrompt, mappedMessages, apiKey, pageContext);
+    const text = await generateChatResponse(systemPrompt, mappedMessages, apiKey, pageContext, {
+      model: process.env.SITE_CHAT_MODEL || "openai/gpt-oss-20b",
+      temperature: 0.55,
+      maxTokens: 700,
+    });
 
     return NextResponse.json({ content: text });
   } catch (err: unknown) {

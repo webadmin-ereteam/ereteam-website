@@ -22,10 +22,8 @@ const services = [
       "Data Governance & Quality",
       "Self-Service Analytics",
     ],
-    tags: ["IBM", "AWS", "Databricks", "Snowflake", "HCL Software"],
-    color: "bg-white border-gray-200 hover:border-[#38bdf8]/50",
-    iconBg: "bg-[#38bdf8]/10",
-    iconColor: "text-[#38bdf8]",
+    accent: "#38bdf8",
+    label: "Modern data foundations",
   },
   {
     icon: TrendingUp,
@@ -40,10 +38,8 @@ const services = [
       "Regulatory Reporting",
       "Management Reporting",
     ],
-    tags: ["IBM Planning Analytics", "TM1", "IBM Cognos", "SAP"],
-    color: "bg-white border-gray-200 hover:border-[#10b981]/50",
-    iconBg: "bg-[#10b981]/10",
-    iconColor: "text-[#10b981]",
+    accent: "#10b981",
+    label: "Connected financial performance",
   },
   {
     icon: BarChart3,
@@ -58,17 +54,14 @@ const services = [
       "Digital Analytics & Attribution",
       "Trade Promotion Analytics",
     ],
-    tags: ["Tableau", "Alteryx", "DataRobot", "Databricks"],
-    color: "bg-white border-gray-200 hover:border-[#f472b6]/50",
-    iconBg: "bg-[#f472b6]/10",
-    iconColor: "text-[#f472b6]",
+    accent: "#f472b6",
+    label: "Evidence-led commercial growth",
   },
 ];
 
 export default function ServicesPage() {
   return (
     <>
-      {/* Hero */}
       {/* Hero */}
       <section
         className="site-overview-hero"
@@ -92,56 +85,66 @@ export default function ServicesPage() {
         </div>
       </section>
 
-      {/* Service Cards */}
-      <section className="py-20 bg-white border-b border-gray-100">
+      {/* Service domains */}
+      <section className="border-b border-brand-dark/10 bg-[#F2EFE8] py-20 sm:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-end lg:gap-16">
+            <div>
+              <p className="text-sm font-medium uppercase tracking-widest text-brand-magenta">
+                Service domains
+              </p>
+              <h2 className="site-display mt-4 max-w-xl text-4xl leading-tight text-brand-dark sm:text-5xl">
+                Three disciplines. One connected capability.
+              </h2>
+            </div>
+            <p className="max-w-2xl text-lg leading-8 text-text-muted lg:justify-self-end">
+              Strategy, engineering and adoption stay connected from the first business
+              question through to the capability your teams use every day.
+            </p>
+          </div>
+
+          <div className="mt-14 border-t border-brand-dark/15">
             {services.map((service) => {
               const Icon = service.icon;
               return (
                 <Link
                   key={service.title}
                   href={service.href}
-                  className={`group block rounded-2xl p-8 border ${service.color} hover:shadow-xl transition-all duration-300`}
+                  className="group -mx-4 grid gap-8 border-b border-brand-dark/15 px-4 py-10 transition-colors duration-300 hover:bg-white/55 sm:py-12 lg:grid-cols-[0.82fr_1.18fr] lg:gap-16"
                 >
-                  <div
-                    className={`w-14 h-14 ${service.iconBg} rounded-2xl flex items-center justify-center mb-6`}
-                  >
-                    <Icon size={28} className={service.iconColor} />
+                  <div className="flex items-start gap-5">
+                    <div
+                      className="flex h-12 w-12 flex-shrink-0 items-center justify-center border"
+                      style={{ backgroundColor: `${service.accent}12`, borderColor: `${service.accent}35` }}
+                    >
+                      <Icon size={23} style={{ color: service.accent }} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[.15em]" style={{ color: service.accent }}>
+                        {service.label}
+                      </p>
+                      <h2 className="site-display mt-3 max-w-md text-3xl leading-tight text-brand-dark sm:text-4xl">
+                        {service.title}
+                      </h2>
+                      <div className="mt-7 inline-flex items-center gap-2 text-sm font-bold text-brand-dark">
+                        Explore service
+                        <ArrowRight size={16} className="transition-transform duration-300 group-hover:translate-x-1" />
+                      </div>
+                    </div>
                   </div>
-                  <h2 className={`text-xl font-bold text-brand-dark mb-4 transition-colors ${service.iconColor.replace('text', 'group-hover:text')}`}>
-                    {service.title}
-                  </h2>
-                  <p className="text-sm text-text-body leading-relaxed mb-6">
-                    {service.description}
-                  </p>
-                  <ul className="space-y-3 mb-8">
-                    {service.capabilities.map((cap) => (
-                      <li
-                        key={cap}
-                        className="flex items-center gap-3 text-sm text-text-muted"
-                      >
-                        <span className={`w-1.5 h-1.5 rounded-full ${service.iconColor.replace('text-', 'bg-')} flex-shrink-0 opacity-80`} />
-                        {cap}
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="flex flex-wrap gap-2 mb-8">
-                    {service.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="text-xs px-3 py-1.5 bg-gray-50 rounded-md border border-gray-200 text-gray-500"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                  <div className={`flex items-center gap-1.5 text-sm font-semibold ${service.iconColor}`}>
-                    Explore service{" "}
-                    <ArrowRight
-                      size={16}
-                      className="group-hover:translate-x-1 transition-transform"
-                    />
+
+                  <div>
+                    <p className="max-w-2xl text-lg leading-8 text-text-body">
+                      {service.description}
+                    </p>
+                    <ul className="mt-7 grid gap-x-8 gap-y-3 sm:grid-cols-2">
+                      {service.capabilities.map((cap) => (
+                        <li key={cap} className="flex items-center gap-3 text-sm text-text-muted">
+                          <span className="h-px w-5 flex-shrink-0" style={{ backgroundColor: service.accent }} />
+                          {cap}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </Link>
               );
