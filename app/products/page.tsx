@@ -24,13 +24,13 @@ const products = [
   {
     logo: "/logos/products/pharmeta_logo.png",
     name: "Pharmeta",
-    tagline: "Pharmaceutical Product Data",
+    tagline: "AI-Powered Data Platform",
     href: "/products/pharmeta",
     externalHref: "https://pharmeta.io",
-    image: "/images/editorial/product-pharmeta-v2.png",
+    image: "/images/editorial/product-pharmeta-v3.png",
     accent: "#9e8bd7",
-    statement: "One clean product record across every market and distributor.",
-    description: "Pharmeta matches, cleans and certifies complex pharmaceutical product data so commercial and operations teams work from the same trusted record.",
+    statement: "Turn fragmented product and customer data into trusted golden records.",
+    description: "Pharmeta collects data from any source, uses AI to match and standardize inconsistent records, and gives every team a governed source of truth across distributors, markets and systems.",
     capabilities: ["AI-powered SKU matching", "Golden record creation", "Multi-market control"],
   },
   {

@@ -90,7 +90,7 @@ export default function PharmPage() {
         highlight="You just don't see it yet."
         description="Pharmeta cleans and manages complex product and customer data in less time—giving every team a trusted golden record to work from."
         metrics={metrics}
-        image="/images/editorial/product-pharmeta-v2.png"
+        image="/images/editorial/product-pharmeta-v3.png"
         imagePosition="object-center"
         accent="#A995E4"
         externalHref="https://pharmeta.io"
