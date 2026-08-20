@@ -1,6 +1,7 @@
 export const revalidate = 60;
 
 import { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { Heart, TrendingUp, Globe, Users, Zap, Database, BarChart2, Cloud, Brain, Code2, Briefcase, MapPin } from "lucide-react";
 import { getAllActiveJobPostings } from "@/lib/sanity/queries";
@@ -107,52 +108,44 @@ export default async function CareersPage() {
 
   return (
     <>
-      {/* Hero */}
-      {/* Hero */}
-      <section
-        className="pt-32 pb-20"
-        style={{ background: "linear-gradient(135deg, #1A1A2E 0%, #0D3A5C 100%)" }}
-      >
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="mb-4">
-            <Link href="/about" className="text-sm text-gray-400 hover:text-white transition-colors">
-              ← About
-            </Link>
+      <section className="bg-[#071a2a] text-white">
+        <div className="grid min-h-[720px] lg:grid-cols-[1fr_1fr]">
+          <div className="flex items-center px-4 pb-14 pt-32 sm:px-8 lg:px-[max(4rem,calc((100vw-1280px)/2))] lg:pr-14 lg:pt-36">
+            <div className="max-w-2xl">
+              <Link href="/about" className="text-xs font-bold uppercase tracking-[.14em] text-white/55 transition-colors hover:text-white">← About</Link>
+              <p className="site-kicker mt-10">Careers at Ereteam</p>
+              <h1 className="site-display mt-6 text-[clamp(3.8rem,7vw,7.5rem)]">Do work that makes data matter.</h1>
+              <p className="mt-7 max-w-xl text-xl leading-8 text-white/72">Join experienced consultants, engineers and product builders solving decisions that matter for enterprises around the world.</p>
+              <div className="mt-9 flex flex-wrap gap-3">
+                <Link href="#departments" className="site-button site-button--light">Explore opportunities</Link>
+                <Link href="/contact" className="site-button site-button--ghost">Introduce yourself</Link>
+              </div>
+            </div>
           </div>
-          <p className="text-sm font-medium text-brand-primary uppercase tracking-widest mb-4">
-            Careers
-          </p>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight">
-            Make Data{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-primary to-blue-400">Come Alive</span>
-          </h1>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
-            Join a team of passionate data professionals who are building the next
-            generation of enterprise analytics. At Ereteam, your work directly shapes
-            how leading organizations make their most important decisions.
-          </p>
-          <div className="mt-10">
-            <Link
-              href="/contact"
-              className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-brand-primary to-[#38BDF8] text-white font-bold rounded-lg hover:shadow-[0_0_20px_rgba(56,189,248,0.4)] hover:-translate-y-1 transition-all"
-            >
-              Apply Now
-            </Link>
+          <div className="relative min-h-[440px] overflow-hidden lg:min-h-full">
+            <Image src="/images/editorial/careers-team-v2.png" alt="Ereteam colleagues collaborating in a data consultancy studio" fill priority sizes="(min-width: 1024px) 50vw, 100vw" className="object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#071a2a]/60 via-transparent to-transparent lg:bg-gradient-to-r lg:from-[#071a2a]/28 lg:to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 grid grid-cols-2 border-t border-white/25 bg-[#071a2a]/55 backdrop-blur-md">
+              <div className="border-r border-white/20 p-6"><strong className="block text-3xl">80+</strong><span className="text-xs uppercase tracking-[.12em] text-white/60">Data professionals</span></div>
+              <div className="p-6"><strong className="block text-3xl">17</strong><span className="text-xs uppercase tracking-[.12em] text-white/60">Countries served</span></div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Why Ereteam */}
-      <section className="py-20 bg-white">
+      <section className="bg-white py-14 lg:py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
+          <div className="mb-10 grid gap-5 lg:grid-cols-[.8fr_1.2fr] lg:items-end">
+            <div>
             <p className="text-sm font-medium text-brand-magenta uppercase tracking-widest mb-2">
               Why Ereteam
             </p>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-brand-dark mb-4">
+            <h2 className="text-4xl sm:text-5xl font-extrabold text-brand-dark">
               A Place to Do Your Best Work
             </h2>
-            <p className="text-lg text-text-muted max-w-2xl mx-auto">
+            </div>
+            <p className="text-xl leading-8 text-text-muted max-w-2xl lg:justify-self-end">
               We invest in our people because great outcomes require great talent.
             </p>
           </div>
@@ -162,13 +155,13 @@ export default async function CareersPage() {
               return (
                 <div
                   key={reason.title}
-                  className="bg-brand-light rounded-2xl p-6 border border-gray-200 hover:border-brand-primary hover:shadow-md transition-all"
+                  className="bg-brand-light rounded-2xl p-7 border border-gray-200 hover:border-brand-primary hover:shadow-md transition-all"
                 >
                   <div className="w-10 h-10 bg-brand-primary/10 rounded-xl flex items-center justify-center mb-4">
                     <Icon size={20} className="text-brand-primary" />
                   </div>
-                  <h3 className="font-bold text-brand-dark mb-2">{reason.title}</h3>
-                  <p className="text-sm text-text-body leading-relaxed">
+                  <h3 className="text-xl font-bold text-brand-dark mb-3">{reason.title}</h3>
+                  <p className="text-base text-text-body leading-7">
                     {reason.description}
                   </p>
                 </div>
@@ -178,8 +171,21 @@ export default async function CareersPage() {
         </div>
       </section>
 
+      <section className="bg-[#f3f0e8] py-10 lg:py-14">
+        <div className="site-container grid overflow-hidden border border-[#071a2a]/15 bg-white lg:grid-cols-[1.2fr_.8fr]">
+          <div className="relative min-h-[360px] lg:min-h-[520px]">
+            <Image src="/images/editorial/careers-mentoring-v2.png" alt="A senior Ereteam consultant mentoring two colleagues" fill sizes="(min-width: 1024px) 60vw, 100vw" className="object-cover" />
+          </div>
+          <div className="flex flex-col justify-center p-8 sm:p-10 lg:p-12">
+            <p className="site-kicker">Learn by doing</p>
+            <h2 className="mt-6 text-[clamp(2.5rem,4vw,4.6rem)] font-semibold leading-[.98] tracking-[-.05em] text-[#071a2a]">Senior guidance. Real responsibility.</h2>
+            <p className="mt-6 text-lg leading-8 text-[#40515d]">Our teams are deliberately mixed across experience levels. You learn beside specialists, contribute early and build depth through real delivery—not classroom exercises alone.</p>
+          </div>
+        </div>
+      </section>
+
       {/* Departments */}
-      <section className="py-20 bg-brand-light">
+      <section id="departments" className="py-14 lg:py-20 bg-brand-light">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
             <p className="text-sm font-medium text-brand-magenta uppercase tracking-widest mb-2">
@@ -189,23 +195,23 @@ export default async function CareersPage() {
               Where You Could Work
             </h2>
           </div>
-          <div className="space-y-6">
+          <div className="grid gap-5 lg:grid-cols-2">
             {departments.map((dept) => {
               const Icon = dept.icon;
               return (
                 <div
                   key={dept.title}
-                  className="bg-white rounded-2xl p-6 sm:p-8 border border-gray-200 hover:border-brand-primary hover:shadow-md transition-all"
+                  className="bg-white rounded-2xl p-7 sm:p-8 border border-gray-200 hover:border-brand-primary hover:shadow-md transition-all"
                 >
                   <div className="flex flex-col sm:flex-row gap-6">
                     <div className="w-12 h-12 bg-brand-primary/10 rounded-xl flex items-center justify-center flex-shrink-0">
                       <Icon size={22} className="text-brand-primary" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-lg font-bold text-brand-dark mb-2">
+                      <h3 className="text-2xl font-bold text-brand-dark mb-3">
                         {dept.title}
                       </h3>
-                      <p className="text-sm text-text-body leading-relaxed mb-4">
+                      <p className="text-base text-text-body leading-7 mb-5">
                         {dept.description}
                       </p>
                       <div className="flex flex-wrap gap-2">

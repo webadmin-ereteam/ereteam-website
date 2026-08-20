@@ -5,29 +5,26 @@ import Link from "next/link";
 
 export default function CTABanner() {
   return (
-    <section
-      className="py-20"
-      style={{ background: "linear-gradient(135deg, #1A1A2E 0%, #0D3A5C 100%)" }}
-    >
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <section className="relative overflow-hidden bg-[#B96F38] py-24 text-white lg:py-32">
+      <div className="site-container relative text-center">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-4">
-            Ready to unlock the value{" "}
-            <span className="text-brand-primary">in your data?</span>
+          <span className="text-[10px] font-bold uppercase tracking-[.2em] text-white/75">The next conversation</span>
+          <h2 className="site-display mx-auto mt-6 max-w-4xl text-5xl text-white sm:text-6xl lg:text-7xl">
+            What could better decisions change for your business?
           </h2>
-          <p className="text-lg text-gray-300 mb-10">
-            Talk to our experts — no obligation, just clarity.
+          <p className="mx-auto mb-10 mt-7 max-w-xl text-base leading-7 text-white/80">
+            Bring us the ambition, the complexity or the question. We will bring experienced perspective.
           </p>
           <Link
             href="/contact"
-            className="inline-flex items-center px-10 py-4 bg-brand-primary text-white font-semibold rounded-lg hover:bg-opacity-90 transition-all shadow-lg hover:shadow-xl text-base"
+            className="site-button site-button--light"
           >
-            Get in Touch
+            Start a conversation
           </Link>
         </motion.div>
       </div>

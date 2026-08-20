@@ -1,55 +1,29 @@
-"use client";
-
-import { motion } from "framer-motion";
+import Image from "next/image";
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 import { partners } from "@/lib/homeData";
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 30 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-};
-
-const stagger = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.12 } },
-};
 
 export default function PartnersSection() {
   return (
-    <section className="py-16 bg-white border-y border-gray-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-10"
-        >
-          <p className="text-xs font-semibold text-text-muted uppercase tracking-widest">
-            Technology Partners
-          </p>
-        </motion.div>
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={stagger}
-          className="flex flex-wrap justify-center gap-4"
-        >
-          {partners.map((partner) => (
-            <motion.div
-              key={partner.name}
-              variants={fadeUp}
-              className="w-[150px] h-[80px] bg-[#F7F8FA] rounded-xl border border-gray-200 hover:border-brand-primary hover:shadow-md hover:bg-white transition-all cursor-default flex items-center justify-center"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={partner.logo}
-                alt={partner.name}
-                className="max-h-10 max-w-[110px] w-auto object-contain"
-              />
-            </motion.div>
-          ))}
-        </motion.div>
+    <section className="bg-[#f9f7f2] py-24 lg:py-32">
+      <div className="site-container">
+        <div className="grid gap-8 lg:grid-cols-[.75fr_1.25fr]">
+          <div className="lg:pr-12">
+            <span className="site-kicker">Technology ecosystem</span>
+            <h2 className="site-display mt-6 text-5xl text-brand-dark sm:text-6xl">The right platform. Applied with depth.</h2>
+            <p className="mt-7 max-w-md text-sm leading-7 text-text-muted">We pair independent advice with long-standing expertise across the technologies shaping enterprise analytics.</p>
+            <Link href="/partners" className="mt-8 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[.12em]">Meet our partners <ArrowUpRight size={15} /></Link>
+          </div>
+          <div className="mt-5 grid grid-cols-2 border-l border-t border-[#071A2A]/15 sm:grid-cols-3 lg:mt-0">
+            {partners.map((partner) => (
+              <div key={partner.name} className="flex min-h-32 items-center justify-center border-b border-r border-[#071A2A]/15 bg-white/50 p-6 lg:min-h-40">
+                <div className="relative h-14 w-full">
+                  <Image src={partner.logo} alt={partner.name} fill sizes="180px" className="object-contain grayscale opacity-65 transition duration-300 hover:grayscale-0 hover:opacity-100" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </section>
   );

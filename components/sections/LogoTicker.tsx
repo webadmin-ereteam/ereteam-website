@@ -8,12 +8,12 @@ const row2 = clients.slice(ITEMS_PER_ROW);
 
 function ClientItem({ client }: { client: (typeof clients)[0] }) {
   return (
-    <div className="flex-shrink-0 flex items-center justify-center px-6 h-12">
+    <div className="flex h-16 flex-shrink-0 items-center justify-center border-r border-[#071A2A]/10 px-9">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={`/logos/clients/${client.localLogo}`}
         alt={client.name}
-        className="h-8 w-auto max-w-[110px] object-contain grayscale opacity-55 hover:opacity-100 hover:grayscale-0 transition-all duration-300"
+        className="h-8 w-auto max-w-[120px] object-contain grayscale opacity-50 transition-all duration-300 hover:grayscale-0 hover:opacity-100"
       />
     </div>
   );
@@ -37,13 +37,11 @@ function TickerRow({ items, direction }: { items: typeof clients; direction: "le
 
 export default function LogoTicker() {
   return (
-    <section className="py-14 bg-white overflow-hidden border-y border-gray-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
-        <div className="text-center">
-          <p className="text-xs font-semibold text-text-muted uppercase tracking-widest mb-2">Trusted by</p>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-brand-dark">
-            Industry Leaders Worldwide
-          </h2>
+    <section className="overflow-hidden border-y border-[#071A2A]/15 bg-[#f3f0e8] py-16 lg:py-20">
+      <div className="site-container mb-10">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div><span className="site-kicker">Long-term trust</span><h2 className="site-display mt-4 text-4xl text-brand-dark sm:text-5xl">Trusted by enterprise leaders.</h2></div>
+          <p className="max-w-sm text-xs leading-6 text-text-muted">Across finance, telecom, pharmaceuticals, retail, manufacturing and the public sector.</p>
         </div>
       </div>
       <div className="space-y-3">

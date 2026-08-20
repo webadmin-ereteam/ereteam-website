@@ -1,11 +1,11 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Users, Award, Briefcase } from "lucide-react";
+import { ArrowRight, Users, Briefcase } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "About Ereteam",
   description:
-    "Learn about Ereteam — 25 years of enterprise data & analytics expertise. Discover our company story, career opportunities, and technology certifications.",
+    "Learn about Ereteam — 25 years of enterprise data & analytics expertise. Discover our company story and career opportunities.",
 };
 
 const sections = [
@@ -24,14 +24,6 @@ const sections = [
     description:
       "Join a team of passionate data professionals. We're always looking for talented people who want to make data come alive.",
     cta: "Explore opportunities",
-  },
-  {
-    icon: Award,
-    title: "Certifications",
-    href: "/about/certifications",
-    description:
-      "Our technology certifications across IBM, AWS, HCL, Alteryx, Tableau, and DataRobot — proof of our deep technical expertise.",
-    cta: "View certifications",
   },
 ];
 
@@ -65,7 +57,7 @@ export default function AboutPage() {
       {/* Section navigation */}
       <section className="py-20 bg-brand-light">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {sections.map((section) => {
               const Icon = section.icon;
               return (

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, Database, Cloud, Brain, GitMerge, BarChart2 } from "lucide-react";
 import Image from "next/image";
+import ServiceDetailHero from "@/components/detail/ServiceDetailHero";
 
 const serviceAreas = [
   {
@@ -112,10 +113,10 @@ const featuredUseCases = [
 ];
 
 const processSteps = [
-  { number: "01", title: "Discover", description: "Assess current data estate, define business value targets" },
-  { number: "02", title: "Design", description: "Architect the target platform, governance model, and roadmap" },
-  { number: "03", title: "Build", description: "Deliver pipelines, models, and dashboards in sprints" },
-  { number: "04", title: "Optimize", description: "Monitor, iterate, and scale with ongoing DataOps support" },
+  { title: "Discover", description: "Assess current data estate, define business value targets" },
+  { title: "Design", description: "Architect the target platform, governance model, and roadmap" },
+  { title: "Build", description: "Deliver pipelines, models, and dashboards in sprints" },
+  { title: "Optimize", description: "Monitor, iterate, and scale with ongoing DataOps support" },
 ];
 
 const whyStats = [
@@ -126,48 +127,21 @@ const whyStats = [
 
 export default function DataCloudAIPage() {
   return (
-    <>
-      {/* Hero */}
-      {/* Hero */}
-      <section
-        className="pt-32 pb-20"
-        style={{ background: "linear-gradient(135deg, #0a1628 0%, #1a2a5e 100%)" }}
-      >
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-4">
-            <Link href="/services" className="text-sm text-gray-400 hover:text-white transition-colors">
-              ← Services
-            </Link>
-          </div>
-          <p className="text-sm font-medium text-[#38bdf8] uppercase tracking-widest mb-3">
-            Service Domain
-          </p>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight">
-            Data, Cloud &amp; AI
-          </h1>
-          <p className="text-xl text-[#38bdf8] font-semibold mb-6">
-            From raw data to competitive intelligence — end to end.
-          </p>
-          <p className="text-lg text-gray-300 max-w-2xl mb-8 leading-relaxed">
-            Build a modern, scalable data foundation with cloud-native architecture,
-            AI/ML solutions, and enterprise data governance. From strategy to production
-            — we deliver the intelligence infrastructure that powers your competitive advantage.
-          </p>
-          <ul className="space-y-3 text-gray-300 text-sm">
-            {[
-              "AI-Powered BI & self-service analytics at enterprise scale",
-              "Predictive & Generative AI from pilot to production",
-              "Cloud migration on AWS, Azure, and GCP",
-              "Data governance, quality, and lineage frameworks",
-            ].map((bullet) => (
-              <li key={bullet} className="flex items-start gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#38bdf8] flex-shrink-0" />
-                {bullet}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+    <div className="detail-page">
+      <ServiceDetailHero
+        title="Data, Cloud & AI"
+        tagline="From raw data to competitive intelligence — end to end."
+        description="Build a modern, scalable data foundation with cloud-native architecture, AI/ML solutions, and enterprise data governance. From strategy to production, we deliver the intelligence infrastructure that powers competitive advantage."
+        bullets={[
+          "AI-powered BI and self-service analytics",
+          "Predictive and generative AI in production",
+          "Cloud migration across AWS, Azure and GCP",
+          "Data governance, quality and lineage",
+        ]}
+        image="/images/editorial/service-data-ai-v2.png"
+        imageAlt="Enterprise data and AI specialists reviewing analytics"
+        accent="#68B8D8"
+      />
 
       {/* Stats Bar */}
       <section className="bg-white border-y border-gray-100">
@@ -194,39 +168,18 @@ export default function DataCloudAIPage() {
               Deep expertise across the entire data lifecycle.
             </p>
           </div>
-          <div className="space-y-20">
-            {serviceAreas.map((area, index) => {
-              const isEven = index % 2 === 0;
+          <div className="grid gap-px overflow-hidden border border-[#071a2a]/15 bg-[#071a2a]/15 lg:grid-cols-2">
+            {serviceAreas.map((area) => {
               const Icon = area.icon;
               return (
-                <div
-                  key={area.title}
-                  className={`flex flex-col lg:flex-row items-center gap-10 ${
-                    !isEven ? "lg:flex-row-reverse" : ""
-                  }`}
-                >
-                  <div className="w-full lg:w-1/2 relative h-64 sm:h-80 lg:h-[400px] rounded-2xl overflow-hidden shadow-lg">
-                    <Image
-                      src={area.image}
-                      alt={area.title}
-                      fill
-                      className="object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                <article key={area.title} className="bg-white p-7 sm:p-9 lg:p-10">
+                  <div className="flex items-center border-b border-[#071a2a]/12 pb-6">
+                    <div className={`flex h-12 w-12 items-center justify-center ${area.color} bg-opacity-10`}><Icon size={24} className={area.color.replace("bg-", "text-")} /></div>
                   </div>
-                  <div className="w-full lg:w-1/2 space-y-6">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-xl ${area.color} bg-opacity-10 flex items-center justify-center`}>
-                        <Icon size={24} className={area.color.replace("bg-", "text-")} />
-                      </div>
-                      <h3 className="font-bold text-brand-dark text-2xl">{area.title}</h3>
-                    </div>
-                    <p className="text-lg font-medium text-text-muted">{area.summary}</p>
-                    <p className="text-base text-text-body leading-relaxed">
-                      {area.content}
-                    </p>
-                  </div>
-                </div>
+                  <h3 className="mt-7 text-3xl font-semibold text-brand-dark">{area.title}</h3>
+                  <p className="mt-4 text-xl font-medium leading-7 text-text-muted">{area.summary}</p>
+                  <p className="mt-5 text-base leading-7 text-text-body">{area.content}</p>
+                </article>
               );
             })}
           </div>
@@ -242,13 +195,11 @@ export default function DataCloudAIPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 sm:gap-6">
             {processSteps.map((step, i) => (
-              <div key={step.number} className="relative text-center">
+              <div key={step.title} className="relative text-center">
                 {i < processSteps.length - 1 && (
-                  <div className="hidden md:block absolute top-6 left-[calc(50%+2rem)] right-[-50%] h-px bg-gray-200" />
+                  <div className="absolute left-[calc(50%+1rem)] right-[-50%] top-1.5 hidden h-px bg-gray-200 md:block" />
                 )}
-                <div className="w-12 h-12 rounded-full bg-white border border-gray-200 text-brand-primary font-extrabold text-sm flex items-center justify-center mx-auto mb-4 shadow-sm">
-                  {step.number}
-                </div>
+                <div className="mx-auto mb-5 h-3 w-3 rounded-full bg-brand-primary ring-4 ring-white" />
                 <div className="font-bold text-brand-dark text-base mb-2">{step.title}</div>
                 <div className="text-sm text-text-muted px-2">{step.description}</div>
               </div>
@@ -347,6 +298,6 @@ export default function DataCloudAIPage() {
           </Link>
         </div>
       </section>
-    </>
+    </div>
   );
 }

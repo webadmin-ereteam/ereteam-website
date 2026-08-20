@@ -1,84 +1,58 @@
 "use client";
 
-import { motion } from "framer-motion";
+import Image from "next/image";
 import Link from "next/link";
-import { services } from "@/lib/homeData";
+import { motion } from "framer-motion";
+import { ArrowUpRight } from "lucide-react";
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 30 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-};
-
-const stagger = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.12 } },
-};
+const services = [
+  {
+    title: "Financial Performance & Intelligence",
+    description: "Integrated planning, budgeting, forecasting, consolidation and management reporting—designed around how your finance team actually operates.",
+    href: "/services/financial-performance-intelligence",
+    image: "/images/editorial/service-finance-v2.png",
+  },
+  {
+    title: "Data, Cloud & AI",
+    description: "Trusted data foundations, modern cloud platforms and applied AI that move securely from strategy into everyday enterprise use.",
+    href: "/services/data-cloud-ai",
+    image: "/images/editorial/service-data-ai-v2.png",
+  },
+  {
+    title: "Marketing Intelligence",
+    description: "Measurement frameworks and advanced analytics that help commercial teams understand performance, allocate spend and act with confidence.",
+    href: "/services/marketing-intelligence",
+    image: "/images/editorial/service-marketing-v2.png",
+  },
+];
 
 export default function ServicesSection() {
   return (
-    <section className="py-24 bg-[#0B0F19]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={stagger}
-          className="mb-12"
-        >
-          <motion.h2 variants={fadeUp} className="text-3xl sm:text-5xl font-light text-white tracking-wide">
-            Explore <span className="font-semibold">Our Expertise</span>
-          </motion.h2>
-        </motion.div>
+    <section className="bg-[#f9f7f2] py-24 lg:py-36">
+      <div className="site-container">
+        <div className="grid gap-8 pb-14 lg:grid-cols-[.8fr_1.2fr] lg:items-end lg:pb-20">
+          <div>
+            <span className="site-kicker">Our expertise</span>
+            <h2 className="site-display mt-6 text-5xl text-brand-dark sm:text-6xl lg:text-7xl">Deep expertise.<br />One clear outcome.</h2>
+          </div>
+          <p className="max-w-xl text-base leading-8 text-text-muted lg:justify-self-end">Ereteam brings business context, technical rigor and experienced delivery teams together. We do not stop at recommendations—we build the capability with you.</p>
+        </div>
 
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={stagger}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6"
-        >
-          {services.map((service) => {
-            return (
-              <motion.div key={service.title} variants={fadeUp}>
-                <Link
-                  href={service.href}
-                  className="group block h-full rounded-2xl overflow-hidden bg-[#111827] border border-gray-800 hover:border-gray-600 transition-colors duration-300 flex flex-col"
-                >
-                  {/* Image container with aspect ratio */}
-                  <div className="relative h-48 w-full overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img 
-                      src={service.image} 
-                      alt={service.title} 
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                    {/* Accent triangle / ribbon in corner */}
-                    <div className="absolute bottom-0 right-0 w-24 h-24 overflow-hidden">
-                       <div 
-                         className="absolute bottom-0 right-0 w-24 h-24 origin-bottom-right transform rotate-45 flex items-end justify-center pb-2 opacity-90"
-                         style={{ background: `linear-gradient(45deg, transparent 50%, ${service.accent} 50%)` }}
-                       >
-                       </div>
-                    </div>
-                  </div>
-                  
-                  {/* Content container */}
-                  <div className="p-8 flex flex-col flex-grow">
-                    <h3 className="text-2xl font-bold text-white mb-6 pr-4">
-                      {service.title}
-                    </h3>
-                    
-                    <div className="mt-auto pt-4">
-                      <div className="inline-block px-5 py-2 rounded-full border border-gray-600 text-sm font-medium text-white group-hover:bg-white/10 group-hover:border-white/40 transition-all duration-300">
-                        View details
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              </motion.div>
-            );
-          })}
-        </motion.div>
+        <div className="border-t border-[#071A2A]/20">
+          {services.map((service, index) => (
+            <motion.article key={service.title} initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .25 }} transition={{ duration: .6, delay: index * .06 }} className="group grid border-b border-[#071A2A]/20 py-8 lg:grid-cols-[1fr_1fr] lg:items-center lg:gap-12 lg:py-12">
+              <div className="pr-4">
+                <h3 className="site-display text-3xl text-brand-dark transition-colors group-hover:text-brand-primary sm:text-4xl">{service.title}</h3>
+                <p className="mt-5 max-w-2xl text-sm leading-7 text-text-muted">{service.description}</p>
+                <Link href={service.href} className="mt-7 inline-flex items-center gap-3 text-[11px] font-bold uppercase tracking-[.12em] text-brand-dark">Explore capability <ArrowUpRight size={15} /></Link>
+              </div>
+              <Link href={service.href} className="relative mt-7 block aspect-[16/9] overflow-hidden bg-brand-dark lg:mt-0">
+                <Image src={service.image} alt="" fill sizes="(min-width: 1024px) 42vw, 100vw" className="object-cover saturate-[.72] transition duration-700 group-hover:scale-[1.03] group-hover:saturate-100" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#071A2A]/35 to-transparent" />
+              </Link>
+            </motion.article>
+          ))}
+        </div>
       </div>
     </section>
   );

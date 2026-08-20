@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Sparkles, RotateCcw, UserRound, ChevronRight } from "lucide-react";
+import { X, Send, RotateCcw, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useChat } from "../hooks/useChat";
@@ -24,11 +24,11 @@ function MessageText({ content }: { content: string }) {
         if (match) {
           const [, text, href] = match;
           return href.startsWith("/") ? (
-            <Link key={i} href={href} className="underline underline-offset-2 font-medium hover:opacity-80 transition-opacity" style={{ color: "#60a5fa" }}>
+            <Link key={i} href={href} className="font-semibold underline underline-offset-2 transition-opacity hover:opacity-70" style={{ color: "#B96F38" }}>
               {text}
             </Link>
           ) : (
-            <a key={i} href={href} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 font-medium hover:opacity-80 transition-opacity" style={{ color: "#60a5fa" }}>
+            <a key={i} href={href} target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-2 transition-opacity hover:opacity-70" style={{ color: "#B96F38" }}>
               {text}
             </a>
           );
@@ -43,7 +43,7 @@ function TypingDots() {
   return (
     <div className="flex items-center gap-1 py-1">
       {[0, 1, 2].map((i) => (
-        <motion.div key={i} className="w-1.5 h-1.5 rounded-full bg-gray-400"
+        <motion.div key={i} className="h-1.5 w-1.5 bg-[#B96F38]"
           animate={{ opacity: [0.3, 1, 0.3], y: [0, -3, 0] }}
           transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15 }} />
       ))}
@@ -51,13 +51,19 @@ function TypingDots() {
   );
 }
 
-function BotAvatar() {
+function AIMark({ inverse = false }: { inverse?: boolean }) {
   return (
-    <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
-      style={{ background: "linear-gradient(135deg, #1A6FA8, #0C9472)" }}>
-      <Sparkles size={13} color="white" />
-    </div>
+    <span
+      aria-hidden="true"
+      className={`flex h-7 w-7 flex-none items-center justify-center text-[10px] font-bold tracking-[.08em] ${inverse ? "bg-white text-[#071A2A]" : "bg-[#071A2A] text-white"}`}
+    >
+      AI
+    </span>
   );
+}
+
+function BotAvatar() {
+  return <AIMark />;
 }
 
 export default function ChatWidget() {
@@ -112,58 +118,52 @@ export default function ChatWidget() {
   if (pathname.startsWith("/presales") || pathname.startsWith("/spark")) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end gap-3">
+    <div className="fixed bottom-3 right-3 z-50 flex flex-col items-end sm:bottom-5 sm:right-5">
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.94 }}
+            initial={{ opacity: 0, y: 12, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.94 }}
-            transition={{ duration: 0.22, ease: "easeOut" }}
-            className="flex flex-col rounded-2xl overflow-hidden shadow-2xl"
+            exit={{ opacity: 0, y: 10, scale: 0.98 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="flex flex-col overflow-hidden"
             style={{
-              width: "min(370px, calc(100vw - 32px))",
-              height: "min(540px, calc(100svh - 100px))",
-              background: "#07111f",
-              border: "1px solid rgba(26,111,168,0.35)",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(26,111,168,0.1)",
+              width: "min(360px, calc(100vw - 24px))",
+              height: "min(520px, calc(100svh - 24px))",
+              background: "#FBFAF7",
+              border: "1px solid rgba(7,26,42,0.16)",
+              boxShadow: "0 18px 48px rgba(7,26,42,0.18)",
             }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3.5 flex-shrink-0"
-              style={{ background: "linear-gradient(135deg, rgba(26,111,168,0.2), rgba(12,148,114,0.1))", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                  style={{ background: "linear-gradient(135deg, #1A6FA8, #0C9472)" }}>
-                  <Sparkles size={16} color="white" />
-                </div>
-                <div>
-                  <div className="text-sm font-bold text-white">Ereteam AI</div>
-                </div>
+            <div className="flex flex-shrink-0 items-center justify-between border-b border-[#071A2A]/12 bg-[#FBFAF7] px-4 py-3">
+              <div className="flex items-center gap-2.5">
+                <AIMark />
+                <div className="text-[13px] font-semibold text-[#071A2A]">Ereteam IQ</div>
               </div>
               <div className="flex items-center gap-2">
                 {hasConversation && (
-                  <button onClick={handleClearChat} className="text-gray-500 hover:text-white transition-colors p-1" title="Clear conversation">
+                  <button onClick={handleClearChat} className="p-1.5 text-[#65727b] transition-colors hover:text-[#071A2A]" title="Clear conversation">
                     <RotateCcw size={15} />
                   </button>
                 )}
-                <button onClick={() => setOpen(false)} className="text-gray-500 hover:text-white transition-colors p-1">
-                  <X size={18} />
+                <button onClick={() => setOpen(false)} className="p-1.5 text-[#65727b] transition-colors hover:text-[#071A2A]" aria-label="Close Ereteam IQ">
+                  <X size={17} />
                 </button>
               </div>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
-              style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.08) transparent" }}>
+            <div className="flex-1 space-y-3 overflow-y-auto bg-[#FBFAF7] px-4 py-4"
+              style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(7,26,42,0.25) transparent" }}>
 
               {messages.map((msg, i) => (
                 <div key={i} className={`flex gap-2.5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                   {msg.role === "assistant" && <BotAvatar />}
-                  <div className="max-w-[78%] rounded-2xl px-4 py-2.5 text-[13px] leading-relaxed whitespace-pre-line"
+                  <div className="max-w-[84%] px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-line"
                     style={msg.role === "user"
-                      ? { background: "linear-gradient(135deg, #1A6FA8, #155d8f)", color: "white", borderBottomRightRadius: 4 }
-                      : { background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.88)", borderBottomLeftRadius: 4, border: "1px solid rgba(255,255,255,0.06)" }
+                      ? { background: "#071A2A", color: "white" }
+                      : { background: "#F0EEE8", color: "#213846" }
                     }>
                     <MessageText content={msg.content} />
                   </div>
@@ -173,8 +173,7 @@ export default function ChatWidget() {
               {loading && (
                 <div className="flex gap-2.5 justify-start">
                   <BotAvatar />
-                  <div className="rounded-2xl px-4 py-2.5"
-                    style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.06)", borderBottomLeftRadius: 4 }}>
+                  <div className="bg-[#F0EEE8] px-3.5 py-2.5">
                     <TypingDots />
                   </div>
                 </div>
@@ -182,13 +181,11 @@ export default function ChatWidget() {
 
               {/* Suggested questions */}
               {!hasConversation && !loading && (
-                <div className="flex flex-col gap-2 mt-2">
+                <div className="mt-2 divide-y divide-[#071A2A]/10 border-y border-[#071A2A]/10">
                   {SUGGESTIONS.map((s) => (
                     <button key={s} onClick={() => handleSend(s)}
-                      className="flex items-center justify-between text-left text-[12px] px-3 py-2.5 rounded-xl transition-all hover:opacity-90"
-                      style={{ background: "rgba(26,111,168,0.1)", border: "1px solid rgba(26,111,168,0.25)", color: "rgba(255,255,255,0.75)" }}>
+                      className="flex w-full items-center px-1 py-3 text-left text-[12px] text-[#40515d] transition-colors hover:text-[#071A2A]">
                       <span>{s}</span>
-                      <ChevronRight size={13} className="flex-shrink-0 opacity-50" />
                     </button>
                   ))}
                 </div>
@@ -199,8 +196,7 @@ export default function ChatWidget() {
                 <motion.button
                   onClick={() => setShowLead(true)}
                   initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[12px] font-medium transition-all hover:opacity-90"
-                  style={{ background: "rgba(12,148,114,0.1)", border: "1px solid rgba(12,148,114,0.3)", color: "#4ade80" }}>
+                  className="flex w-full items-center justify-center gap-2 border border-[#071A2A] bg-[#071A2A] py-3 text-[12px] font-semibold uppercase tracking-[.08em] text-white transition-colors hover:bg-[#B96F38]">
                   <UserRound size={13} />
                   Talk to an expert
                 </motion.button>
@@ -211,17 +207,16 @@ export default function ChatWidget() {
                 {showLead && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                    className="rounded-2xl p-4 space-y-3"
-                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(26,111,168,0.3)" }}>
-                    <div className="text-[13px] font-semibold text-white">Leave your details</div>
-                    <div className="text-[11px] text-gray-400">Our team will reach out within 1 business day.</div>
+                    className="space-y-3 border-y border-[#071A2A]/12 bg-white/60 px-1 py-4">
+                    <div className="text-[13px] font-semibold text-[#071A2A]">Leave your details</div>
+                    <div className="text-[11px] text-[#65727b]">Our team will reach out within 1 business day.</div>
                     {(["name", "email", "company"] as const).map((field) => (
                       <input key={field}
                         value={leadForm[field]}
                         onChange={(e) => setLeadForm((p) => ({ ...p, [field]: e.target.value }))}
                         placeholder={field === "name" ? "Your name *" : field === "email" ? "Work email *" : "Company (optional)"}
-                        className="w-full rounded-lg px-3 py-2 text-[12px] text-white placeholder-gray-600 outline-none"
-                        style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", fontSize: 16 }}
+                        className="w-full border border-[#071A2A]/16 bg-[#F3F0E8] px-3 py-2 text-[12px] text-[#071A2A] outline-none placeholder:text-[#7f8a91] focus:border-[#B96F38]"
+                        style={{ fontSize: 16 }}
                       />
                     ))}
                     <textarea
@@ -229,18 +224,16 @@ export default function ChatWidget() {
                       onChange={(e) => setLeadForm((p) => ({ ...p, message: e.target.value }))}
                       placeholder="Your message (optional)"
                       rows={3}
-                      className="w-full rounded-lg px-3 py-2 text-[12px] text-white placeholder-gray-600 outline-none resize-none"
-                      style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", fontSize: 16 }}
+                      className="w-full resize-none border border-[#071A2A]/16 bg-[#F3F0E8] px-3 py-2 text-[12px] text-[#071A2A] outline-none placeholder:text-[#7f8a91] focus:border-[#B96F38]"
+                      style={{ fontSize: 16 }}
                     />
                     <div className="flex gap-2">
                       <button onClick={() => setShowLead(false)}
-                        className="flex-1 py-2 rounded-lg text-[12px] text-gray-400 hover:text-white transition-colors"
-                        style={{ border: "1px solid rgba(255,255,255,0.1)" }}>
+                        className="flex-1 border border-[#071A2A]/18 py-2 text-[12px] text-[#65727b] transition-colors hover:border-[#071A2A] hover:text-[#071A2A]">
                         Cancel
                       </button>
                       <button onClick={submitLead} disabled={!leadForm.name || !leadForm.email || leadLoading}
-                        className="flex-1 py-2 rounded-lg text-[12px] font-semibold text-white disabled:opacity-40 transition-all"
-                        style={{ background: "linear-gradient(135deg, #1A6FA8, #0C9472)" }}>
+                        className="flex-1 bg-[#B96F38] py-2 text-[12px] font-semibold text-white transition-colors hover:bg-[#071A2A] disabled:opacity-40">
                         {leadLoading ? "Sending..." : "Send →"}
                       </button>
                     </div>
@@ -252,18 +245,16 @@ export default function ChatWidget() {
             </div>
 
             {/* Input */}
-            <div className="px-4 pb-4 pt-3 flex-shrink-0" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-              <div className="flex items-center gap-2 rounded-xl px-4 py-2.5"
-                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
+            <div className="flex-shrink-0 border-t border-[#071A2A]/12 bg-[#FBFAF7] p-3">
+              <div className="flex items-center gap-2 border border-[#071A2A]/18 bg-white px-3 py-2 focus-within:border-[#071A2A]/50">
                 <input ref={inputRef} value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
                   placeholder="Type your question..."
-                  className="flex-1 bg-transparent text-[13px] text-white placeholder-gray-600 outline-none"
+                  className="flex-1 bg-transparent text-[13px] text-[#071A2A] outline-none placeholder:text-[#7f8a91]"
                   style={{ fontSize: 16 }} />
                 <button onClick={() => handleSend()} disabled={!input.trim() || loading}
-                  className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-all disabled:opacity-25"
-                  style={{ background: "linear-gradient(135deg, #1A6FA8, #0C9472)" }}>
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center bg-[#071A2A] transition-opacity hover:opacity-80 disabled:opacity-25">
                   <Send size={13} color="white" />
                 </button>
               </div>
@@ -272,38 +263,19 @@ export default function ChatWidget() {
         )}
       </AnimatePresence>
 
-      {/* FAB */}
-      <div className="relative">
+      <AnimatePresence>
         {!open && (
-          <>
-            <motion.div className="absolute inset-0 rounded-2xl"
-              style={{ background: "linear-gradient(135deg, #1A6FA8, #0C9472)", filter: "blur(12px)", opacity: 0.6 }}
-              animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0.8, 0.5] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }} />
-            <motion.div className="absolute inset-0 rounded-2xl"
-              style={{ border: "1.5px solid rgba(26,111,168,0.7)" }}
-              animate={{ scale: [1, 1.25, 1], opacity: [0.8, 0, 0.8] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }} />
-          </>
+          <motion.button
+            initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.94 }}
+            onClick={() => setOpen(true)}
+            className="flex h-12 items-center gap-2.5 bg-[#071A2A] px-3 pr-4 text-white shadow-[0_10px_28px_rgba(7,26,42,.2)] transition-opacity hover:opacity-90"
+            whileHover={{ y: -2 }} whileTap={{ y: 0 }} aria-label="Open Ereteam IQ"
+          >
+            <AIMark inverse />
+            <span className="text-[11px] font-semibold uppercase tracking-[.1em]">Ask Ereteam IQ</span>
+          </motion.button>
         )}
-        <motion.button onClick={() => setOpen((v) => !v)}
-          className="relative flex items-center gap-2.5 px-4 rounded-2xl shadow-xl"
-          style={{ background: "linear-gradient(135deg, #1A6FA8, #0C9472)", height: 52 }}
-          whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-          <AnimatePresence mode="wait" initial={false}>
-            {open ? (
-              <motion.span key="x" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }}>
-                <X size={20} color="white" />
-              </motion.span>
-            ) : (
-              <motion.span key="spark" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}>
-                <Sparkles size={20} color="white" />
-              </motion.span>
-            )}
-          </AnimatePresence>
-          {!open && <div className="text-[13px] font-bold text-white leading-none">Ask AI</div>}
-        </motion.button>
-      </div>
+      </AnimatePresence>
     </div>
   );
 }

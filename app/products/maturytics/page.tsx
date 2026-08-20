@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { ExternalLink, Globe, Target, BarChart2, Map, Award, ArrowRight } from "lucide-react";
+import ProductDetailHero from "@/components/detail/ProductDetailHero";
 
 export const metadata: Metadata = {
   title: "Maturytics – Data Maturity Assessment Platform",
@@ -127,67 +128,21 @@ const useCases = [
 
 export default function MaturyticsPage() {
   return (
-    <>
-      {/* Hero */}
-      {/* Hero */}
-      <section
-        className="pt-32 pb-20"
-        style={{ background: "linear-gradient(135deg, #0a1628 0%, #1a2a5e 100%)" }}
-      >
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-4">
-            <Link href="/products" className="text-sm text-gray-400 hover:text-white transition-colors">
-              ← Products
-            </Link>
-          </div>
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-10">
-            <div className="flex-1">
-              <div className="mb-6 pb-6 border-b border-white/10">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/logos/products/maturytics.svg" alt="Maturytics" className="h-10 w-auto max-w-[200px] object-contain" />
-              </div>
-              <p className="text-sm font-medium text-[#F15A29] uppercase tracking-widest mb-3">
-                Data Maturity Assessment Platform
-              </p>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-4">
-                You can&apos;t improve{" "}
-                <span className="text-[#F15A29]">what you can&apos;t measure.</span>
-              </h1>
-              <p className="text-lg text-gray-300 mb-6 max-w-xl">
-                Maturytics assesses your organization&apos;s data and analytics maturity across 5 dimensions, generates a prioritized improvement roadmap, and tracks your transformation progress over time.
-              </p>
-              <div className="flex flex-wrap gap-4">
-                <Link
-                  href="/contact"
-                  className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-[#e05520] to-[#F15A29] text-white font-semibold rounded-lg hover:shadow-[0_0_15px_rgba(241,90,41,0.4)] hover:-translate-y-0.5 transition-all text-sm"
-                >
-                  Start Free Assessment
-                </Link>
-                <a
-                  href="https://maturytics.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 border border-white/20 text-white font-semibold rounded-lg hover:bg-white/20 transition-all text-sm"
-                >
-                  Visit maturytics.com <ExternalLink size={14} />
-                </a>
-              </div>
-            </div>
-            {/* Metrics */}
-            <div className="grid grid-cols-2 gap-4 lg:w-72 flex-shrink-0">
-              {metrics.map((m) => (
-                <div
-                  key={m.label}
-                  className="bg-white/10 rounded-xl p-4 text-center border border-white/10"
-                >
-                  <div className="text-2xl font-extrabold text-[#F15A29] mb-1">{m.value}</div>
-                  <div className="text-xs text-gray-300 leading-tight">{m.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+    <div className="detail-page">
+      <ProductDetailHero
+        name="Maturytics"
+        logo="/logos/products/maturytics.svg"
+        label="Data Maturity Assessment Platform"
+        title="You can't improve"
+        highlight="what you can't measure."
+        description="Maturytics assesses data and analytics maturity across five dimensions, generates a prioritized roadmap and tracks transformation progress over time."
+        metrics={metrics}
+        image="/images/editorial/product-maturytics-v2.png"
+        imagePosition="object-center"
+        accent="#F47A45"
+        externalHref="https://maturytics.com"
+        primaryCta="Start assessment"
+      />
 
       {/* The Problem */}
       <section className="py-20 bg-white">
@@ -325,20 +280,18 @@ export default function MaturyticsPage() {
             </p>
           </div>
           <div className="space-y-4 max-w-4xl mx-auto">
-            {dimensions.map((dim, index) => (
+            {dimensions.map((dim) => (
               <div
                 key={dim.name}
                 className="bg-brand-light rounded-xl p-6 border border-gray-200 shadow-sm"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                   <div className="sm:w-48 flex-shrink-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="w-6 h-6 bg-[#F15A29] text-white rounded-full text-xs font-bold flex items-center justify-center">
-                        {index + 1}
-                      </span>
+                    <div className="mb-1 flex items-center gap-2">
+                      <span className="h-2 w-2 flex-none rounded-full bg-[#F15A29]" />
                       <span className="font-bold text-brand-dark text-sm">{dim.name}</span>
                     </div>
-                    <p className="text-xs text-text-muted pl-8">{dim.description}</p>
+                    <p className="pl-4 text-xs text-text-muted">{dim.description}</p>
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     {dim.levels.map((level, i) => (
@@ -417,6 +370,6 @@ export default function MaturyticsPage() {
           </div>
         </div>
       </section>
-    </>
+    </div>
   );
 }

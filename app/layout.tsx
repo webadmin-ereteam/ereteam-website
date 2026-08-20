@@ -1,17 +1,10 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import ChatWidget from "@/components/ChatWidget";
 import CookieBannerGate from "@/components/CookieBannerGate";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://ereteam.com"),
@@ -47,7 +40,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en">
       <head>
         <Script
           id="cookieyes"
@@ -55,10 +48,11 @@ export default function RootLayout({
           strategy="beforeInteractive"
         />
       </head>
-      <body className="font-sans antialiased bg-white text-text-body">
+      <body className="font-sans antialiased bg-[#f7f5ef] text-text-body">
+        <a href="#main-content" className="site-skip-link">Skip to content</a>
         <CookieBannerGate />
         <Navbar />
-        <main>{children}</main>
+        <main id="main-content">{children}</main>
         <Footer />
         <ChatWidget />
         <Script

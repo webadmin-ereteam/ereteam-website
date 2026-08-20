@@ -1,41 +1,23 @@
-"use client";
-
-import { motion } from "framer-motion";
-
 const stats = [
-  { value: "25", suffix: "th", label: "Years of Excellence", description: "Est. 2001 — Still going strong", isAnniversary: true },
-  { value: "80", suffix: "+", label: "Professionals", description: "Global team", isAnniversary: false },
-  { value: "100", suffix: "+", label: "Enterprise Clients", description: "Worldwide", isAnniversary: false },
-  { value: "17", suffix: "", label: "Countries", description: "Global reach", isAnniversary: false },
+  ["2001", "Founded"],
+  ["80+", "Professionals"],
+  ["100+", "Enterprise clients"],
+  ["17", "Countries served"],
 ];
 
 export default function StatsBar() {
   return (
-    <section className="bg-white border-b border-gray-100 py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8">
-          {stats.map((stat, index) => (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="text-center"
-            >
-              <div className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-brand-primary mb-1">
-                {stat.value}
-                <span className="text-brand-magenta">{stat.suffix}</span>
-              </div>
-              <div className="text-sm font-semibold text-brand-dark mb-0.5">
-                {stat.label}
-              </div>
-              <div className={`text-xs font-medium ${stat.isAnniversary ? "text-brand-magenta" : "text-text-muted"}`}>
-                {stat.description}
-              </div>
-            </motion.div>
-          ))}
+    <section className="border-b border-[#071A2A]/15 bg-[#f3f0e8]">
+      <div className="site-container grid grid-cols-2 lg:grid-cols-[1.3fr_repeat(4,1fr)]">
+        <div className="col-span-2 flex items-center border-b border-[#071A2A]/15 py-7 lg:col-span-1 lg:border-b-0 lg:border-r lg:pr-8">
+          <p className="text-xs font-semibold uppercase leading-6 tracking-[.13em] text-brand-dark">A quarter century of<br />enterprise delivery</p>
         </div>
+        {stats.map(([value, label]) => (
+          <div key={label} className="border-b border-r border-[#071A2A]/15 px-4 py-7 last:border-r-0 lg:border-b-0 lg:px-7">
+            <strong className="site-display block text-3xl text-brand-dark sm:text-4xl">{value}</strong>
+            <span className="mt-2 block text-[10px] font-bold uppercase tracking-[.12em] text-text-muted">{label}</span>
+          </div>
+        ))}
       </div>
     </section>
   );

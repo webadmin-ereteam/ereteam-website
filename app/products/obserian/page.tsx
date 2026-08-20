@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { ExternalLink, Shield, CheckCircle, Lock, TrendingUp, ArrowRight, Server, AlertTriangle } from "lucide-react";
+import ProductDetailHero from "@/components/detail/ProductDetailHero";
 
 export const metadata: Metadata = {
   title: "Obserian – Enterprise Data Governance Platform",
@@ -98,67 +99,21 @@ const deploymentOptions = [
 
 export default function OberianPage() {
   return (
-    <>
-      {/* Hero */}
-      {/* Hero */}
-      <section
-        className="pt-32 pb-20"
-        style={{ background: "linear-gradient(135deg, #0a1628 0%, #1a2a5e 100%)" }}
-      >
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-4">
-            <Link href="/products" className="text-sm text-gray-400 hover:text-white transition-colors">
-              ← Products
-            </Link>
-          </div>
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-10">
-            <div className="flex-1">
-              <div className="mb-6 pb-6 border-b border-white/10">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/logos/products/obserian.svg" alt="Obserian" className="h-10 w-auto max-w-[200px] object-contain" />
-              </div>
-              <p className="text-sm font-medium text-[#7454A2] uppercase tracking-widest mb-3">
-                Enterprise Data Governance Platform
-              </p>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-4">
-                Your data quality problems are invisible.{" "}
-                <span className="text-[#7454A2]">Until they become a crisis.</span>
-              </h1>
-              <p className="text-lg text-gray-300 mb-6 max-w-xl">
-                Obserian is the AI-powered data governance platform that continuously monitors data quality, maps lineage end-to-end, and automates compliance reporting — so your organization stays in control at enterprise scale.
-              </p>
-              <div className="flex flex-wrap gap-4">
-                <Link
-                  href="/contact"
-                  className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-[#5a3a8a] to-[#7454A2] text-white font-semibold rounded-lg hover:shadow-[0_0_15px_rgba(116,84,162,0.4)] hover:-translate-y-0.5 transition-all text-sm"
-                >
-                  Request a Demo
-                </Link>
-                <a
-                  href="https://obserian.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 border border-white/20 text-white font-semibold rounded-lg hover:bg-white/20 transition-all text-sm"
-                >
-                  Visit obserian.com <ExternalLink size={14} />
-                </a>
-              </div>
-            </div>
-            {/* Metrics */}
-            <div className="grid grid-cols-2 gap-4 lg:w-72 flex-shrink-0">
-              {metrics.map((m) => (
-                <div
-                  key={m.label}
-                  className="bg-white/10 rounded-xl p-4 text-center border border-white/10"
-                >
-                  <div className="text-2xl font-extrabold text-[#7454A2] mb-1">{m.value}</div>
-                  <div className="text-xs text-gray-300 leading-tight">{m.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+    <div className="detail-page">
+      <ProductDetailHero
+        name="Obserian"
+        logo="/logos/products/obserian.svg"
+        label="Enterprise Data Governance Platform"
+        title="Your data quality problems are invisible."
+        highlight="Until they become a crisis."
+        description="Obserian continuously monitors data quality, maps lineage end to end and automates compliance reporting—so the enterprise stays in control at scale."
+        metrics={metrics}
+        image="/images/editorial/product-obserian-v2.png"
+        imagePosition="object-center"
+        accent="#A88BCC"
+        externalHref="https://obserian.com"
+        primaryCta="Request a demo"
+      />
 
       {/* The Problem */}
       <section className="py-20 bg-white">
@@ -369,6 +324,6 @@ export default function OberianPage() {
           </div>
         </div>
       </section>
-    </>
+    </div>
   );
 }

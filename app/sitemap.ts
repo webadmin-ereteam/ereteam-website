@@ -9,7 +9,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/about`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/about/company`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/about/careers`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
-    { url: `${base}/about/certifications`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
     { url: `${base}/services`, lastModified: now, changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/services/data-cloud-ai`, lastModified: now, changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/services/financial-performance-intelligence`, lastModified: now, changeFrequency: "monthly", priority: 0.9 },

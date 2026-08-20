@@ -1,172 +1,53 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Globe } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 
-const services = [
-  { label: "Data, Cloud & AI", href: "/services/data-cloud-ai" },
-  {
-    label: "Financial Performance & Intelligence",
-    href: "/services/financial-performance-intelligence",
-  },
-  {
-    label: "Marketing Intelligence",
-    href: "/services/marketing-intelligence",
-  },
-];
-
-const products = [
-  { label: "Obserian", internalHref: "/products/obserian", externalHref: "https://obserian.com" },
-  { label: "Pharmeta", internalHref: "/products/pharmeta", externalHref: "https://pharmeta.io" },
-  { label: "Maturytics", internalHref: "/products/maturytics", externalHref: "https://maturytics.com" },
-];
-
-const company = [
-  { label: "About Us", href: "/about/company" },
-  { label: "Partners", href: "/partners" },
-  { label: "Careers", href: "/about/careers" },
-  { label: "Contact", href: "/contact" },
-];
-
-const resources = [
-  { label: "Blog", href: "/blog" },
-  { label: "News", href: "/news" },
-  { label: "Success Stories", href: "/use-cases" },
-  { label: "Certifications", href: "/about/certifications" },
-  { label: "Privacy Policy", href: "/privacy-policy" },
-];
+const columns = [
+  { title: "Expertise", links: [["Data, Cloud & AI", "/services/data-cloud-ai"], ["Financial Performance", "/services/financial-performance-intelligence"], ["Marketing Intelligence", "/services/marketing-intelligence"]] },
+  { title: "Products", links: [["Obserian", "/products/obserian"], ["Pharmeta", "/products/pharmeta"], ["Maturytics", "/products/maturytics"]] },
+  { title: "Company", links: [["About", "/about/company"], ["Partners", "/partners"], ["Careers", "/about/careers"], ["Contact", "/contact"]] },
+  { title: "Resources", links: [["Success Stories", "/use-cases"], ["Blog", "/blog"], ["News", "/news"], ["Privacy", "/privacy-policy"]] },
+] as const;
 
 export default function Footer() {
   const pathname = usePathname();
   if (pathname.startsWith("/presales") || pathname.startsWith("/spark")) return null;
 
   return (
-    <footer className="bg-brand-dark text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-10">
-          {/* Col 1: Brand */}
-          <div className="lg:col-span-1">
-            <Link href="/" className="inline-block mb-4">
-              <Image
-                src="/logos/ereteam-logo.png"
-                alt="Ereteam"
-                width={180}
-                height={54}
-                className="h-14 w-auto brightness-0 invert"
-              />
-            </Link>
-            <p className="text-sm font-medium text-white mb-3">
-              Where Data Comes Alive
-            </p>
-            <p className="text-sm text-gray-400 leading-relaxed mb-6">
-              25 years of enterprise data &amp; analytics expertise. HQ in USA,
-              operations in Türkiye.
-            </p>
-            <a
-              href="https://www.linkedin.com/company/ereteam"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
-            </a>
-          </div>
-
-          {/* Col 2: Services */}
+    <footer className="border-t border-white/15 bg-[#071A2A] text-white">
+      <div className="site-container py-16 lg:py-24">
+        <div className="grid gap-14 border-b border-white/15 pb-16 lg:grid-cols-[1.35fr_1fr] lg:pb-24">
           <div>
-            <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-5">
-              Services
-            </h3>
-            <ul className="space-y-3">
-              {services.map((item) => (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className="text-sm text-gray-400 hover:text-white transition-colors"
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <span className="site-kicker">Ereteam since 2001</span>
+            <p className="site-display mt-7 max-w-2xl text-4xl text-white sm:text-5xl lg:text-6xl">Where experience meets what&apos;s next.</p>
           </div>
-
-          {/* Col 3: Products */}
-          <div>
-            <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-5">
-              Products
-            </h3>
-            <ul className="space-y-3">
-              {products.map((item) => (
-                <li key={item.label}>
-                  <div className="inline-flex items-center gap-1.5">
-                    <Link
-                      href={item.internalHref}
-                      className="text-sm text-gray-400 hover:text-white transition-colors"
-                    >
-                      {item.label}
-                    </Link>
-                    <a
-                      href={item.externalHref}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-gray-600 hover:text-gray-300 transition-colors"
-                      title={`Visit ${item.label} website`}
-                    >
-                      <Globe size={12} />
-                    </a>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Col 4: Company */}
-          <div>
-            <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-5">
-              Company
-            </h3>
-            <ul className="space-y-3">
-              {company.map((item) => (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className="text-sm text-gray-400 hover:text-white transition-colors"
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Col 5: Resources */}
-          <div>
-            <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-5">
-              Resources
-            </h3>
-            <ul className="space-y-3">
-              {resources.map((item) => (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className="text-sm text-gray-400 hover:text-white transition-colors"
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+          <div className="flex flex-col items-start justify-end lg:items-end">
+            <p className="mb-7 max-w-md text-sm leading-7 text-white/65 lg:text-right">For 25 years, we have helped enterprise leaders turn complex data into clear decisions, resilient systems and measurable performance.</p>
+            <Link href="/contact" className="site-button site-button--light">Start a conversation <ArrowUpRight size={16} /></Link>
           </div>
         </div>
 
-        {/* Bottom bar */}
-        <div className="mt-12 pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-gray-500">
-            &copy; 2026 Ereteam. All rights reserved.
-          </p>
+        <div className="grid gap-12 py-14 sm:grid-cols-2 lg:grid-cols-[1.15fr_repeat(4,minmax(0,1fr))] lg:gap-9">
+          <div>
+            <Image src="/logos/ereteam-logo.png" alt="Ereteam" width={176} height={52} className="h-[70px] w-auto brightness-0 invert" />
+            <p className="mt-4 max-w-xs text-xs leading-6 text-white/50">New Jersey, USA · Istanbul, Türkiye<br />25 years of enterprise data and analytics expertise.</p>
+          </div>
+          {columns.map((column) => (
+            <div key={column.title}>
+              <h2 className="mb-5 text-[10px] font-bold uppercase tracking-[.2em] text-[#D69A6E]">{column.title}</h2>
+              <ul className="space-y-3">
+                {column.links.map(([label, href]) => <li key={href}><Link href={href} className="text-sm text-white/65 transition-colors hover:text-white">{label}</Link></li>)}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-col gap-4 border-t border-white/15 pt-7 text-[11px] text-white/45 sm:flex-row sm:items-center sm:justify-between">
+          <p>© 2026 Ereteam. All rights reserved.</p>
+          <a href="https://www.linkedin.com/company/ereteam" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-white/60 hover:text-white">LinkedIn <ArrowUpRight size={12} /></a>
         </div>
       </div>
     </footer>

@@ -53,7 +53,7 @@ export default async function PartnersPage() {
         <div className="absolute inset-0 z-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img 
-            src="/images/ai/partners_bg.png" 
+            src="/images/editorial/hero-advisory.png"
             alt="Partners Background" 
             className="w-full h-full object-cover opacity-60"
           />

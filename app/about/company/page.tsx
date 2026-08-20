@@ -23,19 +23,16 @@ const stats = [
 
 const pillars = [
   {
-    number: "01",
     title: "Deep Specialization",
     description:
       "We focus exclusively on data and analytics — no infrastructure projects, no ERP implementations, no digital marketing. This singular focus means every engagement benefits from 25 years of accumulated patterns, accelerators, and hard-won lessons from the most complex data environments in the world.",
   },
   {
-    number: "02",
     title: "Business First, Technology Second",
     description:
       "We start every engagement by understanding the business problem, not by recommending a technology. Our vendor-agnostic approach means we select the right tool for your needs, and our certified expertise across 7+ platforms means we can deliver on that promise.",
   },
   {
-    number: "03",
     title: "Outcomes Over Outputs",
     description:
       "We measure our success by your business outcomes — budget cycles shortened, revenues grown, costs reduced, risks mitigated. We stay engaged beyond implementation to ensure adoption, deliver training, and evolve solutions as your business evolves.",
@@ -87,7 +84,6 @@ export default async function CompanyPage() {
       <section className="bg-brand-magenta/10 border-y border-brand-magenta/30 py-4">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <span className="inline-flex items-center gap-2 text-brand-magenta font-semibold text-sm">
-            <span className="text-lg">🎉</span>
             Celebrating 25 Years of Excellence — Est. 2001
           </span>
         </div>
@@ -161,9 +157,7 @@ export default async function CompanyPage() {
                 key={pillar.title}
                 className="bg-white rounded-2xl p-8 border border-gray-200 shadow-sm"
               >
-                <div className="text-4xl font-extrabold text-brand-primary/20 mb-4">
-                  {pillar.number}
-                </div>
+                <div className="mb-5 h-1 w-10 bg-brand-primary/55" />
                 <h3 className="text-lg font-bold text-brand-dark mb-3">
                   {pillar.title}
                 </h3>

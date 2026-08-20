@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { ExternalLink, Database, CheckCircle, Globe, Shield, Zap, ArrowRight } from "lucide-react";
+import ProductDetailHero from "@/components/detail/ProductDetailHero";
 
 export const metadata: Metadata = {
   title: "Pharmeta – AI-Powered Product Data Platform",
@@ -80,67 +81,21 @@ const comparison = [
 
 export default function PharmPage() {
   return (
-    <>
-      {/* Hero */}
-      {/* Hero */}
-      <section
-        className="pt-32 pb-20"
-        style={{ background: "linear-gradient(135deg, #0a1628 0%, #1a2a5e 100%)" }}
-      >
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-4">
-            <Link href="/products" className="text-sm text-gray-400 hover:text-white transition-colors">
-              ← Products
-            </Link>
-          </div>
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-10">
-            <div className="flex-1">
-              <div className="mb-6 pb-6 border-b border-white/10">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/logos/products/pharmeta_logo.png" alt="Pharmeta" className="h-10 w-auto max-w-[220px] object-contain" />
-              </div>
-              <p className="text-sm font-medium text-[#8B6FD4] uppercase tracking-widest mb-3">
-                AI-Powered Data Platform
-              </p>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-4">
-                Your data is costing you money.{" "}
-                <span className="text-[#8B6FD4]">You just don&apos;t see it yet.</span>
-              </h1>
-              <p className="text-lg text-gray-300 mb-6 max-w-xl">
-                Pharmeta is the secure AI-powered data platform that enables organizations to clean and manage product and customer data in less time — enabling everyone to do their jobs more effectively, efficiently, and profitably.
-              </p>
-              <div className="flex flex-wrap gap-4">
-                <Link
-                  href="/contact"
-                  className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-[#6b4ab4] to-[#8B6FD4] text-white font-semibold rounded-lg hover:shadow-[0_0_15px_rgba(139,111,212,0.4)] hover:-translate-y-0.5 transition-all text-sm"
-                >
-                  Request a Demo
-                </Link>
-                <a
-                  href="https://pharmeta.io"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 border border-white/20 text-white font-semibold rounded-lg hover:bg-white/20 transition-all text-sm"
-                >
-                  Visit pharmeta.io <ExternalLink size={14} />
-                </a>
-              </div>
-            </div>
-            {/* Metrics */}
-            <div className="grid grid-cols-2 gap-4 lg:w-72 flex-shrink-0">
-              {metrics.map((m) => (
-                <div
-                  key={m.label}
-                  className="bg-white/10 rounded-xl p-4 text-center border border-white/10"
-                >
-                  <div className="text-2xl font-extrabold text-[#8B6FD4] mb-1">{m.value}</div>
-                  <div className="text-xs text-gray-300 leading-tight">{m.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+    <div className="detail-page">
+      <ProductDetailHero
+        name="Pharmeta"
+        logo="/logos/products/pharmeta_logo.png"
+        label="AI-Powered Data Platform"
+        title="Your data is costing you money."
+        highlight="You just don't see it yet."
+        description="Pharmeta cleans and manages complex product and customer data in less time—giving every team a trusted golden record to work from."
+        metrics={metrics}
+        image="/images/editorial/product-pharmeta-v2.png"
+        imagePosition="object-center"
+        accent="#A995E4"
+        externalHref="https://pharmeta.io"
+        primaryCta="Request a demo"
+      />
 
       {/* The Problem */}
       <section className="py-20 bg-white">
@@ -325,6 +280,6 @@ export default function PharmPage() {
           </div>
         </div>
       </section>
-    </>
+    </div>
   );
 }

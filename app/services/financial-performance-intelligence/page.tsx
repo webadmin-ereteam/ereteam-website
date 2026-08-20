@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, TrendingUp, GitBranch, Calendar, Cpu, Users } from "lucide-react";
 import Image from "next/image";
+import ServiceDetailHero from "@/components/detail/ServiceDetailHero";
 
 const serviceAreas = [
   {
@@ -118,12 +119,12 @@ const featuredUseCases = [
 ];
 
 const processSteps = [
-  { number: "01", title: "Discovery", description: "Map current planning processes, data sources, and pain points" },
-  { number: "02", title: "Design", description: "Define model architecture, driver logic, and integration blueprint" },
-  { number: "03", title: "Build", description: "Develop TM1/PA models, consolidation rules, and reporting layer" },
-  { number: "04", title: "Test", description: "UAT with finance team — validate against actuals and prior periods" },
-  { number: "05", title: "Deploy", description: "Cutover, training, and hypercare for first full planning cycle" },
-  { number: "06", title: "Optimize", description: "Post-cycle review, model enhancements, and ongoing support" },
+  { title: "Discovery", description: "Map current planning processes, data sources, and pain points" },
+  { title: "Design", description: "Define model architecture, driver logic, and integration blueprint" },
+  { title: "Build", description: "Develop TM1/PA models, consolidation rules, and reporting layer" },
+  { title: "Test", description: "UAT with finance team — validate against actuals and prior periods" },
+  { title: "Deploy", description: "Cutover, training, and hypercare for first full planning cycle" },
+  { title: "Optimize", description: "Post-cycle review, model enhancements, and ongoing support" },
 ];
 
 const whyStats = [
@@ -134,48 +135,21 @@ const whyStats = [
 
 export default function FinancialPerformancePage() {
   return (
-    <>
-      {/* Hero */}
-      {/* Hero */}
-      <section
-        className="pt-32 pb-20"
-        style={{ background: "linear-gradient(135deg, #0a1628 0%, #1a2a5e 100%)" }}
-      >
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-4">
-            <Link href="/services" className="text-sm text-gray-400 hover:text-white transition-colors">
-              ← Services
-            </Link>
-          </div>
-          <p className="text-sm font-medium text-[#10b981] uppercase tracking-widest mb-3">
-            Service Domain
-          </p>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight">
-            Financial Performance &amp; Intelligence
-          </h1>
-          <p className="text-xl text-[#10b981] font-semibold mb-6">
-            From spreadsheet chaos to a single version of financial truth.
-          </p>
-          <p className="text-lg text-gray-300 max-w-2xl mb-8 leading-relaxed">
-            Transform your finance function with integrated FP&amp;A, driver-based budgeting,
-            financial consolidation, and regulatory reporting. We help CFOs and finance teams
-            move from reactive reporting to proactive, data-driven decision support.
-          </p>
-          <ul className="space-y-3 text-gray-300 text-sm">
-            {[
-              "Driver-based planning models that update in real time",
-              "Automated consolidation for complex multi-entity groups",
-              "Scenario modelling and what-if analysis for leadership",
-              "Sales, HR, and operational plans fully integrated with finance",
-            ].map((bullet) => (
-              <li key={bullet} className="flex items-start gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#10b981] flex-shrink-0" />
-                {bullet}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+    <div className="detail-page">
+      <ServiceDetailHero
+        title="Financial Performance & Intelligence"
+        tagline="From spreadsheet chaos to a single version of financial truth."
+        description="Transform finance with integrated FP&A, driver-based budgeting, consolidation and regulatory reporting. We help CFOs move from reactive reporting to proactive decision support."
+        bullets={[
+          "Driver-based planning in real time",
+          "Multi-entity financial consolidation",
+          "Scenario modelling for leadership",
+          "Integrated sales, HR and operational plans",
+        ]}
+        image="/images/editorial/service-finance-v2.png"
+        imageAlt="Finance leaders reviewing planning and reporting"
+        accent="#D69A6E"
+      />
 
       {/* Stats Bar */}
       <section className="bg-white border-y border-gray-100">
@@ -193,23 +167,27 @@ export default function FinancialPerformancePage() {
 
       {/* Why IBM Planning Analytics Spotlight */}
       <section className="py-16 bg-brand-light">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
-            <p className="text-xs font-semibold text-[#10b981] uppercase tracking-widest mb-3">Platform Spotlight</p>
-            <h2 className="text-2xl font-extrabold text-brand-dark mb-4">Why IBM Planning Analytics?</h2>
-            <p className="text-text-body leading-relaxed mb-4">
-              IBM Planning Analytics (TM1) is widely recognized as the world&apos;s best-in-class platform
-              for enterprise financial planning, budgeting, and consolidation. Its in-memory OLAP engine
-              can handle the most complex financial models — multi-currency, multi-entity, multi-scenario
-              — while delivering sub-second calculation times even at scale.
-            </p>
-            <p className="text-text-body leading-relaxed">
-              Ereteam is one of the deepest IBM Planning Analytics implementers globally, with dedicated
-              TM1 developers who have built production models for tier-1 banks, insurers, energy companies,
-              and global consumer brands. We don&apos;t configure out-of-the-box templates — we build
-              bespoke financial models that mirror your exact business logic, reporting hierarchy, and
-              regulatory requirements.
-            </p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid border-y border-[#071a2a]/16 py-8 lg:grid-cols-[.38fr_1.62fr] lg:gap-12 lg:py-10">
+            <div>
+              <p className="text-xs font-semibold text-[#10b981] uppercase tracking-widest">Platform Spotlight</p>
+              <span className="mt-5 hidden h-px w-20 bg-[#10b981] lg:block" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-extrabold text-brand-dark">Why IBM Planning Analytics?</h2>
+              <div className="mt-7 grid gap-6 lg:grid-cols-2 lg:gap-10">
+                <p className="text-text-body leading-relaxed">
+                  IBM Planning Analytics (TM1) is widely recognized as the world&apos;s best-in-class platform
+                  for enterprise financial planning, budgeting, and consolidation. Its in-memory OLAP engine
+                  handles complex multi-currency, multi-entity and multi-scenario models at scale.
+                </p>
+                <p className="text-text-body leading-relaxed">
+                  Ereteam&apos;s dedicated TM1 specialists build production models for banks, insurers, energy
+                  companies and global consumer brands—mirroring each organization&apos;s business logic,
+                  reporting hierarchy and regulatory requirements.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -225,39 +203,18 @@ export default function FinancialPerformancePage() {
               Deep expertise across the entire financial planning lifecycle.
             </p>
           </div>
-          <div className="space-y-20">
-            {serviceAreas.map((area, index) => {
-              const isEven = index % 2 === 0;
+          <div className="grid gap-px overflow-hidden border border-[#071a2a]/15 bg-[#071a2a]/15 lg:grid-cols-2">
+            {serviceAreas.map((area) => {
               const Icon = area.icon;
               return (
-                <div
-                  key={area.title}
-                  className={`flex flex-col lg:flex-row items-center gap-10 ${
-                    !isEven ? "lg:flex-row-reverse" : ""
-                  }`}
-                >
-                  <div className="w-full lg:w-1/2 relative h-64 sm:h-80 lg:h-[400px] rounded-2xl overflow-hidden shadow-lg">
-                    <Image
-                      src={area.image}
-                      alt={area.title}
-                      fill
-                      className="object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                <article key={area.title} className="bg-white p-7 sm:p-9 lg:p-10">
+                  <div className="flex items-center border-b border-[#071a2a]/12 pb-6">
+                    <div className={`flex h-12 w-12 items-center justify-center ${area.color} bg-opacity-10`}><Icon size={24} className={area.color.replace("bg-", "text-")} /></div>
                   </div>
-                  <div className="w-full lg:w-1/2 space-y-6">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-xl ${area.color} bg-opacity-10 flex items-center justify-center`}>
-                        <Icon size={24} className={area.color.replace("bg-", "text-")} />
-                      </div>
-                      <h3 className="font-bold text-brand-dark text-2xl">{area.title}</h3>
-                    </div>
-                    <p className="text-lg font-medium text-text-muted">{area.summary}</p>
-                    <p className="text-base text-text-body leading-relaxed">
-                      {area.content}
-                    </p>
-                  </div>
-                </div>
+                  <h3 className="mt-7 text-3xl font-semibold text-brand-dark">{area.title}</h3>
+                  <p className="mt-4 text-xl font-medium leading-7 text-text-muted">{area.summary}</p>
+                  <p className="mt-5 text-base leading-7 text-text-body">{area.content}</p>
+                </article>
               );
             })}
           </div>
@@ -273,10 +230,8 @@ export default function FinancialPerformancePage() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 sm:gap-4">
             {processSteps.map((step) => (
-              <div key={step.number} className="text-center">
-                <div className="w-12 h-12 rounded-full bg-white border border-gray-200 text-[#10b981] font-extrabold text-sm flex items-center justify-center mx-auto mb-4 shadow-sm">
-                  {step.number}
-                </div>
+              <div key={step.title} className="text-center">
+                <div className="mx-auto mb-5 h-1 w-10 bg-[#10b981]/70" />
                 <div className="font-bold text-brand-dark text-base mb-2">{step.title}</div>
                 <div className="text-xs text-text-muted leading-snug">{step.description}</div>
               </div>
@@ -375,6 +330,6 @@ export default function FinancialPerformancePage() {
           </Link>
         </div>
       </section>
-    </>
+    </div>
   );
 }
