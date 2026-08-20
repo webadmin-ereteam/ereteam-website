@@ -49,7 +49,7 @@ export default async function PartnersPage() {
   return (
     <>
       {/* Hero */}
-      <section className="relative pt-40 pb-32 overflow-hidden">
+      <section className="site-overview-hero relative overflow-hidden">
         <div className="absolute inset-0 z-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img 
@@ -63,13 +63,13 @@ export default async function PartnersPage() {
           <p className="text-sm font-medium text-[#38bdf8] uppercase tracking-widest mb-4">
             Technology Partners
           </p>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight">
+          <h1 className="site-page-title mb-6 text-white">
             Building on the World&apos;s{" "}
             <span style={{ background: "linear-gradient(90deg, #1A6FA8, #38bdf8, #0C9472)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
               Best Technology
             </span>
           </h1>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
+          <p className="site-page-lead mx-auto max-w-2xl text-gray-300">
             Ereteam is a certified partner of the industry&apos;s leading technology vendors.
           </p>
         </div>

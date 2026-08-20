@@ -50,12 +50,12 @@ const products = [
 export default function ProductsPage() {
   return (
     <div className="products-index bg-[#f6f3ec]">
-      <section className="bg-[#071a2a] pb-16 pt-32 text-white lg:pb-20 lg:pt-40">
+      <section className="site-overview-hero bg-[#071a2a] text-white">
         <div className="site-container">
           <p className="site-kicker">Ereteam products</p>
           <div className="mt-8 grid gap-8 lg:grid-cols-[1.3fr_.7fr] lg:items-end">
-            <h1 className="site-display max-w-5xl text-[clamp(3.8rem,8vw,8.4rem)]">Built from real enterprise problems.</h1>
-            <p className="max-w-xl border-l border-white/20 pl-6 text-lg leading-8 text-white/68 lg:pb-2">Three focused platforms shaped by 25 years of delivery experience—not generic software looking for a use case.</p>
+            <h1 className="site-page-title max-w-5xl">Built from real enterprise problems.</h1>
+            <p className="site-page-lead max-w-xl border-l border-white/20 pl-6 text-white/68 lg:pb-2">Three focused platforms shaped by 25 years of delivery experience—not generic software looking for a use case.</p>
           </div>
         </div>
       </section>

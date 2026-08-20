@@ -125,18 +125,18 @@ export default function ContactPage() {
     <>
       {/* Hero */}
       <section
-        className="pt-32 pb-16"
+        className="site-overview-hero"
         style={{ background: "linear-gradient(135deg, #1A1A2E 0%, #0D3A5C 100%)" }}
       >
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-sm font-medium text-brand-primary uppercase tracking-widest mb-3">
             Contact Us
           </p>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-6">
+          <h1 className="site-page-title mb-6 text-white">
             Let&apos;s{" "}
             <span className="text-brand-primary">Talk Data</span>
           </h1>
-          <p className="text-lg text-gray-300 max-w-2xl mx-auto">
+          <p className="site-page-lead mx-auto max-w-2xl text-gray-300">
             Whether you have a project in mind, want to explore our products, or
             just want to benchmark your data maturity — our team is ready to help.
           </p>

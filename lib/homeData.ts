@@ -57,7 +57,7 @@ export const products = [
     internalHref: "/products/pharmeta",
     tagline: "Your data is costing you money.",
     description:
-      "AI-powered product & customer data management for pharma & FMCG. Clean, match, and certify golden records at scale.",
+      "AI-powered product and customer data management. Match, standardize, and govern trusted golden records across markets and systems.",
     logo: "/logos/products/pharmeta_logo.png",
     color: "#5B8ED6",
     image: "/images/ai/product_pharmeta.png",

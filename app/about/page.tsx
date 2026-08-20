@@ -33,20 +33,20 @@ export default function AboutPage() {
       {/* Hero */}
       {/* Hero */}
       <section
-        className="pt-32 pb-20"
+        className="site-overview-hero"
         style={{ background: "linear-gradient(135deg, #0a1628 0%, #1a2a5e 100%)" }}
       >
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-sm font-medium text-[#38bdf8] uppercase tracking-widest mb-4">
             About Ereteam
           </p>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight">
+          <h1 className="site-page-title mb-6 text-white">
             25 Years of Making{" "}
             <span style={{ background: "linear-gradient(90deg, #1A6FA8, #38bdf8, #0C9472)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
               Data Come Alive
             </span>
           </h1>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
+          <p className="site-page-lead mx-auto max-w-2xl text-gray-300">
             We are a dedicated enterprise data and analytics consultancy — not a generalist
             IT firm. Everything we do is focused on helping organizations extract more
             value from their data.

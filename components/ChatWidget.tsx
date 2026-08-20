@@ -129,7 +129,7 @@ export default function ChatWidget() {
             className="flex flex-col overflow-hidden"
             style={{
               width: "min(360px, calc(100vw - 24px))",
-              height: "min(520px, calc(100svh - 24px))",
+              height: "min(520px, calc(100svh - 84px))",
               background: "#FBFAF7",
               border: "1px solid rgba(7,26,42,0.16)",
               boxShadow: "0 18px 48px rgba(7,26,42,0.18)",
@@ -139,7 +139,7 @@ export default function ChatWidget() {
             <div className="flex flex-shrink-0 items-center justify-between border-b border-[#071A2A]/12 bg-[#FBFAF7] px-4 py-3">
               <div className="flex items-center gap-2.5">
                 <AIMark />
-                <div className="text-[13px] font-semibold text-[#071A2A]">Ereteam IQ</div>
+                <div className="text-[13px] font-semibold text-[#071A2A]">Ereteam AI</div>
               </div>
               <div className="flex items-center gap-2">
                 {hasConversation && (
@@ -147,7 +147,7 @@ export default function ChatWidget() {
                     <RotateCcw size={15} />
                   </button>
                 )}
-                <button onClick={() => setOpen(false)} className="p-1.5 text-[#65727b] transition-colors hover:text-[#071A2A]" aria-label="Close Ereteam IQ">
+                <button onClick={() => setOpen(false)} className="p-1.5 text-[#65727b] transition-colors hover:text-[#071A2A]" aria-label="Close Ereteam AI">
                   <X size={17} />
                 </button>
               </div>
@@ -263,19 +263,15 @@ export default function ChatWidget() {
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {!open && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.94 }}
-            onClick={() => setOpen(true)}
-            className="flex h-12 items-center gap-2.5 bg-[#071A2A] px-3 pr-4 text-white shadow-[0_10px_28px_rgba(7,26,42,.2)] transition-opacity hover:opacity-90"
-            whileHover={{ y: -2 }} whileTap={{ y: 0 }} aria-label="Open Ereteam IQ"
-          >
-            <AIMark inverse />
-            <span className="text-[11px] font-semibold uppercase tracking-[.1em]">Ask Ereteam IQ</span>
-          </motion.button>
-        )}
-      </AnimatePresence>
+      <motion.button
+        initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }}
+        onClick={() => setOpen((current) => !current)}
+        className="mt-2 flex h-12 items-center gap-2.5 bg-[#071A2A] px-3 pr-4 text-white shadow-[0_10px_28px_rgba(7,26,42,.2)] transition-opacity hover:opacity-90"
+        whileHover={{ y: -2 }} whileTap={{ y: 0 }} aria-label={open ? "Close Ereteam AI" : "Open Ereteam AI"}
+      >
+        <AIMark inverse />
+        <span className="text-[12px] font-semibold tracking-[.04em]">Ereteam AI</span>
+      </motion.button>
     </div>
   );
 }

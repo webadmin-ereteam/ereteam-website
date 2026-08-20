@@ -6,32 +6,61 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown, Menu, X } from "lucide-react";
 
-const groups = [
+type NavItem = {
+  label: string;
+  href: string;
+  children?: readonly NavItem[];
+};
+
+type NavGroup = {
+  label: string;
+  href: string;
+  items: readonly NavItem[];
+};
+
+const groups: readonly NavGroup[] = [
   {
     label: "Services",
     href: "/services",
     items: [
-      ["Data, Cloud & AI", "/services/data-cloud-ai"],
-      ["Financial Performance", "/services/financial-performance-intelligence"],
-      ["Marketing Intelligence", "/services/marketing-intelligence"],
+      { label: "Data, Cloud & AI", href: "/services/data-cloud-ai" },
+      { label: "Financial Performance", href: "/services/financial-performance-intelligence" },
+      { label: "Marketing Intelligence", href: "/services/marketing-intelligence" },
     ],
   },
   {
-    label: "Products",
+    label: "Technologies",
     href: "/products",
-    items: [["Obserian", "/products/obserian"], ["Pharmeta", "/products/pharmeta"], ["Maturytics", "/products/maturytics"]],
+    items: [
+      {
+        label: "Ereteam Products",
+        href: "/products",
+        children: [
+          { label: "Obserian", href: "/products/obserian" },
+          { label: "Pharmeta", href: "/products/pharmeta" },
+          { label: "Maturytics", href: "/products/maturytics" },
+        ],
+      },
+      { label: "Partners", href: "/partners" },
+    ],
   },
   {
     label: "Company",
     href: "/about",
-    items: [["About Ereteam", "/about/company"], ["Careers", "/about/careers"]],
+    items: [
+      { label: "About Ereteam", href: "/about/company" },
+      { label: "Careers", href: "/about/careers" },
+    ],
   },
   {
     label: "Insights",
     href: "/use-cases",
-    items: [["Success Stories", "/use-cases"], ["Blog", "/blog"], ["News", "/news"]],
+    items: [
+      { label: "Success Stories", href: "/use-cases" },
+      { label: "Ereteam on LinkedIn", href: "/social-media" },
+    ],
   },
-] as const;
+];
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -71,16 +100,25 @@ export default function Navbar() {
                 {group.label}<ChevronDown size={13} className="transition-transform group-hover:rotate-180" />
               </Link>
               <div className="invisible absolute left-0 top-full w-[310px] translate-y-2 border border-[#071A2A]/10 bg-[#f9f7f2] p-2 opacity-0 transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
-                <div className="border-b border-[#071A2A]/10 px-4 py-3 text-[10px] font-bold uppercase tracking-[.18em] text-[#B96F38]">{group.label}</div>
-                {group.items.map(([label, href]) => (
-                  <Link key={href} href={href} className="flex items-center border-b border-[#071A2A]/10 px-4 py-4 text-sm text-brand-dark transition-colors last:border-0 hover:bg-[#f3f0e8] hover:text-brand-primary">
-                    {label}
-                  </Link>
+                {group.items.map((item) => (
+                  <div key={item.href} className="border-b border-[#071A2A]/10 last:border-0">
+                    <Link href={item.href} className="flex items-center px-4 py-4 text-sm text-brand-dark transition-colors hover:bg-[#f3f0e8] hover:text-brand-primary">
+                      {item.label}
+                    </Link>
+                    {item.children && (
+                      <div className="mx-4 mb-3 border-l border-[#B96F38]/35 pl-3">
+                        {item.children.map((child) => (
+                          <Link key={child.href} href={child.href} className="block px-3 py-2 text-[13px] text-text-muted transition-colors hover:bg-[#f3f0e8] hover:text-brand-primary">
+                            {child.label}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
           ))}
-          <Link href="/partners" className={`px-4 text-[12px] font-semibold uppercase tracking-[.1em] ${ink}`}>Partners</Link>
           <Link href="/contact" className={`ml-5 inline-flex min-h-11 items-center border px-5 text-[11px] font-bold uppercase tracking-[.12em] transition-colors ${overHero ? "border-white/60 text-white hover:bg-white hover:text-brand-dark" : "border-brand-dark bg-brand-dark text-white hover:bg-[#B96F38] hover:border-[#B96F38]"}`}>Contact</Link>
         </div>
 
@@ -98,10 +136,24 @@ export default function Navbar() {
                   <Link href={group.href} onClick={() => setMobileOpen(false)} className="flex flex-1 items-center py-5 text-xl text-brand-dark">{group.label}</Link>
                   <button type="button" className="h-12 w-12" aria-label={`Toggle ${group.label}`} onClick={() => setOpenGroup(openGroup === group.label ? null : group.label)}><ChevronDown className={`mx-auto transition ${openGroup === group.label ? "rotate-180" : ""}`} /></button>
                 </div>
-                {openGroup === group.label && <div className="pb-4 pl-10">{group.items.map(([label, href]) => <Link key={href} href={href} onClick={() => setMobileOpen(false)} className="block py-2 text-sm text-text-muted">{label}</Link>)}</div>}
+                {openGroup === group.label && (
+                  <div className="pb-4 pl-7">
+                    {group.items.map((item) => (
+                      <div key={item.href} className="border-l border-brand-dark/15 pl-4">
+                        <Link href={item.href} onClick={() => setMobileOpen(false)} className="block py-2 text-sm font-medium text-brand-dark">{item.label}</Link>
+                        {item.children && (
+                          <div className="pb-2 pl-4">
+                            {item.children.map((child) => (
+                              <Link key={child.href} href={child.href} onClick={() => setMobileOpen(false)} className="block py-2 text-sm text-text-muted">{child.label}</Link>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
-            <Link href="/partners" onClick={() => setMobileOpen(false)} className="block border-b border-brand-dark/15 py-5 text-xl">Partners</Link>
             <Link href="/contact" onClick={() => setMobileOpen(false)} className="site-button mt-8 w-full">Start a conversation</Link>
           </div>
         </div>

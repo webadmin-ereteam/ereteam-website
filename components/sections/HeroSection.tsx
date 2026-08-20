@@ -56,10 +56,10 @@ export default function HeroSection() {
 
       <div className="site-container relative z-10 grid min-h-[720px] grid-rows-[1fr_auto] pt-28 lg:min-h-[820px] lg:pt-36">
         <div className="flex items-center">
-          <div key={active} className="max-w-3xl animate-[hero-in_.8s_cubic-bezier(.22,1,.36,1)_both]">
+          <div key={active} className="max-w-5xl animate-[hero-in_.8s_cubic-bezier(.22,1,.36,1)_both]">
             <span className="site-kicker text-[#D69A6E]">{slides[active].eyebrow}</span>
-            <h1 className="site-display mt-7 text-[clamp(3.25rem,7.2vw,7.2rem)] text-white">{slides[active].title}</h1>
-            <p className="mt-7 max-w-xl text-base leading-7 text-white/75 sm:text-lg">{slides[active].body}</p>
+            <h1 className="site-display mt-7 min-h-[3.8em] max-w-5xl text-[clamp(3.25rem,7.2vw,7.2rem)] text-white sm:min-h-[2.85em] lg:min-h-[1.9em]">{slides[active].title}</h1>
+            <p className="mt-7 min-h-[5.25rem] max-w-xl text-base leading-7 text-white/75 sm:min-h-[3.5rem] sm:text-lg">{slides[active].body}</p>
             <div className="mt-9 flex flex-wrap gap-3">
               <Link href={slides[active].href} className="site-button site-button--light">Explore expertise <ArrowRight size={16} /></Link>
               <Link href="/contact" className="site-button site-button--ghost">Talk to our team</Link>

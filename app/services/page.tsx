@@ -71,20 +71,20 @@ export default function ServicesPage() {
       {/* Hero */}
       {/* Hero */}
       <section
-        className="pt-32 pb-20"
+        className="site-overview-hero"
         style={{ background: "linear-gradient(135deg, #0a1628 0%, #1a2a5e 100%)" }}
       >
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-sm font-medium text-[#38bdf8] uppercase tracking-widest mb-4">
             Our Services
           </p>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight">
+          <h1 className="site-page-title mb-6 text-white">
             Expertise at Every Layer of{" "}
             <span style={{ background: "linear-gradient(90deg, #1A6FA8, #38bdf8, #0C9472)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
               Your Data Stack
             </span>
           </h1>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
+          <p className="site-page-lead mx-auto max-w-2xl text-gray-300">
             From raw data infrastructure to C-suite decision intelligence, Ereteam
             delivers end-to-end analytics capabilities built on 25 years of enterprise
             expertise.

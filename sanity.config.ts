@@ -16,13 +16,6 @@ export default defineConfig({
           .title("Content Management")
           .items([
             S.listItem()
-              .title("Blog Posts")
-              .child(S.documentTypeList("blog").title("Blog Posts")),
-            S.listItem()
-              .title("News")
-              .child(S.documentTypeList("news").title("News")),
-            S.divider(),
-            S.listItem()
               .title("Success Stories")
               .child(S.documentTypeList("successStory").title("Success Stories")),
             S.listItem()

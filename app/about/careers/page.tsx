@@ -109,13 +109,13 @@ export default async function CareersPage() {
   return (
     <>
       <section className="bg-[#071a2a] text-white">
-        <div className="grid min-h-[720px] lg:grid-cols-[1fr_1fr]">
-          <div className="flex items-center px-4 pb-14 pt-32 sm:px-8 lg:px-[max(4rem,calc((100vw-1280px)/2))] lg:pr-14 lg:pt-36">
+        <div className="grid min-h-[660px] lg:grid-cols-[1fr_1fr]">
+          <div className="flex items-center px-4 pb-14 pt-28 sm:px-8 lg:px-[max(4rem,calc((100vw-1280px)/2))] lg:pr-14 lg:pt-32">
             <div className="max-w-2xl">
               <Link href="/about" className="text-xs font-bold uppercase tracking-[.14em] text-white/55 transition-colors hover:text-white">← About</Link>
               <p className="site-kicker mt-10">Careers at Ereteam</p>
-              <h1 className="site-display mt-6 text-[clamp(3.8rem,7vw,7.5rem)]">Do work that makes data matter.</h1>
-              <p className="mt-7 max-w-xl text-xl leading-8 text-white/72">Join experienced consultants, engineers and product builders solving decisions that matter for enterprises around the world.</p>
+              <h1 className="site-page-title mt-6">Do work that makes data matter.</h1>
+              <p className="site-page-lead mt-7 max-w-xl text-white/72">Join experienced consultants, engineers and product builders solving decisions that matter for enterprises around the world.</p>
               <div className="mt-9 flex flex-wrap gap-3">
                 <Link href="#departments" className="site-button site-button--light">Explore opportunities</Link>
                 <Link href="/contact" className="site-button site-button--ghost">Introduce yourself</Link>

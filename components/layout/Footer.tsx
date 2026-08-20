@@ -9,7 +9,7 @@ const columns = [
   { title: "Expertise", links: [["Data, Cloud & AI", "/services/data-cloud-ai"], ["Financial Performance", "/services/financial-performance-intelligence"], ["Marketing Intelligence", "/services/marketing-intelligence"]] },
   { title: "Products", links: [["Obserian", "/products/obserian"], ["Pharmeta", "/products/pharmeta"], ["Maturytics", "/products/maturytics"]] },
   { title: "Company", links: [["About", "/about/company"], ["Partners", "/partners"], ["Careers", "/about/careers"], ["Contact", "/contact"]] },
-  { title: "Resources", links: [["Success Stories", "/use-cases"], ["Blog", "/blog"], ["News", "/news"], ["Privacy", "/privacy-policy"]] },
+  { title: "Resources", links: [["Success Stories", "/use-cases"], ["Ereteam on LinkedIn", "/social-media"], ["Privacy", "/privacy-policy"]] },
 ] as const;
 
 export default function Footer() {

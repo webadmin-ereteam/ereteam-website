@@ -20,6 +20,12 @@ const nextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      { source: "/blog/:path*", destination: "/social-media", permanent: true },
+      { source: "/news/:path*", destination: "/social-media", permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

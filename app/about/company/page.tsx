@@ -56,7 +56,7 @@ export default async function CompanyPage() {
       {/* Hero */}
       {/* Hero */}
       <section
-        className="pt-32 pb-20"
+        className="site-overview-hero"
         style={{ background: "linear-gradient(135deg, #1A1A2E 0%, #0D3A5C 100%)" }}
       >
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -68,11 +68,11 @@ export default async function CompanyPage() {
           <p className="text-sm font-medium text-brand-primary uppercase tracking-widest mb-4">
             Our Company
           </p>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight">
+          <h1 className="site-page-title mb-6 text-white">
             Built Around Data.{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-primary to-blue-400">Built for Impact.</span>
           </h1>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
+          <p className="site-page-lead mx-auto max-w-2xl text-gray-300">
             Since 2001, Ereteam has been at the forefront of enterprise data and analytics.
             We are a team of specialists who believe that data, properly harnessed, has
             the power to transform organizations.

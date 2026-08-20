@@ -10,7 +10,7 @@ const STORAGE_KEY = "ereteam-iq-v1";
 
 export const WELCOME_MESSAGE: Message = {
   role: "assistant",
-  content: "Hi, I'm Ereteam IQ. Ask me anything about our services, products, clients, or expertise.",
+  content: "Hi, I'm Ereteam AI. Ask me anything about our services, products, clients, or expertise.",
 };
 
 export function useChat(pathname: string) {

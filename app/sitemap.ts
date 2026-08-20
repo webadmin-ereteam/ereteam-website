@@ -19,8 +19,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/products/maturytics`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/partners`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/use-cases`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
-    { url: `${base}/blog`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
-    { url: `${base}/news`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
+    { url: `${base}/social-media`, lastModified: now, changeFrequency: "daily", priority: 0.7 },
     { url: `${base}/contact`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/privacy-policy`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
   ];

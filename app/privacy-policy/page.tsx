@@ -66,8 +66,8 @@ export default function PrivacyPolicyPage() {
               ← Home
             </Link>
           </div>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-4">Privacy Policy</h1>
-          <p className="text-lg text-gray-300 max-w-2xl">
+          <h1 className="site-page-title site-page-title--compact mb-4 text-white">Privacy Policy</h1>
+          <p className="site-page-lead max-w-2xl text-gray-300">
             Ereteam is committed to protecting your personal data. Below you will find our data protection and privacy documents.
           </p>
         </div>
