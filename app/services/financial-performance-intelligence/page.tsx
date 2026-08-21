@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight, TrendingUp, GitBranch, Calendar, Cpu, Users } from "lucide-react";
 import Image from "next/image";
 import ServiceDetailHero from "@/components/detail/ServiceDetailHero";
+import { DeliveryEditorial, ServiceAreasEditorial } from "@/components/detail/ServiceEditorialSections";
 
 const serviceAreas = [
   {
@@ -14,7 +15,7 @@ const serviceAreas = [
     content:
       "We implement world-class FP&A platforms that consolidate budget planning, rolling forecasts, and cash flow planning into a single collaborative workspace. By replacing disconnected Excel models with driver-based planning, we help finance teams cut budget cycles from weeks to days while dramatically improving accuracy and auditability. Every assumption is visible, traceable, and version-controlled.",
     technologies: ["IBM Planning Analytics", "IBM TM1"],
-    image: "https://images.unsplash.com/photo-1580894899378-92e56886cd4d?auto=format&fit=crop&q=80&w=1000",
+    image: "/images/editorial/service-detail/finance-integrated-planning.jpg",
   },
   {
     icon: GitBranch,
@@ -24,7 +25,7 @@ const serviceAreas = [
     content:
       "We build multi-scenario planning engines where executives can instantly stress-test assumptions and see the downstream P&L, balance sheet, and cash flow impact. Scenarios are linked directly to operational drivers — headcount, volume, pricing, FX — so every change propagates through the model automatically and consistently.",
     technologies: ["IBM Planning Analytics", "IBM TM1", "Power BI"],
-    image: "https://images.unsplash.com/photo-1644088379091-d574269d422f?auto=format&fit=crop&q=80&w=1000",
+    image: "/images/editorial/service-detail/finance-scenario-modelling.jpg",
   },
   {
     icon: Calendar,
@@ -34,7 +35,7 @@ const serviceAreas = [
     content:
       "We design long-range financial models that integrate macroeconomic assumptions, market dynamics, and internal operational drivers into coherent 3–10 year forecasts. These models support strategic decision-making, M&A evaluation, capital allocation, and investor communications — giving leadership a single version of the long-range truth.",
     technologies: ["IBM Planning Analytics", "IBM TM1", "Python"],
-    image: "https://images.unsplash.com/photo-1702047063975-0841a0621b5a?auto=format&fit=crop&q=80&w=1000",
+    image: "/images/editorial/service-detail/finance-long-term-forecasting.jpg",
   },
   {
     icon: Cpu,
@@ -44,7 +45,7 @@ const serviceAreas = [
     content:
       "We automate statutory and management consolidation for groups with complex legal structures. Our solutions handle intercompany eliminations, multi-currency translation, minority interest calculations, and IFRS/GAAP adjustments. AI-assisted variance analysis and anomaly detection surface material issues before the close — reducing close cycles from weeks to days.",
     technologies: ["IBM Cognos Controller", "IBM Planning Analytics", "Theobald", "Python"],
-    image: "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?auto=format&fit=crop&q=80&w=1000",
+    image: "/images/editorial/service-detail/finance-ai-consolidation.jpg",
   },
   {
     icon: Users,
@@ -54,7 +55,7 @@ const serviceAreas = [
     content:
       "We extend financial planning into commercial and workforce domains — building sales quota models, territory plans, commission calculation engines, and headcount cost models. Finance and HR get a shared planning language, with workforce costs and commercial targets fully integrated into the enterprise financial model.",
     technologies: ["IBM Planning Analytics", "IBM TM1", "Apparo Fast Edit"],
-    image: "https://images.unsplash.com/photo-1564069114553-7215e1ff1890?auto=format&fit=crop&q=80&w=1000",
+    image: "/images/editorial/service-detail/finance-sales-hr-planning.jpg",
   },
 ];
 
@@ -192,53 +193,19 @@ export default function FinancialPerformancePage() {
         </div>
       </section>
 
-      {/* Service Areas (Alternating) */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-extrabold text-brand-dark mb-4">
-              Service Areas
-            </h2>
-            <p className="text-text-muted">
-              Deep expertise across the entire financial planning lifecycle.
-            </p>
-          </div>
-          <div className="grid gap-px overflow-hidden border border-[#071a2a]/15 bg-[#071a2a]/15 lg:grid-cols-2">
-            {serviceAreas.map((area) => {
-              const Icon = area.icon;
-              return (
-                <article key={area.title} className="bg-white p-7 sm:p-9 lg:p-10">
-                  <div className="flex items-center border-b border-[#071a2a]/12 pb-6">
-                    <div className={`flex h-12 w-12 items-center justify-center ${area.color} bg-opacity-10`}><Icon size={24} className={area.color.replace("bg-", "text-")} /></div>
-                  </div>
-                  <h3 className="mt-7 text-3xl font-semibold text-brand-dark">{area.title}</h3>
-                  <p className="mt-4 text-xl font-medium leading-7 text-text-muted">{area.summary}</p>
-                  <p className="mt-5 text-base leading-7 text-text-body">{area.content}</p>
-                </article>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+      <ServiceAreasEditorial
+        areas={serviceAreas}
+        eyebrow="Finance capabilities"
+        title="Planning, reporting and performance in one connected model."
+        description="We connect strategic targets with operational drivers so finance teams can plan continuously and explain every decision."
+        accent="#D69A6E"
+      />
 
-      {/* Engagement Process */}
-      <section className="py-20 bg-brand-light">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-extrabold text-brand-dark mb-4">How We Deliver</h2>
-            <p className="text-text-muted">A structured engagement that covers every phase from scoping to go-live.</p>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 sm:gap-4">
-            {processSteps.map((step) => (
-              <div key={step.title} className="text-center">
-                <div className="mx-auto mb-5 h-1 w-10 bg-[#10b981]/70" />
-                <div className="font-bold text-brand-dark text-base mb-2">{step.title}</div>
-                <div className="text-xs text-text-muted leading-snug">{step.description}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <DeliveryEditorial
+        steps={processSteps}
+        description="A structured engagement that covers every phase from scoping to go-live."
+        accent="#D69A6E"
+      />
 
       {/* Featured Success Stories */}
       <section className="py-20 bg-white">

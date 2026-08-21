@@ -181,6 +181,10 @@ body:has(.site-header) main a[class*="bg-gradient-to-r"] {
 }
 .detail-page > section:not(.detail-hero):nth-child(even) { background: linear-gradient(180deg, var(--paper-light), var(--paper)) !important; }
 .detail-page > section:not(.detail-hero):nth-child(odd) { background: linear-gradient(180deg, var(--paper), var(--paper-light)) !important; }
+.detail-page > section.detail-section--dark:not(.detail-hero) {
+  background: #071a2a !important;
+  border-top-color: rgb(255 255 255 / .14);
+}
 .detail-page > section:not(.detail-hero) > div:not([class*="absolute"]) {
   width: min(100% - 2rem, 1280px) !important;
   max-width: 1280px !important;

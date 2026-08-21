@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight, Megaphone, TrendingUp, Zap, Database, Monitor, Settings } from "lucide-react";
 import Image from "next/image";
 import ServiceDetailHero from "@/components/detail/ServiceDetailHero";
+import { DeliveryEditorial, ServiceAreasEditorial } from "@/components/detail/ServiceEditorialSections";
 
 const serviceAreas = [
   {
@@ -14,7 +15,7 @@ const serviceAreas = [
     content:
       "We implement HCL Unica Campaign and Unica Interact to deliver fully orchestrated omnichannel campaigns — combining mass outbound (email, SMS, direct mail) with real-time inbound decisioning across web, mobile, and contact center channels. Our implementations cover audience selection, segmentation, suppression logic, offer management, and response tracking at enterprise scale.",
     technologies: ["HCL Unica Campaign", "HCL Unica Interact", "HCL Unica Communicate"],
-    image: "https://images.unsplash.com/photo-1686061592689-312bbfb5c055?auto=format&fit=crop&q=80&w=1000",
+    image: "/images/editorial/service-detail/marketing-multichannel-campaigns.jpg",
   },
   {
     icon: TrendingUp,
@@ -24,7 +25,7 @@ const serviceAreas = [
     content:
       "We build customer journey analytics frameworks that stitch together touchpoints across channels and time — from first acquisition contact through onboarding, engagement, and retention events. By mapping drop-off points and conversion drivers at each lifecycle stage, we give marketing and CX teams the evidence base to intervene at the right moment.",
     technologies: ["HCL Unica Campaign", "Tableau", "Python", "SQL"],
-    image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=1000",
+    image: "/images/editorial/service-detail/marketing-journey-funnel.jpg",
   },
   {
     icon: Zap,
@@ -34,7 +35,7 @@ const serviceAreas = [
     content:
       "We design and deploy Next Best Offer (NBO) engines powered by HCL Unica Interact — serving personalized, context-aware offers in real time across inbound digital channels and contact center interactions. Our models factor in customer value, product eligibility, behavioral propensity scores, and business rules to recommend the most relevant offer at each moment.",
     technologies: ["HCL Unica Interact", "DataRobot", "Python"],
-    image: "https://images.unsplash.com/photo-1568952433726-3896e3881c65?auto=format&fit=crop&q=80&w=1000",
+    image: "/images/editorial/service-detail/marketing-next-best-offer.jpg",
   },
   {
     icon: Database,
@@ -44,7 +45,7 @@ const serviceAreas = [
     content:
       "We build unified customer data layers that consolidate behavioral, transactional, and demographic data into actionable customer profiles. These profiles feed directly into Unica segmentation and audience selection, ensuring every campaign and personalization decision is grounded in a complete, current view of the customer.",
     technologies: ["HCL Unica Platform", "Python", "SQL", "AWS"],
-    image: "https://images.unsplash.com/photo-1667670778881-537035257bd8?auto=format&fit=crop&q=80&w=1000",
+    image: "/images/editorial/service-detail/marketing-customer-data-platform.jpg",
   },
   {
     icon: Monitor,
@@ -54,7 +55,7 @@ const serviceAreas = [
     content:
       "We implement HCL Discover (formerly Tealeaf) to give digital teams full visibility into online customer behavior — capturing session replays, interaction heatmaps, form analytics, and struggle detection. This enables product and CX teams to diagnose UX friction, investigate customer complaints, and continuously improve digital conversion rates.",
     technologies: ["HCL Discover", "HCL Unica Platform"],
-    image: "https://images.unsplash.com/photo-1545987796-200677ee1011?auto=format&fit=crop&q=80&w=1000",
+    image: "/images/editorial/service-detail/marketing-digital-analytics.jpg",
   },
   {
     icon: Settings,
@@ -64,7 +65,7 @@ const serviceAreas = [
     content:
       "We implement HCL Unica Plan to bring structure and visibility to marketing operations — from campaign intake and creative brief management to agency workflow coordination, asset approvals, and budget tracking. Marketing teams get a governed, auditable process for every campaign from idea to in-market execution.",
     technologies: ["HCL Unica Plan", "HCL Unica Director"],
-    image: "https://images.unsplash.com/photo-1560221328-12fe60f83ab8?auto=format&fit=crop&q=80&w=1000",
+    image: "/images/editorial/service-detail/marketing-operations.jpg",
   },
 ];
 
@@ -167,56 +168,19 @@ export default function MarketingIntelligencePage() {
         </div>
       </section>
 
-      {/* Service Areas (Alternating) */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-extrabold text-brand-dark mb-4">
-              Service Areas
-            </h2>
-            <p className="text-text-muted">
-              Deep expertise across the entire marketing analytics lifecycle.
-            </p>
-          </div>
-          <div className="grid gap-px overflow-hidden border border-[#071a2a]/15 bg-[#071a2a]/15 lg:grid-cols-2">
-            {serviceAreas.map((area) => {
-              const Icon = area.icon;
-              return (
-                <article key={area.title} className="bg-white p-7 sm:p-9 lg:p-10">
-                  <div className="flex items-center border-b border-[#071a2a]/12 pb-6">
-                    <div className={`flex h-12 w-12 items-center justify-center ${area.color} bg-opacity-10`}><Icon size={24} className={area.color.replace("bg-", "text-")} /></div>
-                  </div>
-                  <h3 className="mt-7 text-3xl font-semibold text-brand-dark">{area.title}</h3>
-                  <p className="mt-4 text-xl font-medium leading-7 text-text-muted">{area.summary}</p>
-                  <p className="mt-5 text-base leading-7 text-text-body">{area.content}</p>
-                </article>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+      <ServiceAreasEditorial
+        areas={serviceAreas}
+        eyebrow="Marketing capabilities"
+        title="One intelligence layer for every customer interaction."
+        description="We connect campaign orchestration, decisioning and digital behavior so every channel learns from the same customer view."
+        accent="#D995AD"
+      />
 
-      {/* How We Deliver */}
-      <section className="py-20 bg-brand-light">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-extrabold text-brand-dark mb-4">How We Deliver</h2>
-            <p className="text-text-muted">From platform implementation to live campaign orchestration.</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-            {processSteps.map((step, i) => (
-              <div key={step.title} className="relative text-center">
-                {i < processSteps.length - 1 && (
-                  <div className="absolute left-[calc(50%+1rem)] right-[-50%] top-1.5 hidden h-px bg-gray-300 md:block" />
-                )}
-                <div className="mx-auto mb-5 h-3 w-3 rounded-full bg-[#f472b6] ring-4 ring-white" />
-                <div className="font-bold text-brand-dark text-sm mb-1">{step.title}</div>
-                <div className="text-xs text-text-muted">{step.description}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <DeliveryEditorial
+        steps={processSteps}
+        description="From platform implementation to live campaign orchestration."
+        accent="#D995AD"
+      />
 
       {/* Featured Success Stories */}
       <section className="py-20 bg-white">

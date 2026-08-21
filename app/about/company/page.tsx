@@ -184,110 +184,58 @@ export default async function CompanyPage() {
           {partnersBoard.length === 0 ? (
             <p className="text-center text-gray-400">Partners Board information coming soon.</p>
           ) : (
-            <div className="max-w-6xl mx-auto">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            <div className="mx-auto max-w-7xl overflow-hidden bg-brand-dark/15 p-px">
+              <div className="grid grid-cols-2 gap-px sm:grid-cols-3 lg:grid-cols-5">
                 {partnersBoard.map((person: SanityTeamMember) => (
-                  <div
+                  <article
                     key={person._id}
-                    className="group bg-brand-light rounded-2xl p-5 text-center border border-gray-200 hover:border-brand-primary/60 hover:shadow-lg transition-all flex flex-col items-center"
+                    className="group flex min-w-0 flex-col bg-[#F4F0E8] p-3 transition-colors hover:bg-white sm:p-4"
                   >
                     {person.imagePartners || person.image ? (
-                      <div className="w-full aspect-[4/5] mb-5 overflow-hidden rounded-xl bg-white">
+                      <div className="aspect-square w-full overflow-hidden bg-white">
                         <Image
-                          src={urlFor(person.imagePartners || person.image).width(600).height(750).fit('crop').url()}
+                          src={urlFor(person.imagePartners || person.image).width(600).height(600).fit('crop').url()}
                           alt={person.name}
                           width={600}
-                          height={750}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.025]"
+                          height={600}
+                          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.025]"
                         />
                       </div>
                     ) : (
-                      <div className="w-full aspect-[4/5] bg-brand-primary/10 rounded-xl flex items-center justify-center mb-5 text-5xl font-bold text-brand-primary">
+                      <div className="flex aspect-square w-full items-center justify-center bg-brand-primary/10 text-4xl font-bold text-brand-primary">
                         {person.name.charAt(0)}
                       </div>
                     )}
-                    <p className="text-lg font-bold text-brand-dark leading-tight mb-1">
-                      {person.name}
-                    </p>
-                    {person.title && (
-                      <p className="text-sm font-medium text-brand-primary mb-4">
-                        {person.title}
-                      </p>
-                    )}
-                    {person.linkedIn && (
-                      <a
-                        href={person.linkedIn}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-[#0A66C2]/20 text-[#0A66C2] hover:bg-[#0A66C2] hover:text-white transition-colors mt-auto"
-                        aria-label={`${person.name} LinkedIn`}
-                      >
-                        <LinkedInIcon />
-                      </a>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-
-          {false && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {partnersBoard.map((person: SanityTeamMember) => (
-                <div
-                  key={person._id}
-                  className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-brand-primary hover:shadow-lg transition-all flex flex-col"
-                >
-                  <div className="w-full aspect-[4/3] relative">
-                    {person.image || person.imagePartners ? (
-                      <Image
-                        src={urlFor(person.image || person.imagePartners).width(800).height(600).fit('crop').url()}
-                        alt={person.name}
-                        width={800}
-                        height={600}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-brand-primary/10 flex items-center justify-center text-6xl font-bold text-brand-primary">
-                        {person.name.charAt(0)}
-                      </div>
-                    )}
-                    {person.region && (
-                      <div className="absolute top-4 right-4">
-                        <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-brand-magenta text-white shadow-md">
-                          {person.region}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="p-6 flex flex-col flex-grow">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="text-xl font-bold text-brand-dark mb-1">{person.name}</h3>
-                        <p className="text-sm font-semibold text-brand-primary">{person.title}</p>
+                    <div className="flex min-h-28 flex-1 items-start justify-between gap-3 pt-4 sm:min-h-32 sm:pt-5">
+                      <div className="min-w-0 text-left">
+                        <p className="text-base font-semibold leading-tight text-brand-dark sm:text-lg">
+                          {person.name}
+                        </p>
+                        {person.title && (
+                          <p className="mt-2 text-xs font-medium leading-5 text-brand-primary sm:text-sm">
+                            {person.title}
+                          </p>
+                        )}
                       </div>
                       {person.linkedIn && (
                         <a
                           href={person.linkedIn}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[#0A66C2] hover:text-[#004182] transition-colors flex-shrink-0"
+                          className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center border border-[#0A66C2]/22 text-[#0A66C2] transition-colors hover:bg-[#0A66C2] hover:text-white"
                           aria-label={`${person.name} LinkedIn`}
                         >
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
-                          </svg>
+                          <LinkedInIcon />
                         </a>
                       )}
                     </div>
-                  </div>
-                </div>
-              ))}
+                  </article>
+                ))}
+              </div>
             </div>
           )}
+        </div>
+      </section>
 
       {/* CTA */}
       <section className="relative py-24 overflow-hidden">

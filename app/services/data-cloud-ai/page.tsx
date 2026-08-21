@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight, Database, Cloud, Brain, GitMerge, BarChart2 } from "lucide-react";
 import Image from "next/image";
 import ServiceDetailHero from "@/components/detail/ServiceDetailHero";
+import { DeliveryEditorial, ServiceAreasEditorial } from "@/components/detail/ServiceEditorialSections";
 
 const serviceAreas = [
   {
@@ -14,7 +15,7 @@ const serviceAreas = [
     content:
       "We design and implement governed self-service analytics environments that empower business users while maintaining data integrity. Our DataOps practice automates pipeline orchestration, CI/CD for data, and monitors data freshness end-to-end. From semantic layers and certified data marts to Tableau and Cognos dashboards — we build analytics experiences that business users actually adopt.",
     technologies: ["Tableau", "IBM Cognos Analytics", "Power BI", "Alteryx", "dbt", "Prefect"],
-    image: "https://images.unsplash.com/photo-1644325349124-d1756b79dd42?auto=format&fit=crop&q=80&w=1000",
+    image: "/images/editorial/service-detail/data-bi-dataops.jpg",
   },
   {
     icon: Database,
@@ -24,7 +25,7 @@ const serviceAreas = [
     content:
       "We implement enterprise data governance frameworks covering metadata management, data lineage, master data management (MDM), and automated data quality monitoring. AI-powered validation rules and continuous quality scoring ensure your data is reliable at every point of consumption. We establish ownership, stewardship models, and audit trails that satisfy both regulators and business stakeholders.",
     technologies: ["IBM InfoSphere MDM", "Python", "dbt", "Prefect"],
-    image: "https://images.unsplash.com/photo-1642516303080-431f6681f864?auto=format&fit=crop&q=80&w=1000",
+    image: "/images/editorial/service-detail/data-governance-quality.jpg",
   },
   {
     icon: Brain,
@@ -34,7 +35,7 @@ const serviceAreas = [
     content:
       "We help organizations move from AI experimentation to production AI deployment. Our team designs ML pipelines, builds predictive and prescriptive models, and integrates AI outputs into business workflows. We also scope and deliver Generative AI use cases — from internal knowledge assistants to LLM-powered document processing — grounded in your enterprise data.",
     technologies: ["DataRobot", "Databricks MLflow", "Python", "AWS SageMaker", "IBM Watson", "OpenAI API"],
-    image: "https://images.unsplash.com/photo-1640158615573-cd28feb1bf4e?auto=format&fit=crop&q=80&w=1000",
+    image: "/images/editorial/service-detail/data-predictive-genai.jpg",
   },
   {
     icon: GitMerge,
@@ -44,7 +45,7 @@ const serviceAreas = [
     content:
       "We build and modernize data engineering foundations — from high-volume ETL/ELT pipelines to lakehouse architectures on Databricks and Snowflake. We integrate third-party data sources (market data, geospatial, syndicated) and build enrichment layers that give your models and dashboards the context they need to deliver real insight.",
     technologies: ["Databricks", "Snowflake", "Apache Spark", "AWS Glue", "Python", "dbt"],
-    image: "https://images.unsplash.com/photo-1480944657103-7fed22359e1d?auto=format&fit=crop&q=80&w=1000",
+    image: "/images/editorial/service-detail/data-engineering-enrichment.jpg",
   },
   {
     icon: Cloud,
@@ -54,7 +55,7 @@ const serviceAreas = [
     content:
       "From legacy on-premise data warehouses to modern cloud-native platforms, we manage the full migration lifecycle. We assess your current estate, design the target architecture, execute migration with zero data loss, and optimize post-migration performance and cost. Deep expertise spans IBM Cloud Pak for Data, AWS, Azure, and GCP — including full DataOps practice build-out.",
     technologies: ["AWS", "Azure", "GCP", "IBM Cloud Pak for Data", "Databricks", "Terraform"],
-    image: "https://images.unsplash.com/photo-1523961131990-5ea7c61b2107?auto=format&fit=crop&q=80&w=1000",
+    image: "/images/editorial/service-detail/data-cloud-transformation.jpg",
   },
 ];
 
@@ -157,56 +158,19 @@ export default function DataCloudAIPage() {
         </div>
       </section>
 
-      {/* Service Areas (Alternating) */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-extrabold text-brand-dark mb-4">
-              Service Areas
-            </h2>
-            <p className="text-text-muted">
-              Deep expertise across the entire data lifecycle.
-            </p>
-          </div>
-          <div className="grid gap-px overflow-hidden border border-[#071a2a]/15 bg-[#071a2a]/15 lg:grid-cols-2">
-            {serviceAreas.map((area) => {
-              const Icon = area.icon;
-              return (
-                <article key={area.title} className="bg-white p-7 sm:p-9 lg:p-10">
-                  <div className="flex items-center border-b border-[#071a2a]/12 pb-6">
-                    <div className={`flex h-12 w-12 items-center justify-center ${area.color} bg-opacity-10`}><Icon size={24} className={area.color.replace("bg-", "text-")} /></div>
-                  </div>
-                  <h3 className="mt-7 text-3xl font-semibold text-brand-dark">{area.title}</h3>
-                  <p className="mt-4 text-xl font-medium leading-7 text-text-muted">{area.summary}</p>
-                  <p className="mt-5 text-base leading-7 text-text-body">{area.content}</p>
-                </article>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+      <ServiceAreasEditorial
+        areas={serviceAreas}
+        eyebrow="Data capabilities"
+        title="One connected practice across the full data lifecycle."
+        description="Architecture, governance, engineering and AI are designed as one operating system—not isolated workstreams."
+        accent="#68B8D8"
+      />
 
-      {/* How We Deliver */}
-      <section className="py-20 bg-brand-light">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-extrabold text-brand-dark mb-4">How We Deliver</h2>
-            <p className="text-text-muted">A proven engagement model from data audit to scaled production.</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 sm:gap-6">
-            {processSteps.map((step, i) => (
-              <div key={step.title} className="relative text-center">
-                {i < processSteps.length - 1 && (
-                  <div className="absolute left-[calc(50%+1rem)] right-[-50%] top-1.5 hidden h-px bg-gray-200 md:block" />
-                )}
-                <div className="mx-auto mb-5 h-3 w-3 rounded-full bg-brand-primary ring-4 ring-white" />
-                <div className="font-bold text-brand-dark text-base mb-2">{step.title}</div>
-                <div className="text-sm text-text-muted px-2">{step.description}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <DeliveryEditorial
+        steps={processSteps}
+        description="A proven engagement model from data audit to scaled production."
+        accent="#68B8D8"
+      />
 
       {/* Featured Success Stories */}
       <section className="py-20 bg-white">
