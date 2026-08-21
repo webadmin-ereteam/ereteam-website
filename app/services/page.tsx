@@ -1,12 +1,18 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Database, TrendingUp, BarChart3 } from "lucide-react";
+import { createPageMetadata } from "@/lib/seo";
+import JsonLd from "@/components/seo/JsonLd";
+import { breadcrumbSchema, collectionSchema } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Services",
   description:
     "Ereteam's enterprise data and analytics services: Data, Cloud & AI, Financial Performance & Intelligence, and Marketing Intelligence.",
-};
+  path: "/services",
+  image: "/images/ai/services_bg.png",
+  keywords: ["enterprise data consulting", "cloud analytics consulting", "financial planning consulting", "marketing intelligence consulting"],
+});
 
 const services = [
   {
@@ -62,6 +68,7 @@ const services = [
 export default function ServicesPage() {
   return (
     <>
+      <JsonLd data={[collectionSchema({ name: "Ereteam Services", description: "Enterprise data, cloud, AI, financial performance and marketing intelligence consulting services.", path: "/services", items: services.map((service) => ({ name: service.title, path: service.href })) }), breadcrumbSchema([{ name: "Home", path: "/" }, { name: "Services", path: "/services" }])]} />
       {/* Hero */}
       <section
         className="site-overview-hero"

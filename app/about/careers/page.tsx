@@ -5,12 +5,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { Heart, TrendingUp, Globe, Users, Zap, Database, BarChart2, Cloud, Brain, Code2, Briefcase, MapPin } from "lucide-react";
 import { getAllActiveJobPostings } from "@/lib/sanity/queries";
+import { createPageMetadata } from "@/lib/seo";
+import JsonLd from "@/components/seo/JsonLd";
+import { absoluteUrl, breadcrumbSchema, SITE_URL } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Careers – Join Ereteam",
   description:
     "Join Ereteam's team of enterprise data and analytics professionals. Explore open roles across data engineering, analytics, AI/ML, and consulting.",
-};
+  path: "/about/careers",
+  image: "/images/editorial/careers-team-v2.png",
+});
 
 const whyEreteam = [
   {
@@ -105,9 +110,30 @@ const departments = [
 
 export default async function CareersPage() {
   const jobPostings = await getAllActiveJobPostings();
+  const jobSchemas = jobPostings.map((job) => ({
+    "@context": "https://schema.org",
+    "@type": "JobPosting",
+    "@id": `${absoluteUrl("/about/careers")}#${job._id}`,
+    title: job.title,
+    description: job.description || `${job.title} opportunity in Ereteam's ${job.department} team.`,
+    datePosted: job.publishedAt,
+    employmentType: job.type?.toUpperCase().replace(/-/g, "_") || "FULL_TIME",
+    hiringOrganization: { "@id": `${SITE_URL}/#organization` },
+    jobLocation: {
+      "@type": "Place",
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: job.location || "Istanbul",
+        addressCountry: job.location?.toLowerCase().includes("usa") ? "US" : "TR",
+      },
+    },
+    qualifications: (job.requirements || []).join("; "),
+    url: absoluteUrl("/about/careers"),
+  }));
 
   return (
     <>
+      <JsonLd data={[breadcrumbSchema([{ name: "Home", path: "/" }, { name: "About", path: "/about" }, { name: "Careers", path: "/about/careers" }]), ...jobSchemas]} />
       <section className="bg-[#071a2a] text-white">
         <div className="grid min-h-[660px] lg:grid-cols-[1fr_1fr]">
           <div className="flex items-center px-4 pb-14 pt-28 sm:px-8 lg:px-[max(4rem,calc((100vw-1280px)/2))] lg:pr-14 lg:pt-32">

@@ -2,12 +2,16 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { ExternalLink, Shield, CheckCircle, Lock, TrendingUp, ArrowRight, Server, AlertTriangle } from "lucide-react";
 import ProductDetailHero from "@/components/detail/ProductDetailHero";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Obserian – Enterprise Data Governance Platform",
   description:
     "Obserian is an AI-powered data quality and governance platform. Automated validation, lineage tracking, compliance reporting at enterprise scale.",
-};
+  path: "/products/obserian",
+  image: "/images/editorial/product-obserian-v2.png",
+  keywords: ["AI data quality platform", "enterprise data governance", "automated data lineage", "Obserian"],
+});
 
 const steps = [
   {

@@ -13,6 +13,10 @@ function ClientItem({ client }: { client: (typeof clients)[0] }) {
       <img
         src={`/logos/clients/${client.localLogo}`}
         alt={client.name}
+        width="120"
+        height="32"
+        loading="lazy"
+        decoding="async"
         className="h-8 w-auto max-w-[120px] object-contain grayscale opacity-50 transition-all duration-300 hover:grayscale-0 hover:opacity-100"
       />
     </div>

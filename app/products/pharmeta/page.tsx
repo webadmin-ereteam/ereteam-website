@@ -2,12 +2,16 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { ExternalLink, Database, CheckCircle, Globe, Shield, Zap, ArrowRight } from "lucide-react";
 import ProductDetailHero from "@/components/detail/ProductDetailHero";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Pharmeta – AI-Powered Product Data Platform",
   description:
     "Pharmeta is the secure AI-powered data platform that enables organizations to clean and manage product and customer data — turning distributor chaos into clean, standardized golden records.",
-};
+  path: "/products/pharmeta",
+  image: "/images/editorial/product-pharmeta-v3.png",
+  keywords: ["AI product data matching", "golden record management", "SKU matching platform", "Pharmeta"],
+});
 
 const steps = [
   {

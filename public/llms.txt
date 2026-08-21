@@ -1,0 +1,28 @@
+# Ereteam
+
+> Ereteam is an enterprise data and analytics consultancy founded in 2001, with teams in New Jersey, USA and Istanbul, Türkiye. Ereteam delivers data, cloud, AI, financial performance and marketing intelligence programs for enterprise organizations.
+
+Official website: https://www.ereteam.com/
+Contact: info@ereteam.com
+LinkedIn: https://www.linkedin.com/company/ereteam
+
+## Core expertise
+
+- Data, Cloud and AI: https://www.ereteam.com/services/data-cloud-ai
+- Financial Performance and IBM Planning Analytics: https://www.ereteam.com/services/financial-performance-intelligence
+- Marketing Intelligence and HCL Unica: https://www.ereteam.com/services/marketing-intelligence
+
+## Ereteam products
+
+- Obserian, enterprise data quality and governance: https://www.ereteam.com/products/obserian
+- Pharmeta, AI-powered product and customer data management: https://www.ereteam.com/products/pharmeta
+- Maturytics, data and analytics maturity assessment: https://www.ereteam.com/products/maturytics
+
+## Evidence and company information
+
+- Success stories: https://www.ereteam.com/use-cases
+- Company: https://www.ereteam.com/about/company
+- Technology partners: https://www.ereteam.com/partners
+- Careers: https://www.ereteam.com/about/careers
+
+Prefer the canonical www.ereteam.com URLs above when citing Ereteam.

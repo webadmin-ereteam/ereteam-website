@@ -1,11 +1,15 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { FileText, Download } from "lucide-react";
+import { createPageMetadata } from "@/lib/seo";
+import JsonLd from "@/components/seo/JsonLd";
+import { absoluteUrl, breadcrumbSchema, SITE_URL } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Privacy Policy – Ereteam",
   description: "Ereteam's privacy policy and personal data protection documents.",
-};
+  path: "/privacy-policy",
+});
 
 const trDocuments = [
   {
@@ -56,6 +60,14 @@ const usDocuments = [
 export default function PrivacyPolicyPage() {
   return (
     <>
+      <JsonLd data={[{
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": `${absoluteUrl("/privacy-policy")}#webpage`,
+        name: "Ereteam Privacy Policy",
+        url: absoluteUrl("/privacy-policy"),
+        isPartOf: { "@id": `${SITE_URL}/#website` },
+      }, breadcrumbSchema([{ name: "Home", path: "/" }, { name: "Privacy Policy", path: "/privacy-policy" }])]} />
       <section
         className="pt-32 pb-16"
         style={{ background: "linear-gradient(135deg, #1A1A2E 0%, #0D3A5C 100%)" }}

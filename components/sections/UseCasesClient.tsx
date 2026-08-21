@@ -4,6 +4,8 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { SanitySuccessStory } from "@/lib/sanity/queries";
 import Image from "next/image";
+import Link from "next/link";
+import { storySlug } from "@/lib/successStories";
 
 type Industry =
   | "Banking & Finance"
@@ -177,7 +179,11 @@ export default function UseCasesClient({ stories }: { stories: SanitySuccessStor
                 </div>
                 
                 <div className="p-6 flex flex-col flex-1">
-                  <h3 className="font-bold text-brand-dark text-base mb-3">{uc.project}</h3>
+                  <h3 className="font-bold text-brand-dark text-base mb-3">
+                    <Link href={`/success-stories/${storySlug(uc)}`} className="transition-colors hover:text-brand-primary">
+                      {uc.project}
+                    </Link>
+                  </h3>
                   <p className="text-sm text-text-body leading-relaxed mb-4 flex-1">{uc.summary}</p>
                 {uc.results && (
                   <div className="bg-brand-light rounded-xl p-4 mb-4 border border-gray-100">
@@ -197,6 +203,12 @@ export default function UseCasesClient({ stories }: { stories: SanitySuccessStor
                     </span>
                   ))}
                 </div>
+                <Link
+                  href={`/success-stories/${storySlug(uc)}`}
+                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-brand-primary"
+                >
+                  Read the success story <span aria-hidden="true">→</span>
+                </Link>
                 </div>
               </motion.div>
             ))}
