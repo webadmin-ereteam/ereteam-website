@@ -1,9 +1,21 @@
 export const revalidate = 60;
 
+import type { Metadata } from "next";
 import { getAllPartners, SanityPartner } from "@/lib/sanity/queries";
 import { urlFor } from "@/lib/sanity/client";
 import Image from "next/image";
 import Link from "next/link";
+import { createPageMetadata } from "@/lib/seo";
+import JsonLd from "@/components/seo/JsonLd";
+import { absoluteUrl, breadcrumbSchema, SITE_URL } from "@/lib/seo";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "Technology Partners",
+  description: "Explore Ereteam's enterprise technology ecosystem across IBM, AWS, HCL Software, Databricks, Alteryx, Tableau, Snowflake and specialist platforms.",
+  path: "/partners",
+  image: "/images/ai/partners_bg.png",
+  keywords: ["Ereteam partners", "IBM business partner", "HCL Software partner", "Databricks consulting partner"],
+});
 
 const localLogos: Record<string, string> = {
   "IBM": "/logos/partners/ibm.png",
@@ -48,6 +60,22 @@ export default async function PartnersPage() {
 
   return (
     <>
+      <JsonLd data={[{
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "@id": `${absoluteUrl("/partners")}#collection`,
+        name: "Ereteam Technology Partners",
+        url: absoluteUrl("/partners"),
+        isPartOf: { "@id": `${SITE_URL}/#website` },
+        mainEntity: {
+          "@type": "ItemList",
+          itemListElement: partners.map((partner, index) => ({
+            "@type": "ListItem",
+            position: index + 1,
+            item: { "@type": "Organization", name: partner.name },
+          })),
+        },
+      }, breadcrumbSchema([{ name: "Home", path: "/" }, { name: "Partners", path: "/partners" }])]} />
       {/* Hero */}
       <section className="site-overview-hero relative overflow-hidden">
         <div className="absolute inset-0 z-0">

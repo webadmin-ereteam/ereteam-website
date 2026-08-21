@@ -4,6 +4,8 @@ import { client } from "./client";
 
 export interface SanitySuccessStory {
   _id: string;
+  _createdAt?: string;
+  _updatedAt?: string;
   industry: string;
   project: string;
   technologies: string[];
@@ -15,7 +17,7 @@ export interface SanitySuccessStory {
 export async function getAllSuccessStories(): Promise<SanitySuccessStory[]> {
   return client.fetch(
     `*[_type == "successStory" && industry != "Government"] | order(order asc, project asc) {
-      _id, industry, project, technologies, summary, results, order
+      _id, _createdAt, _updatedAt, industry, project, technologies, summary, results, order
     }`
   );
 }

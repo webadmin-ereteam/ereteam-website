@@ -2,12 +2,16 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { ExternalLink, Globe, Target, BarChart2, Map, Award, ArrowRight } from "lucide-react";
 import ProductDetailHero from "@/components/detail/ProductDetailHero";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Maturytics – Data Maturity Assessment Platform",
   description:
     "Maturytics assesses your organization's data and analytics maturity across 5 dimensions and generates actionable roadmaps for data transformation.",
-};
+  path: "/products/maturytics",
+  image: "/images/editorial/product-maturytics-v2.png",
+  keywords: ["data maturity assessment", "analytics maturity model", "data transformation roadmap", "Maturytics"],
+});
 
 const steps = [
   {

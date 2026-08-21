@@ -5,9 +5,11 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import ChatWidget from "@/components/ChatWidget";
 import CookieBannerGate from "@/components/CookieBannerGate";
+import JsonLd from "@/components/seo/JsonLd";
+import { organizationSchema, SITE_URL, websiteSchema } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://ereteam.com"),
+  metadataBase: new URL(SITE_URL),
   title: {
     template: "%s | Ereteam",
     default: "Ereteam | Where Data Comes Alive",
@@ -23,14 +25,36 @@ export const metadata: Metadata = {
     "marketing intelligence",
     "data consultancy",
   ],
+  authors: [{ name: "Ereteam", url: SITE_URL }],
+  creator: "Ereteam",
+  publisher: "Ereteam",
+  category: "Enterprise Data & Analytics Consulting",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://ereteam.com",
+    url: SITE_URL,
     siteName: "Ereteam",
     title: "Ereteam | Where Data Comes Alive",
     description:
       "25 years of enterprise data & analytics expertise. HQ in USA, operations in Türkiye.",
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Ereteam — Where Data Comes Alive" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Ereteam | Where Data Comes Alive",
+    description: "25 years of enterprise data and analytics expertise.",
+    images: ["/opengraph-image"],
   },
 };
 
@@ -49,6 +73,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans antialiased bg-[#f7f5ef] text-text-body">
+        <JsonLd data={[organizationSchema, websiteSchema]} />
         <a href="#main-content" className="site-skip-link">Skip to content</a>
         <CookieBannerGate />
         <Navbar />

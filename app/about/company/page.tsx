@@ -5,12 +5,18 @@ import Link from "next/link";
 import { getPartnersBoard, SanityTeamMember } from "@/lib/sanity/queries";
 import { urlFor } from "@/lib/sanity/client";
 import Image from "next/image";
+import { createPageMetadata } from "@/lib/seo";
+import JsonLd from "@/components/seo/JsonLd";
+import { absoluteUrl, breadcrumbSchema, SITE_URL } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Company – About Ereteam",
   description:
     "Learn about Ereteam: our story, mission, approach, and partners. 25 years of enterprise data & analytics expertise.",
-};
+  path: "/about/company",
+  image: "/images/ai/about_bg.png",
+  keywords: ["Ereteam company", "enterprise analytics consultancy", "data consulting USA", "data consulting Türkiye"],
+});
 
 const stats = [
   { value: "2001", label: "Founded" },
@@ -50,6 +56,14 @@ export default async function CompanyPage() {
 
   return (
     <>
+      <JsonLd data={[{
+        "@context": "https://schema.org",
+        "@type": "AboutPage",
+        "@id": `${absoluteUrl("/about/company")}#about`,
+        name: "About Ereteam",
+        url: absoluteUrl("/about/company"),
+        about: { "@id": `${SITE_URL}/#organization` },
+      }, breadcrumbSchema([{ name: "Home", path: "/" }, { name: "About", path: "/about" }, { name: "Company", path: "/about/company" }])]} />
       {/* Hero */}
       <section
         className="site-overview-hero"

@@ -47,7 +47,7 @@ export default function HeroSection() {
       <div className="absolute inset-0">
         {slides.map((slide, index) => (
           <div key={slide.image} className={`absolute inset-0 transition-opacity duration-1000 ${index === active ? "opacity-100" : "pointer-events-none opacity-0"}`} aria-hidden={index !== active}>
-            <Image src={slide.image} alt="" fill priority sizes="100vw" className={`object-cover ${slide.position}`} />
+            <Image src={slide.image} alt="" fill priority={index === 0} sizes="100vw" className={`object-cover ${slide.position}`} />
           </div>
         ))}
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(4,17,28,.94)_0%,rgba(4,17,28,.72)_44%,rgba(4,17,28,.2)_75%,rgba(4,17,28,.46)_100%)]" />

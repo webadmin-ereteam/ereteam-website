@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
 import { ArrowUpRight, BarChart3, Database, Radio, Users } from "lucide-react";
+import { createPageMetadata } from "@/lib/seo";
+import JsonLd from "@/components/seo/JsonLd";
+import { absoluteUrl, breadcrumbSchema, SITE_URL } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Ereteam on LinkedIn | Ereteam",
-  description: "Follow Ereteam's latest perspectives, project stories and company updates on LinkedIn.",
-};
+export const metadata: Metadata = createPageMetadata({
+  title: "Ereteam Insights and LinkedIn Updates",
+  description: "Follow Ereteam's latest enterprise data, AI, financial planning and marketing technology perspectives on LinkedIn.",
+  path: "/social-media",
+  image: "/images/ai/media_.png",
+});
 
 const themes = [
   {
@@ -27,6 +32,15 @@ const themes = [
 export default function SocialMediaPage() {
   return (
     <main>
+      <JsonLd data={[{
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "@id": `${absoluteUrl("/social-media")}#insights`,
+        name: "Ereteam Insights and LinkedIn Updates",
+        url: absoluteUrl("/social-media"),
+        isPartOf: { "@id": `${SITE_URL}/#website` },
+        sameAs: "https://www.linkedin.com/company/ereteam",
+      }, breadcrumbSchema([{ name: "Home", path: "/" }, { name: "Insights", path: "/social-media" }])]} />
       <section className="site-overview-hero overflow-hidden bg-[#071A2A] text-white">
         <div className="site-container grid w-full items-center gap-12 lg:grid-cols-[1.25fr_.75fr]">
           <div className="max-w-4xl">

@@ -1,13 +1,27 @@
 export const revalidate = 60;
 
+import type { Metadata } from "next";
 import { getAllSuccessStories } from "@/lib/sanity/queries";
 import UseCasesClient from "@/components/sections/UseCasesClient";
+import { createPageMetadata } from "@/lib/seo";
+import JsonLd from "@/components/seo/JsonLd";
+import { breadcrumbSchema, collectionSchema } from "@/lib/seo";
+import { storySlug } from "@/lib/successStories";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "Enterprise Data and Analytics Success Stories",
+  description: "Explore Ereteam success stories across banking, insurance, telecom, pharma, retail and manufacturing, with measurable enterprise data and analytics outcomes.",
+  path: "/use-cases",
+  image: "/images/ai/usecases_bg.png",
+  keywords: ["data analytics case studies", "IBM Planning Analytics success stories", "enterprise AI case studies", "HCL Unica case studies"],
+});
 
 export default async function UseCasesPage() {
   const stories = await getAllSuccessStories();
 
   return (
     <>
+      <JsonLd data={[collectionSchema({ name: "Ereteam Success Stories", description: "Measurable enterprise data and analytics outcomes delivered by Ereteam.", path: "/use-cases", items: stories.map((story) => ({ name: story.project, path: `/success-stories/${storySlug(story)}` })) }), breadcrumbSchema([{ name: "Home", path: "/" }, { name: "Success Stories", path: "/use-cases" }])]} />
       <section
         className="pt-32 pb-20"
         style={{ background: "linear-gradient(135deg, #0a1628 0%, #1a2a5e 100%)" }}

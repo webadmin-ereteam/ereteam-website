@@ -1,12 +1,16 @@
-import { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Users, Briefcase } from "lucide-react";
+import { createPageMetadata } from "@/lib/seo";
+import JsonLd from "@/components/seo/JsonLd";
+import { absoluteUrl, breadcrumbSchema, SITE_URL } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
   title: "About Ereteam",
   description:
     "Learn about Ereteam — 25 years of enterprise data & analytics expertise. Discover our company story and career opportunities.",
-};
+  path: "/about",
+  image: "/images/ai/about_bg.png",
+});
 
 const sections = [
   {
@@ -30,7 +34,14 @@ const sections = [
 export default function AboutPage() {
   return (
     <>
-      {/* Hero */}
+      <JsonLd data={[{
+        "@context": "https://schema.org",
+        "@type": "AboutPage",
+        "@id": `${absoluteUrl("/about")}#about`,
+        name: "About Ereteam",
+        url: absoluteUrl("/about"),
+        about: { "@id": `${SITE_URL}/#organization` },
+      }, breadcrumbSchema([{ name: "Home", path: "/" }, { name: "About", path: "/about" }])]} />
       {/* Hero */}
       <section
         className="site-overview-hero"
@@ -51,6 +62,19 @@ export default function AboutPage() {
             IT firm. Everything we do is focused on helping organizations extract more
             value from their data.
           </p>
+        </div>
+      </section>
+
+      <section className="border-b border-[#071a2a]/12 bg-white py-14 lg:py-20">
+        <div className="site-container grid gap-8 lg:grid-cols-[.7fr_1.3fr] lg:items-start">
+          <div>
+            <p className="site-kicker">Ereteam at a glance</p>
+            <p className="mt-5 text-sm leading-7 text-text-muted">Founded in 2001 · New Jersey and Istanbul · 80+ data professionals</p>
+          </div>
+          <div className="space-y-6 text-lg leading-8 text-[#40515d]">
+            <p>Ereteam designs and delivers enterprise data systems that support decisions across finance, operations, marketing and executive leadership. Our work spans modern cloud data platforms, applied AI, IBM Planning Analytics, HCL Unica and purpose-built software products.</p>
+            <p>We combine specialist consulting teams in the United States and Türkiye with delivery experience across 17 countries. The result is a firm built for complex, long-lived enterprise programs—not short-term technology installation.</p>
+          </div>
         </div>
       </section>
 

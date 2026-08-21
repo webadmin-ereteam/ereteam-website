@@ -2,11 +2,16 @@ import { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { createPageMetadata } from "@/lib/seo";
+import JsonLd from "@/components/seo/JsonLd";
+import { breadcrumbSchema, collectionSchema } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Products",
   description: "Ereteam's purpose-built enterprise analytics products: Obserian, Pharmeta, and Maturytics.",
-};
+  path: "/products",
+  image: "/images/ai/products_bg.png",
+});
 
 const products = [
   {
@@ -50,6 +55,7 @@ const products = [
 export default function ProductsPage() {
   return (
     <div className="products-index bg-[#f6f3ec]">
+      <JsonLd data={[collectionSchema({ name: "Ereteam Products", description: "Purpose-built enterprise data and analytics software from Ereteam.", path: "/products", items: products.map((product) => ({ name: product.name, path: product.href })) }), breadcrumbSchema([{ name: "Home", path: "/" }, { name: "Products", path: "/products" }])]} />
       <section className="site-overview-hero bg-[#071a2a] text-white">
         <div className="site-container">
           <p className="site-kicker">Ereteam products</p>
