@@ -1,9 +1,10 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Database, TrendingUp, BarChart3 } from "lucide-react";
+import { ArrowRight, Database, TrendingUp, BarChart3, Layers3 } from "lucide-react";
 import { createPageMetadata } from "@/lib/seo";
 import JsonLd from "@/components/seo/JsonLd";
 import { breadcrumbSchema, collectionSchema } from "@/lib/seo";
+import EditorialOverviewHero from "@/components/sections/EditorialOverviewHero";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Services",
@@ -69,28 +70,14 @@ export default function ServicesPage() {
   return (
     <>
       <JsonLd data={[collectionSchema({ name: "Ereteam Services", description: "Enterprise data, cloud, AI, financial performance and marketing intelligence consulting services.", path: "/services", items: services.map((service) => ({ name: service.title, path: service.href })) }), breadcrumbSchema([{ name: "Home", path: "/" }, { name: "Services", path: "/services" }])]} />
-      {/* Hero */}
-      <section
-        className="site-overview-hero"
-        style={{ background: "linear-gradient(135deg, #0a1628 0%, #1a2a5e 100%)" }}
-      >
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-sm font-medium text-[#38bdf8] uppercase tracking-widest mb-4">
-            Our Services
-          </p>
-          <h1 className="site-page-title mb-6 text-white">
-            Expertise at Every Layer of{" "}
-            <span style={{ background: "linear-gradient(90deg, #1A6FA8, #38bdf8, #0C9472)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              Your Data Stack
-            </span>
-          </h1>
-          <p className="site-page-lead mx-auto max-w-2xl text-gray-300">
-            From raw data infrastructure to C-suite decision intelligence, Ereteam
-            delivers end-to-end analytics capabilities built on 25 years of enterprise
-            expertise.
-          </p>
-        </div>
-      </section>
+      <EditorialOverviewHero
+        eyebrow="Our services"
+        title="Expertise at every layer of your data stack."
+        description="From raw data infrastructure to C-suite decision intelligence, Ereteam delivers end-to-end analytics capabilities built on 25 years of enterprise expertise."
+        railLabel="Three connected practices"
+        railText="Data foundations, finance intelligence and commercial analytics—designed as one enterprise capability."
+        icon={Layers3}
+      />
 
       {/* Service domains */}
       <section className="border-b border-brand-dark/10 bg-[#F2EFE8] py-20 sm:py-24">

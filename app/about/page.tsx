@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ArrowRight, Users, Briefcase } from "lucide-react";
+import { ArrowRight, Users, Briefcase, Compass } from "lucide-react";
 import { createPageMetadata } from "@/lib/seo";
 import JsonLd from "@/components/seo/JsonLd";
 import { absoluteUrl, breadcrumbSchema, SITE_URL } from "@/lib/seo";
+import EditorialOverviewHero from "@/components/sections/EditorialOverviewHero";
 
 export const metadata = createPageMetadata({
   title: "About Ereteam",
@@ -42,28 +43,14 @@ export default function AboutPage() {
         url: absoluteUrl("/about"),
         about: { "@id": `${SITE_URL}/#organization` },
       }, breadcrumbSchema([{ name: "Home", path: "/" }, { name: "About", path: "/about" }])]} />
-      {/* Hero */}
-      <section
-        className="site-overview-hero"
-        style={{ background: "linear-gradient(135deg, #0a1628 0%, #1a2a5e 100%)" }}
-      >
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-sm font-medium text-[#38bdf8] uppercase tracking-widest mb-4">
-            About Ereteam
-          </p>
-          <h1 className="site-page-title mb-6 text-white">
-            25 Years of Making{" "}
-            <span style={{ background: "linear-gradient(90deg, #1A6FA8, #38bdf8, #0C9472)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              Data Come Alive
-            </span>
-          </h1>
-          <p className="site-page-lead mx-auto max-w-2xl text-gray-300">
-            We are a dedicated enterprise data and analytics consultancy — not a generalist
-            IT firm. Everything we do is focused on helping organizations extract more
-            value from their data.
-          </p>
-        </div>
-      </section>
+      <EditorialOverviewHero
+        eyebrow="About Ereteam"
+        title="25 years of making data come alive."
+        description="We are a dedicated enterprise data and analytics consultancy—not a generalist IT firm. Everything we do is focused on helping organizations extract more value from their data."
+        railLabel="Established in 2001"
+        railText="New Jersey and Istanbul. More than 80 specialists delivering enterprise programs across 17 countries."
+        icon={Compass}
+      />
 
       <section className="border-b border-[#071a2a]/12 bg-white py-14 lg:py-20">
         <div className="site-container grid gap-8 lg:grid-cols-[.7fr_1.3fr] lg:items-start">

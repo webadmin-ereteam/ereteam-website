@@ -8,6 +8,8 @@ import Image from "next/image";
 import { createPageMetadata } from "@/lib/seo";
 import JsonLd from "@/components/seo/JsonLd";
 import { absoluteUrl, breadcrumbSchema, SITE_URL } from "@/lib/seo";
+import { Building2 } from "lucide-react";
+import EditorialOverviewHero from "@/components/sections/EditorialOverviewHero";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Company – About Ereteam",
@@ -64,31 +66,16 @@ export default async function CompanyPage() {
         url: absoluteUrl("/about/company"),
         about: { "@id": `${SITE_URL}/#organization` },
       }, breadcrumbSchema([{ name: "Home", path: "/" }, { name: "About", path: "/about" }, { name: "Company", path: "/about/company" }])]} />
-      {/* Hero */}
-      <section
-        className="site-overview-hero"
-        style={{ background: "linear-gradient(135deg, #1A1A2E 0%, #0D3A5C 100%)" }}
-      >
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="mb-4">
-            <Link href="/about" className="text-sm text-gray-400 hover:text-white transition-colors">
-              ← About
-            </Link>
-          </div>
-          <p className="text-sm font-medium text-brand-primary uppercase tracking-widest mb-4">
-            Our Company
-          </p>
-          <h1 className="site-page-title mb-6 text-white">
-            Built Around Data.{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-primary to-blue-400">Built for Impact.</span>
-          </h1>
-          <p className="site-page-lead mx-auto max-w-2xl text-gray-300">
-            Since 2001, Ereteam has been at the forefront of enterprise data and analytics.
-            We are a team of specialists who believe that data, properly harnessed, has
-            the power to transform organizations.
-          </p>
-        </div>
-      </section>
+      <EditorialOverviewHero
+        eyebrow="Our company"
+        title="Built around data. Built for impact."
+        description="Since 2001, Ereteam has been at the forefront of enterprise data and analytics. We are specialists who believe that data, properly harnessed, has the power to transform organizations."
+        railLabel="One specialist focus"
+        railText="Enterprise data systems that improve real decisions—not technology implemented for its own sake."
+        icon={Building2}
+        backHref="/about"
+        backLabel="About Ereteam"
+      />
 
       {/* 25th Anniversary Banner */}
       <section className="bg-brand-magenta/10 border-y border-brand-magenta/30 py-4">

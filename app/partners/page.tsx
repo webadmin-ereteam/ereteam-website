@@ -8,6 +8,8 @@ import Link from "next/link";
 import { createPageMetadata } from "@/lib/seo";
 import JsonLd from "@/components/seo/JsonLd";
 import { absoluteUrl, breadcrumbSchema, SITE_URL } from "@/lib/seo";
+import { Network } from "lucide-react";
+import EditorialOverviewHero from "@/components/sections/EditorialOverviewHero";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Technology Partners",
@@ -76,32 +78,14 @@ export default async function PartnersPage() {
           })),
         },
       }, breadcrumbSchema([{ name: "Home", path: "/" }, { name: "Partners", path: "/partners" }])]} />
-      {/* Hero */}
-      <section className="site-overview-hero relative overflow-hidden">
-        <div className="absolute inset-0 z-0">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img 
-            src="/images/editorial/hero-advisory.png"
-            alt="Partners Background" 
-            className="w-full h-full object-cover opacity-60"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#0B0F19]/40 via-[#0B0F19]/80 to-[#0B0F19]"></div>
-        </div>
-        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-sm font-medium text-[#38bdf8] uppercase tracking-widest mb-4">
-            Technology Partners
-          </p>
-          <h1 className="site-page-title mb-6 text-white">
-            Building on the World&apos;s{" "}
-            <span style={{ background: "linear-gradient(90deg, #1A6FA8, #38bdf8, #0C9472)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              Best Technology
-            </span>
-          </h1>
-          <p className="site-page-lead mx-auto max-w-2xl text-gray-300">
-            Ereteam is a certified partner of the industry&apos;s leading technology vendors.
-          </p>
-        </div>
-      </section>
+      <EditorialOverviewHero
+        eyebrow="Technology partners"
+        title="Building on the world&apos;s best technology."
+        description="Ereteam combines the industry&apos;s leading enterprise platforms with the delivery depth required to make them work in complex organizations."
+        railLabel={`${partners.length} platform relationships`}
+        railText="A connected ecosystem spanning data, AI, planning, analytics and customer engagement."
+        icon={Network}
+      />
 
       {/* Partners Grid */}
       <section className="py-20 bg-white">

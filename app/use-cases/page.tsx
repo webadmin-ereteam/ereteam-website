@@ -7,6 +7,8 @@ import { createPageMetadata } from "@/lib/seo";
 import JsonLd from "@/components/seo/JsonLd";
 import { breadcrumbSchema, collectionSchema } from "@/lib/seo";
 import { storySlug } from "@/lib/successStories";
+import { Trophy } from "lucide-react";
+import EditorialOverviewHero from "@/components/sections/EditorialOverviewHero";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Enterprise Data and Analytics Success Stories",
@@ -22,26 +24,14 @@ export default async function UseCasesPage() {
   return (
     <>
       <JsonLd data={[collectionSchema({ name: "Ereteam Success Stories", description: "Measurable enterprise data and analytics outcomes delivered by Ereteam.", path: "/use-cases", items: stories.map((story) => ({ name: story.project, path: `/success-stories/${storySlug(story)}` })) }), breadcrumbSchema([{ name: "Home", path: "/" }, { name: "Success Stories", path: "/use-cases" }])]} />
-      <section
-        className="pt-32 pb-20"
-        style={{ background: "linear-gradient(135deg, #0a1628 0%, #1a2a5e 100%)" }}
-      >
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-sm font-medium text-[#38bdf8] uppercase tracking-widest mb-4">
-            Success Stories
-          </p>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight">
-            Proven Impact Across{" "}
-            <span style={{ background: "linear-gradient(90deg, #1A6FA8, #38bdf8, #0C9472)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              Every Industry
-            </span>
-          </h1>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
-            Over 25 years, we&apos;ve delivered measurable outcomes for 100+ enterprise
-            organizations across banking, pharma, telecom, retail, and beyond.
-          </p>
-        </div>
-      </section>
+      <EditorialOverviewHero
+        eyebrow="Success stories"
+        title="Proven impact across every industry."
+        description="Over 25 years, we have delivered measurable outcomes for more than 100 enterprise organizations across banking, pharma, telecom, retail and beyond."
+        railLabel={`${stories.length} documented outcomes`}
+        railText="Evidence from real programs: faster planning, stronger governance and decisions made with greater confidence."
+        icon={Trophy}
+      />
       <UseCasesClient stories={stories} />
     </>
   );
