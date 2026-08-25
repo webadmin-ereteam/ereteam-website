@@ -258,6 +258,9 @@ export default function ChatWidget() {
                   <Send size={13} color="white" />
                 </button>
               </div>
+              <p className="mt-1.5 px-0.5 text-[9px] leading-relaxed text-[#65727b]">
+                Messages may be logged to improve Ereteam AI. Do not share sensitive information.
+              </p>
             </div>
           </motion.div>
         )}

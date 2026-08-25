@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getChatContext } from "@/lib/getChatContext";
 import { pages } from "@/lib/siteData";
 import { generateChatResponse, ChatMessage } from "@/lib/services/llmService";
+import { logChatExchange } from "@/lib/services/chatLogService";
 import { getClientIp, rateLimit } from "@/lib/rateLimit";
 import { z } from "zod";
 
@@ -18,9 +19,12 @@ const chatRequestSchema = z.object({
     .min(1)
     .max(20),
   currentPage: z.string().max(200).optional(),
+  sessionId: z.string().trim().min(1).max(100),
 });
 
 export async function POST(req: NextRequest) {
+  let logContext: { sessionId: string; page: string; question: string } | null = null;
+
   try {
     const limit = rateLimit(`chat:${getClientIp(req)}`, 20, 10 * 60 * 1000);
     if (!limit.allowed) {
@@ -39,7 +43,18 @@ export async function POST(req: NextRequest) {
     const payload = chatRequestSchema.safeParse(await req.json());
     if (!payload.success) return NextResponse.json({ error: "Invalid chat request" }, { status: 400 });
 
-    const { messages, currentPage } = payload.data;
+    const { messages, currentPage, sessionId } = payload.data;
+    const latestQuestion = [...messages].reverse().find((message) => message.role === "user")?.content;
+
+    if (!latestQuestion) {
+      return NextResponse.json({ error: "Invalid chat request" }, { status: 400 });
+    }
+
+    logContext = {
+      sessionId,
+      page: currentPage || "/",
+      question: latestQuestion,
+    };
 
     const systemPrompt = await getChatContext();
 
@@ -58,10 +73,25 @@ export async function POST(req: NextRequest) {
       maxTokens: 700,
     });
 
+    await logChatExchange({
+      ...logContext,
+      answer: text,
+      status: "Answered",
+    });
+
     return NextResponse.json({ content: text });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("Chat API error:", message);
+
+    if (logContext) {
+      await logChatExchange({
+        ...logContext,
+        answer: "",
+        status: "Error",
+      });
+    }
+
     return NextResponse.json({ error: "Unable to process the chat request" }, { status: 500 });
   }
 }

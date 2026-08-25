@@ -7,6 +7,16 @@ export interface Message {
 }
 
 const STORAGE_KEY = "ereteam-iq-v1";
+const SESSION_STORAGE_KEY = "ereteam-ai-session-v1";
+
+function getSessionId() {
+  const existing = localStorage.getItem(SESSION_STORAGE_KEY);
+  if (existing) return existing;
+
+  const sessionId = crypto.randomUUID();
+  localStorage.setItem(SESSION_STORAGE_KEY, sessionId);
+  return sessionId;
+}
 
 export const WELCOME_MESSAGE: Message = {
   role: "assistant",
@@ -20,6 +30,7 @@ export function useChat(pathname: string) {
   const clearChat = () => {
     setMessages([WELCOME_MESSAGE]);
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(SESSION_STORAGE_KEY);
   };
 
   const sendMessage = async (content: string) => {
@@ -37,6 +48,7 @@ export function useChat(pathname: string) {
         body: JSON.stringify({
           messages: history.filter((m) => m.content !== WELCOME_MESSAGE.content),
           currentPage: pathname,
+          sessionId: getSessionId(),
         }),
       });
       const data = await res.json();
