@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Mail, Phone, CheckCircle, Loader2 } from "lucide-react";
+import { Mail, Phone, CheckCircle, Loader2, MessageSquareText } from "lucide-react";
 import { z } from "zod";
+import EditorialOverviewHero from "@/components/sections/EditorialOverviewHero";
 
 const contactSchema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
@@ -45,7 +46,7 @@ const areasOfInterest = [
   "Financial Performance & Intelligence",
   "Marketing Intelligence",
   "Obserian (Data Governance)",
-  "Pharmeta (Pharma Analytics)",
+  "Pharmeta (Product Data Management)",
   "Maturytics (Data Maturity)",
   "Partnership / Reseller",
   "Careers / Employment",
@@ -123,25 +124,14 @@ export default function ContactPage() {
 
   return (
     <>
-      {/* Hero */}
-      <section
-        className="site-overview-hero"
-        style={{ background: "linear-gradient(135deg, #1A1A2E 0%, #0D3A5C 100%)" }}
-      >
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-sm font-medium text-brand-primary uppercase tracking-widest mb-3">
-            Contact Us
-          </p>
-          <h1 className="site-page-title mb-6 text-white">
-            Let&apos;s{" "}
-            <span className="text-brand-primary">Talk Data</span>
-          </h1>
-          <p className="site-page-lead mx-auto max-w-2xl text-gray-300">
-            Whether you have a project in mind, want to explore our products, or
-            just want to benchmark your data maturity — our team is ready to help.
-          </p>
-        </div>
-      </section>
+      <EditorialOverviewHero
+        eyebrow="Contact Ereteam"
+        title="Let&apos;s talk data."
+        description="Whether you have a project in mind, want to explore our products or benchmark your data maturity, our team is ready to help."
+        railLabel="A direct conversation"
+        railText="Tell us what is changing, where the friction sits and what a better decision would look like."
+        icon={MessageSquareText}
+      />
 
       {/* Main content */}
       <section className="py-16 bg-brand-light">
