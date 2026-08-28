@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { ArrowUpRight, Radio } from "lucide-react";
-import { useState } from "react";
+import { ArrowUpRight, Radio, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import type { LinkedInFeedPost } from "@/lib/linkedin";
 
 const PAGE_SIZE = 6;
@@ -16,31 +16,54 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-export default function LinkedInFeed({ posts }: { posts: LinkedInFeedPost[] }) {
+export default function LinkedInFeed({
+  posts,
+  initialPostId,
+}: {
+  posts: LinkedInFeedPost[];
+  initialPostId?: string;
+}) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [selectedPost, setSelectedPost] = useState<LinkedInFeedPost | null>(
+    () => posts.find((post) => post.id === initialPostId) || null
+  );
+
+  useEffect(() => {
+    if (!selectedPost) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelectedPost(null);
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedPost]);
 
   if (!posts.length) return null;
 
   const visiblePosts = posts.slice(0, visibleCount);
 
   return (
-    <section className="bg-[#071A2A] py-20 text-white lg:py-28">
+    <section className="bg-[#071A2A] py-12 text-white lg:py-16">
       <div className="site-container">
-        <div className="grid gap-8 border-b border-white/15 pb-11 lg:grid-cols-[.65fr_1.35fr] lg:items-end">
+        <div className="grid gap-5 border-b border-white/15 pb-7 lg:grid-cols-[.4fr_1fr_auto] lg:items-end">
           <p className="site-kicker text-[#D69A6E]">Latest updates</p>
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-            <h2 className="site-display max-w-3xl text-5xl sm:text-6xl lg:text-7xl">
-              Fresh from the Ereteam feed.
-            </h2>
-            <a
-              href="https://www.linkedin.com/company/ereteam"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-[.12em] text-white/70 transition-colors hover:text-white"
-            >
-              Follow Ereteam <ArrowUpRight size={15} />
-            </a>
-          </div>
+          <h2 className="site-display text-4xl sm:text-5xl lg:whitespace-nowrap lg:text-6xl">
+            Latest from Ereteam.
+          </h2>
+          <a
+            href="https://www.linkedin.com/company/ereteam"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-[.12em] text-white/70 transition-colors hover:text-white"
+          >
+            Follow Ereteam <ArrowUpRight size={15} />
+          </a>
         </div>
 
         <div className="grid border-white/15 md:grid-cols-2 md:border-l xl:grid-cols-3">
@@ -75,15 +98,14 @@ export default function LinkedInFeed({ posts }: { posts: LinkedInFeedPost[] }) {
                     {post.articleTitle}
                   </h3>
                 )}
-                <p className="mt-4 line-clamp-5 text-[15px] leading-7 text-white/68">{post.text}</p>
-                <a
-                  href={post.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <p className="mt-4 line-clamp-5 whitespace-pre-line text-[15px] leading-7 text-white/68">{post.text}</p>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPost(post)}
                   className="mt-7 inline-flex items-center gap-2 self-start text-xs font-bold uppercase tracking-[.1em] text-[#D69A6E] transition-colors hover:text-white"
                 >
-                  Read on LinkedIn <ArrowUpRight size={14} />
-                </a>
+                  Read full post <ArrowUpRight size={14} />
+                </button>
               </div>
             </article>
           ))}
@@ -101,6 +123,53 @@ export default function LinkedInFeed({ posts }: { posts: LinkedInFeedPost[] }) {
           </div>
         )}
       </div>
+
+      {selectedPost && (
+        <div
+          className="fixed inset-0 z-[100] flex items-end justify-center bg-[#03101b]/80 p-0 backdrop-blur-sm sm:items-center sm:p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="linkedin-post-title"
+          onMouseDown={(event) => {
+            if (event.currentTarget === event.target) setSelectedPost(null);
+          }}
+        >
+          <article className="relative max-h-[92vh] w-full max-w-3xl overflow-y-auto bg-[#f3f0e8] px-6 py-8 text-[#071A2A] shadow-2xl sm:px-10 sm:py-10">
+            <button
+              type="button"
+              onClick={() => setSelectedPost(null)}
+              className="absolute right-5 top-5 grid size-10 place-items-center border border-[#071A2A]/20 transition-colors hover:bg-[#071A2A] hover:text-white"
+              aria-label="Close post"
+            >
+              <X size={19} />
+            </button>
+
+            <p className="site-kicker pr-14">Ereteam on LinkedIn</p>
+            <p className="mt-5 text-sm font-semibold uppercase tracking-[.1em] text-[#071A2A]/45">
+              {formatDate(selectedPost.publishedAt)}
+            </p>
+            {selectedPost.articleTitle && (
+              <h2 id="linkedin-post-title" className="site-display mt-5 max-w-2xl text-3xl sm:text-4xl">
+                {selectedPost.articleTitle}
+              </h2>
+            )}
+            <p
+              id={selectedPost.articleTitle ? undefined : "linkedin-post-title"}
+              className="mt-7 whitespace-pre-line text-[17px] leading-8 text-[#223441]"
+            >
+              {selectedPost.text}
+            </p>
+            <a
+              href={selectedPost.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-9 inline-flex items-center gap-2 border-t border-[#071A2A]/15 pt-6 text-xs font-bold uppercase tracking-[.11em] text-[#9B5729] transition-colors hover:text-[#071A2A]"
+            >
+              View original on LinkedIn <ArrowUpRight size={14} />
+            </a>
+          </article>
+        </div>
+      )}
     </section>
   );
 }

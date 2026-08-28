@@ -33,8 +33,13 @@ const themes = [
   },
 ];
 
-export default async function SocialMediaPage() {
+export default async function SocialMediaPage({
+  searchParams,
+}: {
+  searchParams?: { post?: string };
+}) {
   const posts = await getLinkedInPosts();
+  const initialPostId = typeof searchParams?.post === "string" ? searchParams.post : undefined;
 
   return (
     <main>
@@ -47,58 +52,58 @@ export default async function SocialMediaPage() {
         isPartOf: { "@id": `${SITE_URL}/#website` },
         sameAs: "https://www.linkedin.com/company/ereteam",
       }, breadcrumbSchema([{ name: "Home", path: "/" }, { name: "Insights", path: "/social-media" }])]} />
-      <section className="site-overview-hero overflow-hidden bg-[#071A2A] text-white">
-        <div className="site-container grid w-full items-center gap-12 lg:grid-cols-[1.25fr_.75fr]">
+      <section className="site-overview-hero !min-h-[430px] !pb-10 !pt-24 overflow-hidden bg-[#071A2A] text-white lg:!min-h-[460px] lg:!pb-12 lg:!pt-28">
+        <div className="site-container grid w-full items-center gap-8 lg:grid-cols-[1.25fr_.75fr] lg:gap-12">
           <div className="max-w-4xl">
             <p className="site-kicker">Ereteam on social</p>
-            <h1 className="site-page-title mt-6">
+            <h1 className="site-page-title site-page-title--compact mt-4">
               Where our work enters the conversation.
             </h1>
-            <p className="site-page-lead mt-7 max-w-2xl text-white/68">
+            <p className="site-page-lead mt-5 max-w-2xl text-white/68">
               Follow the thinking, delivery lessons and people shaping enterprise data and analytics at Ereteam.
             </p>
             <a
               href="https://www.linkedin.com/company/ereteam"
               target="_blank"
               rel="noopener noreferrer"
-              className="site-button site-button--light mt-9"
+              className="site-button site-button--light mt-6"
             >
               Follow on LinkedIn <ArrowUpRight size={16} />
             </a>
           </div>
 
-          <div className="border-l border-white/20 pb-2 pl-7 lg:mb-2 lg:pl-10">
-            <Radio className="mb-9 text-[#D69A6E]" size={34} strokeWidth={1.5} />
+          <div className="border-t border-white/20 pt-6 lg:border-l lg:border-t-0 lg:pb-2 lg:pl-8 lg:pt-0">
+            <Radio className="mb-5 text-[#D69A6E]" size={30} strokeWidth={1.5} />
             <p className="text-xs font-bold uppercase tracking-[.18em] text-white/45">One ongoing feed</p>
-            <p className="mt-5 max-w-sm text-xl leading-8 text-white/82">
+            <p className="mt-3 max-w-sm text-lg leading-7 text-white/82">
               Project insight, product thinking and company life—shared while it is happening.
             </p>
           </div>
         </div>
       </section>
 
-      <section className="bg-[#f3f0e8] py-20 lg:py-28">
+      <LinkedInFeed posts={posts} initialPostId={initialPostId} />
+
+      <section className="bg-[#f3f0e8] py-12 lg:py-16">
         <div className="site-container">
-          <div className="grid gap-10 border-b border-[#071A2A]/15 pb-12 lg:grid-cols-[.7fr_1.3fr] lg:items-end">
+          <div className="grid gap-5 border-b border-[#071A2A]/15 pb-7 lg:grid-cols-[.7fr_1.3fr] lg:items-end">
             <p className="site-kicker">What we share</p>
-            <h2 className="site-display max-w-4xl text-5xl text-brand-dark sm:text-6xl lg:text-7xl">
+            <h2 className="site-display max-w-3xl text-4xl text-brand-dark sm:text-5xl lg:text-6xl">
               Insight grounded in real enterprise work.
             </h2>
           </div>
 
           <div className="grid border-[#071A2A]/15 lg:grid-cols-3 lg:border-l">
             {themes.map(({ icon: Icon, title, description }) => (
-              <article key={title} className="border-b border-[#071A2A]/15 py-10 lg:border-r lg:px-9 lg:py-12">
-                <Icon size={28} strokeWidth={1.5} className="text-[#B96F38]" />
-                <h3 className="mt-9 text-2xl font-semibold tracking-[-.03em] text-brand-dark">{title}</h3>
-                <p className="mt-4 max-w-sm text-base leading-7 text-text-muted">{description}</p>
+              <article key={title} className="border-b border-[#071A2A]/15 py-7 lg:border-r lg:px-8 lg:py-8">
+                <Icon size={23} strokeWidth={1.5} className="text-[#B96F38]" />
+                <h3 className="mt-5 text-xl font-semibold tracking-[-.03em] text-brand-dark">{title}</h3>
+                <p className="mt-3 max-w-sm text-[15px] leading-6 text-text-muted">{description}</p>
               </article>
             ))}
           </div>
         </div>
       </section>
-
-      <LinkedInFeed posts={posts} />
 
       <section className="bg-white py-20 lg:py-24">
         <div className="site-container flex flex-col gap-8 border-y border-[#071A2A]/15 py-12 lg:flex-row lg:items-center lg:justify-between">

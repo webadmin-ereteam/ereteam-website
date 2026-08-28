@@ -3,10 +3,14 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 
 const LINKEDIN_API_BASE = "https://api.linkedin.com/rest";
+const LINKEDIN_TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken";
 const LINKEDIN_API_VERSION = "202606";
 const LINKEDIN_VANITY_NAME = "ereteam";
+const LINKEDIN_CLIENT_ID = "77utxj920hnqpn";
 const LINKEDIN_POST_COUNT = 24;
 const LINKEDIN_PAGE_SIZE = 10;
+
+let runtimeAccessToken: string | undefined;
 
 type LinkedInPostContent = {
   media?: { id?: string; altText?: string; title?: string };
@@ -43,7 +47,43 @@ function linkedinHeaders(token: string) {
   };
 }
 
-async function linkedinGet<T>(path: string, token: string, finder = false): Promise<T> {
+async function refreshLinkedInAccessToken() {
+  const refreshToken = process.env.LINKEDIN_REFRESH_TOKEN;
+  const clientSecret = process.env.LINKEDIN_CLIENT_SECRET;
+  if (!refreshToken || !clientSecret) {
+    throw new Error("LinkedIn token expired and refresh credentials are incomplete");
+  }
+
+  const response = await fetch(LINKEDIN_TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+      client_id: process.env.LINKEDIN_CLIENT_ID || LINKEDIN_CLIENT_ID,
+      client_secret: clientSecret,
+    }),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`LinkedIn access token refresh failed with ${response.status}`);
+  }
+
+  const result = await response.json() as { access_token?: string };
+  if (!result.access_token) throw new Error("LinkedIn token refresh returned no access token");
+  runtimeAccessToken = result.access_token;
+  return runtimeAccessToken;
+}
+
+async function getLinkedInAccessToken() {
+  if (runtimeAccessToken) return runtimeAccessToken;
+  if (process.env.LINKEDIN_ACCESS_TOKEN) return process.env.LINKEDIN_ACCESS_TOKEN;
+  return refreshLinkedInAccessToken();
+}
+
+async function linkedinGet<T>(path: string, finder = false, retryAfterRefresh = true): Promise<T> {
+  const token = await getLinkedInAccessToken();
   const response = await fetch(`${LINKEDIN_API_BASE}${path}`, {
     headers: {
       ...linkedinHeaders(token),
@@ -52,6 +92,11 @@ async function linkedinGet<T>(path: string, token: string, finder = false): Prom
     cache: "no-store",
   });
 
+  if (response.status === 401 && retryAfterRefresh) {
+    await refreshLinkedInAccessToken();
+    return linkedinGet<T>(path, finder, false);
+  }
+
   if (!response.ok) {
     throw new Error(`LinkedIn API request failed with ${response.status}`);
   }
@@ -59,7 +104,7 @@ async function linkedinGet<T>(path: string, token: string, finder = false): Prom
   return response.json() as Promise<T>;
 }
 
-async function resolveOrganizationId(token: string) {
+async function resolveOrganizationId() {
   if (process.env.LINKEDIN_ORGANIZATION_ID) {
     return process.env.LINKEDIN_ORGANIZATION_ID;
   }
@@ -70,7 +115,7 @@ async function resolveOrganizationId(token: string) {
   });
   const result = await linkedinGet<{
     elements?: Array<{ id?: number | string; vanityName?: string }>;
-  }>(`/organizations?${params.toString()}`, token, true);
+  }>(`/organizations?${params.toString()}`, true);
 
   const organization = result.elements?.find(
     (item) => item.vanityName?.toLowerCase() === LINKEDIN_VANITY_NAME
@@ -83,7 +128,9 @@ async function resolveOrganizationId(token: string) {
 function cleanCommentary(value?: string) {
   return (value || "")
     .replace(/@\[([^\]]+)]\(urn:li:[^)]+\)/g, "$1")
-    .replace(/\s+/g, " ")
+    .replace(/\r\n/g, "\n")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
@@ -102,19 +149,17 @@ function firstImage(post: LinkedInApiPost) {
   return image?.id ? { id: image.id, alt: image.altText || "Ereteam LinkedIn update" } : undefined;
 }
 
-async function resolveImageUrl(imageId: string, token: string) {
+async function resolveImageUrl(imageId: string) {
   const image = await linkedinGet<{ downloadUrl?: string }>(
-    `/images/${encodeURIComponent(imageId)}`,
-    token
+    `/images/${encodeURIComponent(imageId)}`
   );
   return image.downloadUrl;
 }
 
 async function fetchLinkedInPosts(): Promise<LinkedInFeedPost[]> {
-  const token = process.env.LINKEDIN_ACCESS_TOKEN;
-  if (!token) return [];
+  if (!process.env.LINKEDIN_ACCESS_TOKEN && !process.env.LINKEDIN_REFRESH_TOKEN) return [];
 
-  const organizationId = await resolveOrganizationId(token);
+  const organizationId = await resolveOrganizationId();
   const author = `urn:li:organization:${organizationId}`;
   const fetchedPosts: LinkedInApiPost[] = [];
 
@@ -128,7 +173,6 @@ async function fetchLinkedInPosts(): Promise<LinkedInFeedPost[]> {
     });
     const result = await linkedinGet<{ elements?: LinkedInApiPost[] }>(
       `/posts?${params.toString()}`,
-      token,
       true
     );
     const page = result.elements || [];
@@ -146,7 +190,7 @@ async function fetchLinkedInPosts(): Promise<LinkedInFeedPost[]> {
 
     if (image) {
       try {
-        imageUrl = await resolveImageUrl(image.id, token);
+        imageUrl = await resolveImageUrl(image.id);
       } catch (error) {
         console.warn("LinkedIn image could not be resolved:", error instanceof Error ? error.message : error);
       }
