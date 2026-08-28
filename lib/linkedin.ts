@@ -113,59 +113,63 @@ async function fetchLinkedInPosts(): Promise<LinkedInFeedPost[]> {
   const token = process.env.LINKEDIN_ACCESS_TOKEN;
   if (!token) return [];
 
-  try {
-    const organizationId = await resolveOrganizationId(token);
-    const author = `urn:li:organization:${organizationId}`;
-    const params = new URLSearchParams({
-      author,
-      q: "author",
-      count: String(LINKEDIN_POST_COUNT),
-      sortBy: "LAST_MODIFIED",
-    });
-    const result = await linkedinGet<{ elements?: LinkedInApiPost[] }>(
-      `/posts?${params.toString()}`,
-      token,
-      true
-    );
+  const organizationId = await resolveOrganizationId(token);
+  const author = `urn:li:organization:${organizationId}`;
+  const params = new URLSearchParams({
+    author,
+    q: "author",
+    count: String(LINKEDIN_POST_COUNT),
+    sortBy: "LAST_MODIFIED",
+  });
+  const result = await linkedinGet<{ elements?: LinkedInApiPost[] }>(
+    `/posts?${params.toString()}`,
+    token,
+    true
+  );
 
-    const posts = (result.elements || [])
-      .filter((post) => post.lifecycleState === "PUBLISHED" && post.visibility === "PUBLIC")
-      .slice(0, LINKEDIN_POST_COUNT);
+  const posts = (result.elements || [])
+    .filter((post) => post.lifecycleState === "PUBLISHED" && post.visibility === "PUBLIC")
+    .slice(0, LINKEDIN_POST_COUNT);
 
-    return Promise.all(posts.map(async (post) => {
-      const image = firstImage(post);
-      let imageUrl: string | undefined;
+  return Promise.all(posts.map(async (post) => {
+    const image = firstImage(post);
+    let imageUrl: string | undefined;
 
-      if (image) {
-        try {
-          imageUrl = await resolveImageUrl(image.id, token);
-        } catch (error) {
-          console.warn("LinkedIn image could not be resolved:", error instanceof Error ? error.message : error);
-        }
+    if (image) {
+      try {
+        imageUrl = await resolveImageUrl(image.id, token);
+      } catch (error) {
+        console.warn("LinkedIn image could not be resolved:", error instanceof Error ? error.message : error);
       }
+    }
 
-      const timestamp = post.publishedAt || post.createdAt || Date.now();
-      const article = post.content?.article;
-      const text = cleanCommentary(post.commentary) || article?.description || article?.title || "View this Ereteam update on LinkedIn.";
+    const timestamp = post.publishedAt || post.createdAt || Date.now();
+    const article = post.content?.article;
+    const text = cleanCommentary(post.commentary) || article?.description || article?.title || "View this Ereteam update on LinkedIn.";
 
-      return {
-        id: post.id,
-        text,
-        publishedAt: new Date(timestamp).toISOString(),
-        url: `https://www.linkedin.com/feed/update/${post.id}`,
-        imageUrl,
-        imageAlt: image?.alt,
-        articleTitle: article?.title,
-      };
-    }));
+    return {
+      id: post.id,
+      text,
+      publishedAt: new Date(timestamp).toISOString(),
+      url: `https://www.linkedin.com/feed/update/${post.id}`,
+      imageUrl,
+      imageAlt: image?.alt,
+      articleTitle: article?.title,
+    };
+  }));
+}
+
+const getCachedLinkedInPosts = unstable_cache(
+  fetchLinkedInPosts,
+  ["ereteam-linkedin-feed-v2"],
+  { revalidate: 21_600 }
+);
+
+export async function getLinkedInPosts() {
+  try {
+    return await getCachedLinkedInPosts();
   } catch (error) {
     console.error("LinkedIn feed could not be loaded:", error instanceof Error ? error.message : error);
     return [];
   }
 }
-
-export const getLinkedInPosts = unstable_cache(
-  fetchLinkedInPosts,
-  ["ereteam-linkedin-feed-v1"],
-  { revalidate: 21_600 }
-);
