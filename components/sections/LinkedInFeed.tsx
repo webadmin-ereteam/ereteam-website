@@ -107,8 +107,13 @@ export default function LinkedInFeed({
         <div className="grid border-white/15 md:grid-cols-2 md:border-l xl:grid-cols-3">
           {visiblePosts.map((post) => (
             <article key={post.id} className="group flex min-w-0 flex-col overflow-hidden border-b border-white/15 py-8 md:border-r md:px-7 lg:py-10">
-              <a href={post.url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden">
-                <div className="relative aspect-[4/3] overflow-hidden bg-[#102C3E]">
+              <button
+                type="button"
+                onClick={() => setSelectedPost(post)}
+                className="block w-full overflow-hidden text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#D69A6E]"
+                aria-label={`Read full post from ${formatDate(post.publishedAt)}`}
+              >
+                <div className="relative aspect-[1.91/1] overflow-hidden">
                   {post.imageUrl ? (
                     <Image
                       src={post.imageUrl}
@@ -125,7 +130,7 @@ export default function LinkedInFeed({
                     </div>
                   )}
                 </div>
-              </a>
+              </button>
 
               <div className="flex flex-1 flex-col pt-6">
                 <p className="text-[11px] font-bold uppercase tracking-[.15em] text-white/45">
@@ -139,13 +144,23 @@ export default function LinkedInFeed({
                 <p className="mt-4 line-clamp-5 min-w-0 whitespace-pre-line break-words text-[15px] leading-7 text-white/68 [overflow-wrap:anywhere]">
                   <LinkifiedText text={post.text} />
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setSelectedPost(post)}
-                  className="mt-7 inline-flex items-center gap-2 self-start text-xs font-bold uppercase tracking-[.1em] text-[#D69A6E] transition-colors hover:text-white"
-                >
-                  Read full post <ArrowUpRight size={14} />
-                </button>
+                <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPost(post)}
+                    className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.1em] text-[#D69A6E] transition-colors hover:text-white"
+                  >
+                    Read full post <ArrowUpRight size={14} />
+                  </button>
+                  <a
+                    href={post.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.1em] text-white/55 transition-colors hover:text-white"
+                  >
+                    View on LinkedIn <ArrowUpRight size={14} />
+                  </a>
+                </div>
               </div>
             </article>
           ))}
@@ -192,6 +207,18 @@ export default function LinkedInFeed({
               <h2 id="linkedin-post-title" className="site-display mt-5 max-w-2xl text-3xl sm:text-4xl">
                 {selectedPost.articleTitle}
               </h2>
+            )}
+            {selectedPost.imageUrl && (
+              <div className="relative mt-7 aspect-[1.91/1] w-full overflow-hidden border border-[#071A2A]/10">
+                <Image
+                  src={selectedPost.imageUrl}
+                  alt={selectedPost.imageAlt || "Ereteam LinkedIn update"}
+                  fill
+                  unoptimized
+                  sizes="(max-width: 768px) 100vw, 768px"
+                  className="object-contain"
+                />
+              </div>
             )}
             <p
               id={selectedPost.articleTitle ? undefined : "linkedin-post-title"}
