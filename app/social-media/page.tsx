@@ -6,7 +6,7 @@ import { absoluteUrl, breadcrumbSchema, SITE_URL } from "@/lib/seo";
 import { getLinkedInPosts } from "@/lib/linkedin";
 import LinkedInFeed from "@/components/sections/LinkedInFeed";
 
-export const revalidate = 21_600;
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Ereteam Insights and LinkedIn Updates",
