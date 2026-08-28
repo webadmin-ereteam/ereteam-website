@@ -5,6 +5,7 @@ import { unstable_cache } from "next/cache";
 const LINKEDIN_API_BASE = "https://api.linkedin.com/rest";
 const LINKEDIN_API_VERSION = "202606";
 const LINKEDIN_VANITY_NAME = "ereteam";
+const LINKEDIN_POST_COUNT = 24;
 
 type LinkedInPostContent = {
   media?: { id?: string; altText?: string; title?: string };
@@ -118,7 +119,7 @@ async function fetchLinkedInPosts(): Promise<LinkedInFeedPost[]> {
     const params = new URLSearchParams({
       author,
       q: "author",
-      count: "6",
+      count: String(LINKEDIN_POST_COUNT),
       sortBy: "LAST_MODIFIED",
     });
     const result = await linkedinGet<{ elements?: LinkedInApiPost[] }>(
@@ -129,7 +130,7 @@ async function fetchLinkedInPosts(): Promise<LinkedInFeedPost[]> {
 
     const posts = (result.elements || [])
       .filter((post) => post.lifecycleState === "PUBLISHED" && post.visibility === "PUBLIC")
-      .slice(0, 6);
+      .slice(0, LINKEDIN_POST_COUNT);
 
     return Promise.all(posts.map(async (post) => {
       const image = firstImage(post);

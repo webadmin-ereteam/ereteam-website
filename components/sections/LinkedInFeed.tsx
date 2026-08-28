@@ -1,6 +1,11 @@
+"use client";
+
 import Image from "next/image";
 import { ArrowUpRight, Radio } from "lucide-react";
+import { useState } from "react";
 import type { LinkedInFeedPost } from "@/lib/linkedin";
+
+const PAGE_SIZE = 6;
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en", {
@@ -12,7 +17,11 @@ function formatDate(value: string) {
 }
 
 export default function LinkedInFeed({ posts }: { posts: LinkedInFeedPost[] }) {
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
   if (!posts.length) return null;
+
+  const visiblePosts = posts.slice(0, visibleCount);
 
   return (
     <section className="bg-[#071A2A] py-20 text-white lg:py-28">
@@ -35,7 +44,7 @@ export default function LinkedInFeed({ posts }: { posts: LinkedInFeedPost[] }) {
         </div>
 
         <div className="grid border-white/15 md:grid-cols-2 md:border-l xl:grid-cols-3">
-          {posts.map((post) => (
+          {visiblePosts.map((post) => (
             <article key={post.id} className="group flex flex-col border-b border-white/15 py-8 md:border-r md:px-7 lg:py-10">
               <a href={post.url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden">
                 <div className="relative aspect-[4/3] overflow-hidden bg-[#102C3E]">
@@ -79,6 +88,18 @@ export default function LinkedInFeed({ posts }: { posts: LinkedInFeedPost[] }) {
             </article>
           ))}
         </div>
+
+        {visibleCount < posts.length && (
+          <div className="flex justify-center border-t border-white/15 pt-10">
+            <button
+              type="button"
+              onClick={() => setVisibleCount((count) => Math.min(count + PAGE_SIZE, posts.length))}
+              className="border border-white/30 px-7 py-4 text-xs font-bold uppercase tracking-[.12em] text-white transition-colors hover:border-white hover:bg-white hover:text-[#071A2A]"
+            >
+              Show more updates
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );
