@@ -55,7 +55,12 @@ export async function GET(request: NextRequest) {
     cache: "no-store",
   });
   const postsBody = await postsResponse.json().catch(() => null) as {
-    elements?: unknown[];
+    elements?: Array<{
+      lifecycleState?: string;
+      visibility?: string;
+      publishedAt?: number;
+      content?: Record<string, unknown>;
+    }>;
     message?: string;
     status?: number;
   } | null;
@@ -67,5 +72,11 @@ export async function GET(request: NextRequest) {
     apiStatus: postsBody?.status,
     message: postsBody?.message,
     count: postsBody?.elements?.length,
+    sample: postsBody?.elements?.[0] ? {
+      lifecycleState: postsBody.elements[0].lifecycleState,
+      visibility: postsBody.elements[0].visibility,
+      hasPublishedAt: Boolean(postsBody.elements[0].publishedAt),
+      contentTypes: Object.keys(postsBody.elements[0].content || {}),
+    } : null,
   });
 }
