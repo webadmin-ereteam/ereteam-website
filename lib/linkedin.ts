@@ -6,6 +6,7 @@ const LINKEDIN_API_BASE = "https://api.linkedin.com/rest";
 const LINKEDIN_API_VERSION = "202606";
 const LINKEDIN_VANITY_NAME = "ereteam";
 const LINKEDIN_POST_COUNT = 24;
+const LINKEDIN_PAGE_SIZE = 10;
 
 type LinkedInPostContent = {
   media?: { id?: string; altText?: string; title?: string };
@@ -115,19 +116,27 @@ async function fetchLinkedInPosts(): Promise<LinkedInFeedPost[]> {
 
   const organizationId = await resolveOrganizationId(token);
   const author = `urn:li:organization:${organizationId}`;
-  const params = new URLSearchParams({
-    author,
-    q: "author",
-    count: String(LINKEDIN_POST_COUNT),
-    sortBy: "LAST_MODIFIED",
-  });
-  const result = await linkedinGet<{ elements?: LinkedInApiPost[] }>(
-    `/posts?${params.toString()}`,
-    token,
-    true
-  );
+  const fetchedPosts: LinkedInApiPost[] = [];
 
-  const posts = (result.elements || [])
+  for (let start = 0; start < LINKEDIN_POST_COUNT; start += LINKEDIN_PAGE_SIZE) {
+    const params = new URLSearchParams({
+      author,
+      q: "author",
+      count: String(LINKEDIN_PAGE_SIZE),
+      start: String(start),
+      sortBy: "LAST_MODIFIED",
+    });
+    const result = await linkedinGet<{ elements?: LinkedInApiPost[] }>(
+      `/posts?${params.toString()}`,
+      token,
+      true
+    );
+    const page = result.elements || [];
+    fetchedPosts.push(...page);
+    if (page.length < LINKEDIN_PAGE_SIZE) break;
+  }
+
+  const posts = fetchedPosts
     .filter((post) => post.lifecycleState === "PUBLISHED" && post.visibility === "PUBLIC")
     .slice(0, LINKEDIN_POST_COUNT);
 
@@ -161,7 +170,7 @@ async function fetchLinkedInPosts(): Promise<LinkedInFeedPost[]> {
 
 const getCachedLinkedInPosts = unstable_cache(
   fetchLinkedInPosts,
-  ["ereteam-linkedin-feed-v2"],
+  ["ereteam-linkedin-feed-v3"],
   { revalidate: 21_600 }
 );
 
