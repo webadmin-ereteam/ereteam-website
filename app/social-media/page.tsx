@@ -3,6 +3,10 @@ import { ArrowUpRight, BarChart3, Database, Radio, Users } from "lucide-react";
 import { createPageMetadata } from "@/lib/seo";
 import JsonLd from "@/components/seo/JsonLd";
 import { absoluteUrl, breadcrumbSchema, SITE_URL } from "@/lib/seo";
+import { getLinkedInPosts } from "@/lib/linkedin";
+import LinkedInFeed from "@/components/sections/LinkedInFeed";
+
+export const revalidate = 21_600;
 
 export const metadata: Metadata = createPageMetadata({
   title: "Ereteam Insights and LinkedIn Updates",
@@ -29,7 +33,9 @@ const themes = [
   },
 ];
 
-export default function SocialMediaPage() {
+export default async function SocialMediaPage() {
+  const posts = await getLinkedInPosts();
+
   return (
     <main>
       <JsonLd data={[{
@@ -91,6 +97,8 @@ export default function SocialMediaPage() {
           </div>
         </div>
       </section>
+
+      <LinkedInFeed posts={posts} />
 
       <section className="bg-white py-20 lg:py-24">
         <div className="site-container flex flex-col gap-8 border-y border-[#071A2A]/15 py-12 lg:flex-row lg:items-center lg:justify-between">

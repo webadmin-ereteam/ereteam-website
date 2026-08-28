@@ -18,6 +18,14 @@ const nextConfig = {
         hostname: "drive.google.com",
         pathname: "/thumbnail",
       },
+      {
+        protocol: "https",
+        hostname: "media.licdn-ei.com",
+      },
+      {
+        protocol: "https",
+        hostname: "media.licdn.com",
+      },
     ],
   },
   async redirects() {
