@@ -128,6 +128,9 @@ async function resolveOrganizationId() {
 function cleanCommentary(value?: string) {
   return (value || "")
     .replace(/@\[([^\]]+)]\(urn:li:[^)]+\)/g, "$1")
+    .replace(/\{hashtag\}\\?#\|?([^}]+)\}/gi, "#$1")
+    .replace(/\{hashtag\|#?([^}]+)\}/gi, "#$1")
+    .replace(/\\([_#])/g, "$1")
     .replace(/\r\n/g, "\n")
     .replace(/[ \t]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
@@ -214,7 +217,7 @@ async function fetchLinkedInPosts(): Promise<LinkedInFeedPost[]> {
 
 const getCachedLinkedInPosts = unstable_cache(
   fetchLinkedInPosts,
-  ["ereteam-linkedin-feed-v3"],
+  ["ereteam-linkedin-feed-v4"],
   { revalidate: 21_600 }
 );
 

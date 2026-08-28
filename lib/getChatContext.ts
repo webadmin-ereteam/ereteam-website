@@ -86,6 +86,6 @@ RULES:
 
 export const getChatContext = unstable_cache(
   buildChatContext,
-  ["chat-context-v2"],
+  ["chat-context-v3"],
   { tags: [CHAT_CACHE_TAG], revalidate: 3600 }
 );

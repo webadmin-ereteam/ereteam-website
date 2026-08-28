@@ -6,6 +6,44 @@ import { useEffect, useState } from "react";
 import type { LinkedInFeedPost } from "@/lib/linkedin";
 
 const PAGE_SIZE = 6;
+const LINK_PATTERN = /((?:https?:\/\/|www\.)[^\s]+|[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}|#[A-Za-z0-9_À-ÖØ-öø-ÿĞğİıŞşÇçÖöÜü]+)/g;
+
+function LinkifiedText({ text }: { text: string }) {
+  return text.split(LINK_PATTERN).map((part, index) => {
+    if (/^(?:https?:\/\/|www\.)/i.test(part)) {
+      const trailing = part.match(/[),.;!?]+$/)?.[0] || "";
+      const url = trailing ? part.slice(0, -trailing.length) : part;
+      const href = url.startsWith("www.") ? `https://${url}` : url;
+      return (
+        <span key={`${part}-${index}`}>
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer nofollow"
+            className="break-all font-medium text-[#B96F38] underline decoration-[#B96F38]/35 underline-offset-4 hover:decoration-current"
+          >
+            {url}
+          </a>
+          {trailing}
+        </span>
+      );
+    }
+
+    if (/^[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}$/.test(part)) {
+      return (
+        <a key={`${part}-${index}`} href={`mailto:${part}`} className="break-all font-medium text-[#B96F38] underline decoration-[#B96F38]/35 underline-offset-4">
+          {part}
+        </a>
+      );
+    }
+
+    if (part.startsWith("#")) {
+      return <span key={`${part}-${index}`} className="font-medium text-[#9B5729]">{part}</span>;
+    }
+
+    return part;
+  });
+}
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en", {
@@ -68,7 +106,7 @@ export default function LinkedInFeed({
 
         <div className="grid border-white/15 md:grid-cols-2 md:border-l xl:grid-cols-3">
           {visiblePosts.map((post) => (
-            <article key={post.id} className="group flex flex-col border-b border-white/15 py-8 md:border-r md:px-7 lg:py-10">
+            <article key={post.id} className="group flex min-w-0 flex-col overflow-hidden border-b border-white/15 py-8 md:border-r md:px-7 lg:py-10">
               <a href={post.url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden">
                 <div className="relative aspect-[4/3] overflow-hidden bg-[#102C3E]">
                   {post.imageUrl ? (
@@ -78,7 +116,7 @@ export default function LinkedInFeed({
                       fill
                       unoptimized
                       sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
-                      className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.025]"
+                      className="object-contain transition-transform duration-700 ease-out group-hover:scale-[1.015]"
                     />
                   ) : (
                     <div className="flex h-full flex-col justify-between p-7">
@@ -98,7 +136,9 @@ export default function LinkedInFeed({
                     {post.articleTitle}
                   </h3>
                 )}
-                <p className="mt-4 line-clamp-5 whitespace-pre-line text-[15px] leading-7 text-white/68">{post.text}</p>
+                <p className="mt-4 line-clamp-5 min-w-0 whitespace-pre-line break-words text-[15px] leading-7 text-white/68 [overflow-wrap:anywhere]">
+                  <LinkifiedText text={post.text} />
+                </p>
                 <button
                   type="button"
                   onClick={() => setSelectedPost(post)}
@@ -134,7 +174,7 @@ export default function LinkedInFeed({
             if (event.currentTarget === event.target) setSelectedPost(null);
           }}
         >
-          <article className="relative max-h-[92vh] w-full max-w-3xl overflow-y-auto bg-[#f3f0e8] px-6 py-8 text-[#071A2A] shadow-2xl sm:px-10 sm:py-10">
+          <article className="relative max-h-[92vh] min-w-0 w-full max-w-3xl overflow-x-hidden overflow-y-auto bg-[#f3f0e8] px-6 py-8 text-[#071A2A] shadow-2xl sm:px-10 sm:py-10">
             <button
               type="button"
               onClick={() => setSelectedPost(null)}
@@ -155,9 +195,9 @@ export default function LinkedInFeed({
             )}
             <p
               id={selectedPost.articleTitle ? undefined : "linkedin-post-title"}
-              className="mt-7 whitespace-pre-line text-[17px] leading-8 text-[#223441]"
+              className="mt-7 min-w-0 whitespace-pre-line break-words text-[17px] leading-8 text-[#223441] [overflow-wrap:anywhere]"
             >
-              {selectedPost.text}
+              <LinkifiedText text={selectedPost.text} />
             </p>
             <a
               href={selectedPost.url}
