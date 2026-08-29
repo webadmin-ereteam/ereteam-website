@@ -6,7 +6,6 @@ import UseCasesClient from "@/components/sections/UseCasesClient";
 import { createPageMetadata } from "@/lib/seo";
 import JsonLd from "@/components/seo/JsonLd";
 import { breadcrumbSchema, collectionSchema } from "@/lib/seo";
-import { storySlug } from "@/lib/successStories";
 import { Trophy } from "lucide-react";
 import EditorialOverviewHero from "@/components/sections/EditorialOverviewHero";
 
@@ -23,7 +22,7 @@ export default async function UseCasesPage() {
 
   return (
     <>
-      <JsonLd data={[collectionSchema({ name: "Ereteam Success Stories", description: "Measurable enterprise data and analytics outcomes delivered by Ereteam.", path: "/use-cases", items: stories.map((story) => ({ name: story.project, path: `/success-stories/${storySlug(story)}` })) }), breadcrumbSchema([{ name: "Home", path: "/" }, { name: "Success Stories", path: "/use-cases" }])]} />
+      <JsonLd data={[collectionSchema({ name: "Ereteam Success Stories", description: "Measurable enterprise data and analytics outcomes delivered by Ereteam.", path: "/use-cases", items: stories.map((story) => ({ name: story.project })) }), breadcrumbSchema([{ name: "Home", path: "/" }, { name: "Success Stories", path: "/use-cases" }])]} />
       <EditorialOverviewHero
         eyebrow="Success stories"
         title="Proven impact across every industry."

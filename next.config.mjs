@@ -34,6 +34,7 @@ const nextConfig = {
       { source: "/news/:path*", destination: "/social-media", permanent: true },
       { source: "/about/certifications", destination: "/about/company", permanent: true },
       { source: "/industry-expertise/:path*", destination: "/use-cases", permanent: true },
+      { source: "/success-stories/:path*", destination: "/use-cases", permanent: true },
     ];
   },
   async headers() {

@@ -177,7 +177,7 @@ export function collectionSchema(options: {
   name: string;
   description: string;
   path: string;
-  items: Array<{ name: string; path: string }>;
+  items: Array<{ name: string; path?: string }>;
 }) {
   return {
     "@context": "https://schema.org",
@@ -193,7 +193,7 @@ export function collectionSchema(options: {
         "@type": "ListItem",
         position: index + 1,
         name: item.name,
-        url: absoluteUrl(item.path),
+        ...(item.path ? { url: absoluteUrl(item.path) } : {}),
       })),
     },
   };

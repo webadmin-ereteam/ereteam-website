@@ -1,11 +1,9 @@
 import { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/seo";
-import { getAllSuccessStories } from "@/lib/sanity/queries";
-import { storySlug } from "@/lib/successStories";
 
 const CORPORATE_UPDATED = new Date("2026-08-21T00:00:00.000Z");
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+export default function sitemap(): MetadataRoute.Sitemap {
   const routes: MetadataRoute.Sitemap = [
     { url: SITE_URL, lastModified: CORPORATE_UPDATED, changeFrequency: "weekly", priority: 1 },
     { url: `${SITE_URL}/about`, lastModified: CORPORATE_UPDATED, changeFrequency: "monthly", priority: 0.8 },
@@ -25,20 +23,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/contact`, lastModified: CORPORATE_UPDATED, changeFrequency: "monthly", priority: 0.8 },
     { url: `${SITE_URL}/privacy-policy`, lastModified: CORPORATE_UPDATED, changeFrequency: "yearly", priority: 0.3 },
   ];
-
-  try {
-    const stories = await getAllSuccessStories();
-    routes.push(
-      ...stories.map((story) => ({
-        url: `${SITE_URL}/success-stories/${storySlug(story)}`,
-        lastModified: story._updatedAt ? new Date(story._updatedAt) : CORPORATE_UPDATED,
-        changeFrequency: "monthly" as const,
-        priority: 0.7,
-      }))
-    );
-  } catch {
-    // Corporate routes should remain available if Sanity is temporarily unavailable.
-  }
 
   return routes;
 }
