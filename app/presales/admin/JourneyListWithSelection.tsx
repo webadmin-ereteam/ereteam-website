@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarDays, Check, Copy, ExternalLink, Eye, FileCheck2, FileSignature, Link2, Package, UserCog, UserRound, Zap } from "lucide-react";
+import { CalendarDays, Check, Copy, ExternalLink, Eye, FileCheck2, FileSignature, Link2, Package, UserCog, UserRound, XCircle, Zap } from "lucide-react";
 import {
   bulkAssignSalesRep,
   bulkSetJourneyArchived,
@@ -59,6 +59,7 @@ export type JourneyRow = {
   contactEmail: string;
   status: string;
   archived: boolean;
+  isClosed: boolean;
   linkActive: boolean;
   accessToken: string;
   salesRepName: string | null;
@@ -271,7 +272,13 @@ export function JourneyListWithSelection({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {journeys.map((journey) => (
           <Link key={journey.id} href={`/presales/admin/journeys/${journey.id}`} className="block h-full">
-            <div className="group relative flex h-full flex-col rounded-xl border border-gray-100 p-5 transition-colors hover:border-gray-200">
+            <div
+              className={`group relative flex h-full flex-col rounded-xl border p-5 transition-colors ${
+                journey.isClosed
+                  ? "border-red-200/80 hover:border-red-300"
+                  : "border-gray-100 hover:border-gray-200"
+              }`}
+            >
               <input
                 type="checkbox"
                 checked={selected.has(journey.id)}
@@ -297,19 +304,27 @@ export function JourneyListWithSelection({
                 <span className="truncate text-text-muted">· {journey.currentStageName ?? "—"}</span>
               </div>
 
-              {(journey.proposalRequested || journey.pendingSurveys > 0 || journey.ourTurnSurveys > 0) && (
+              {journey.isClosed && (
+                <div className="mt-3">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-red-500/[0.08] px-2 py-0.5 text-[11px] font-semibold text-red-700 ring-1 ring-inset ring-red-500/20">
+                    <XCircle size={11} aria-hidden="true" /> Kapalı
+                  </span>
+                </div>
+              )}
+
+              {(journey.proposalRequested || (!journey.isClosed && (journey.pendingSurveys > 0 || journey.ourTurnSurveys > 0))) && (
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {journey.proposalRequested && (
                     <MiniChip color="pink" icon={FileSignature}>
                       Teklif talep edildi
                     </MiniChip>
                   )}
-                  {journey.pendingSurveys > 0 && (
+                  {!journey.isClosed && journey.pendingSurveys > 0 && (
                     <MiniChip color="amber" icon={FileCheck2}>
                       {journey.pendingSurveys} müşteride
                     </MiniChip>
                   )}
-                  {journey.ourTurnSurveys > 0 && (
+                  {!journey.isClosed && journey.ourTurnSurveys > 0 && (
                     <MiniChip color="pink" icon={Zap}>
                       {journey.ourTurnSurveys} aksiyon bizde
                     </MiniChip>

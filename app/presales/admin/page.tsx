@@ -16,6 +16,10 @@ import { JourneyListWithSelection, type JourneyRow } from "./JourneyListWithSele
 // invisible select inside it) so keyboard/click focus is still legible.
 const filterSelectClass = "cursor-pointer border-0 bg-transparent p-0 text-[13px] font-medium text-text-body focus:outline-none";
 
+function isJourneyClosed(journey: { status: string; archived: boolean }) {
+  return journey.status !== "active" || journey.archived;
+}
+
 function FilterChip({
   label,
   children,
@@ -137,6 +141,12 @@ export default async function AdminDashboardPage({
       if (!haystack.includes(query)) return false;
     }
     return true;
+  });
+
+  // Keep the existing newest-first order inside each group, but move closed
+  // cases behind every open case so the actionable work stays at the top.
+  const sortedFilteredJourneys = [...filteredJourneys].sort((a, b) => {
+    return Number(isJourneyClosed(a)) - Number(isJourneyClosed(b));
   });
 
   const hasActiveFilters = !!(
@@ -299,7 +309,7 @@ export default async function AdminDashboardPage({
       )}
 
       <JourneyListWithSelection
-        journeys={filteredJourneys.map(
+        journeys={sortedFilteredJourneys.map(
           (journey): JourneyRow => ({
             id: journey.id,
             name: journey.name,
@@ -308,6 +318,7 @@ export default async function AdminDashboardPage({
             contactEmail: journey.prospect.contactEmail,
             status: journey.status,
             archived: journey.archived,
+            isClosed: isJourneyClosed(journey),
             linkActive: isJourneyLinkActive(journey),
             accessToken: journey.accessToken,
             salesRepName: journey.salesRep?.name ?? null,

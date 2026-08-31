@@ -657,6 +657,12 @@ confirmation line in the bulk bar once it actually finishes, not just a
 generic "Uygulanıyor..." spinner. Reassigning a sales rep (single or bulk)
 also revalidates the customer's own page (`/presales/j/[token]`), so the
 "Satış Temsilciniz" card there updates immediately, not just the admin views.
+Dashboard results keep their existing newest-first order within two groups:
+open cases first, then closed cases (`status !== "active"` or archived) at the
+end. Closed cards have a red outlined border and a red "Kapalı" badge so they
+remain unmistakable even when a filter includes mixed statuses. Their
+"müşteride" / "aksiyon bizde" chips are hidden because a closed case has no
+current action owner.
 
 **Journey detail header** (`app/presales/admin/journeys/[id]/layout.tsx`): same
 pattern as the dashboard card — heading is `Journey.name`, with the assigned
