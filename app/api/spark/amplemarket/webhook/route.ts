@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/presales/db";
 import { Prisma } from "@/lib/generated/prisma/client";
+import { amplemarketOwnerEmail, amplemarketSequenceKind } from "@/lib/spark/amplemarketEvent";
 
 export const dynamic = "force-dynamic";
 
@@ -37,8 +38,7 @@ export async function POST(request: NextRequest) {
   if (!Number.isFinite(occurredAt.getTime())) return NextResponse.json({ error: "Invalid event date" }, { status: 400 });
 
   const sequenceName = string(sequence.name);
-  const explicitKind = string(sequence.type)?.toLowerCase();
-  const sequenceKind = explicitKind === "duo" || sequenceName?.toLowerCase().includes("duo") ? "duo" : eventType === "sent" ? "bulk" : undefined;
+  const sequenceKind = amplemarketSequenceKind(payload, sequenceName);
   const externalId = string(payload.id) || string(emailMessage.id) || createHash("sha256").update(JSON.stringify(payload)).digest("hex");
   const firstName = string(dynamic.first_name); const lastName = string(dynamic.last_name);
 
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     update: {},
     create: {
       externalId, eventType, sequenceKind, sequenceName,
-      ownerEmail: string(object(payload.user).email) || string(payload.owner_email),
+      ownerEmail: amplemarketOwnerEmail(payload),
       personName: [firstName, lastName].filter(Boolean).join(" ") || string(dynamic.name),
       companyName: string(dynamic.company_name) || string(dynamic.account_name), occurredAt,
       payload: JSON.parse(JSON.stringify(payload)) as Prisma.InputJsonValue,

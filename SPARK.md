@@ -215,6 +215,12 @@ reply, positive and meeting totals; person-level bulk/Duo/total send breakdown;
 positive/reply conversion; and meetings booked within the rolling seven-day
 window. Manually entered priorities and action lists are not rendered.
 
+Bulk/Duo classification uses Amplemarket's `creation_method`: `duo` is Duo;
+`manual` and `ai_assisted` are bulk sequences. Never assume an unclassified sent
+event is bulk. Owner labels use the webhook's `user.first_name` and
+`user.last_name` (or `dynamic_fields.sender`); known Ereteam e-mail addresses
+are mapped to full names only when the source omits those fields.
+
 The live dashboard must preserve the visual hierarchy and interaction model of
 the approved standalone Spark HTML: branded dark header, three written numeric
 executive-summary cards, four KPI cards, dark weekly movement strip with inline
@@ -223,17 +229,21 @@ monthly trend, forecast and Lead Generation. Do not add a separate weekly deal
 movement card. Million-scale compact values always show two decimal places.
 
 The public Amplemarket REST API is used only for connection validation because
-it does not expose historical weekly sent/reply analytics. Lead Generation is
-calculated from stored JSON Data and workflow webhooks from the time those feeds
-were enabled; never fill missing historical periods with sample values.
+it does not expose historical weekly sent/reply analytics. The official webhook
+payload also does not guarantee `creation_method`; exact Bulk/Duo send splits
+therefore require Amplemarket Analytics reconciliation. Never fill missing
+historical periods with sample values or silently classify unknown sends as
+bulk.
 
-For the one-time pre-webhook gap, Amplemarket MCP Analytics can provide exact
-daily owner and bulk/Duo aggregates. Submit those rows to the authenticated
+Amplemarket MCP Analytics can provide exact daily owner and bulk/Duo
+aggregates. Submit those rows to the authenticated
 `/api/spark/amplemarket/backfill` endpoint. The endpoint creates deterministic,
-deduplicated source events, refreshes the dashboard cache, and is therefore safe
-to submit repeatedly. This is bootstrap
-only: after the gap is filled, Amplemarket webhooks and Vercel Cron operate in
-the cloud without requiring the user's Mac or a Codex automation to be online.
+deduplicated source events and a daily coverage marker. On covered dates the
+Analytics send totals replace, rather than duplicate, raw webhook send events.
+Submitting a covered date again atomically replaces its earlier Analytics rows,
+then refreshes the dashboard cache. Webhooks remain authoritative for replies,
+positive replies and meetings; Analytics is authoritative for the sent
+Bulk/Duo split.
 
 ## Commands
 

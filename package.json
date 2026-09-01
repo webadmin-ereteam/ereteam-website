@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "test:spark-chat": "tsx scripts/test-spark-chat-knowledge.ts",
+    "test:spark-amplemarket": "tsx scripts/test-spark-amplemarket.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
