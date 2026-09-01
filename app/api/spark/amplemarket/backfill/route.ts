@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/presales/db";
+import { verifySessionToken } from "@/lib/presales/session";
 import { refreshSparkData } from "@/lib/spark/cache";
 
 export const dynamic = "force-dynamic";
@@ -26,9 +27,21 @@ const validCount = (value: unknown) => Number.isInteger(value) && Number(value) 
 export async function POST(request: NextRequest) {
   const configured = process.env.AMPLEMARKET_WEBHOOK_SECRET;
   const supplied = request.nextUrl.searchParams.get("key") || request.headers.get("x-spark-webhook-secret") || "";
-  if (!configured || !safeEqual(supplied, configured)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const validSecret = Boolean(configured && supplied && safeEqual(supplied, configured));
+  const validSession = await verifySessionToken(request.cookies.get("spark_session")?.value);
+  if (!validSecret && !validSession) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await request.json() as { rows?: BackfillRow[] };
+  let body: { rows?: BackfillRow[] };
+  if (request.headers.get("content-type")?.includes("application/x-www-form-urlencoded")) {
+    const form = await request.formData();
+    try {
+      body = { rows: JSON.parse(String(form.get("rows") || "[]")) as BackfillRow[] };
+    } catch {
+      return NextResponse.json({ error: "Invalid rows JSON" }, { status: 400 });
+    }
+  } else {
+    body = await request.json() as { rows?: BackfillRow[] };
+  }
   if (!Array.isArray(body.rows) || body.rows.length > 500) return NextResponse.json({ error: "Invalid rows" }, { status: 400 });
 
   const records: Prisma.SparkAmplemarketEventCreateManyInput[] = [];

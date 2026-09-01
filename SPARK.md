@@ -245,10 +245,15 @@ then refreshes the dashboard cache. Webhooks remain authoritative for replies,
 positive replies and meetings; Analytics is authoritative for the sent
 Bulk/Duo split.
 
+Authenticated Spark users can submit the same rows without exposing the
+webhook secret at `/spark/amplemarket-sync`. This internal route is intentionally
+not linked from the dashboard.
+
 ## Commands
 
 ```bash
 npm run test:spark-chat
+npm run test:spark-amplemarket
 npm run build
 ```
 
