@@ -8,6 +8,8 @@ const SORO_RSS_URL =
   process.env.SORO_RSS_URL ||
   "https://app.trysoro.com/api/rss/0cfffdcd-4a36-41c8-a6d7-160ab20e98bf";
 
+export const SORO_REVALIDATE_SECONDS = 300;
+
 type SoroFeedItem = Parser.Item & {
   fullContent?: string;
   creator?: string;
@@ -93,7 +95,7 @@ function validDate(value?: string) {
 export async function getSoroArticles(): Promise<SoroArticle[]> {
   try {
     const response = await fetch(SORO_RSS_URL, {
-      next: { revalidate: 1800, tags: ["soro-articles"] },
+      next: { revalidate: SORO_REVALIDATE_SECONDS, tags: ["soro-articles"] },
       headers: { Accept: "application/rss+xml, application/xml;q=0.9, text/xml;q=0.8" },
     });
 
