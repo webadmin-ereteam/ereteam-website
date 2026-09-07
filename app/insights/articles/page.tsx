@@ -54,15 +54,22 @@ export default async function ArticlesPage() {
           {articles.length ? (
             <div className="grid border-l border-t border-[#071A2A]/15 md:grid-cols-2 lg:grid-cols-3">
               {articles.map((article) => (
-                <article key={article.slug} className="group flex min-h-[360px] flex-col border-b border-r border-[#071A2A]/15 bg-white">
-                  {article.image && <img src={article.image} alt={article.title} className="aspect-[16/9] w-full border-b border-[#071A2A]/15 object-cover" loading="lazy" />}
-                  <div className="flex flex-1 flex-col p-6 lg:p-8">
-                    <p className="text-[11px] font-bold uppercase tracking-[.14em] text-[#B96F38]">{article.category || "Insight"}{formatDate(article.publishedAt) ? ` · ${formatDate(article.publishedAt)}` : ""}</p>
-                    <h2 className="mt-4 text-2xl font-semibold leading-tight tracking-[-.035em] text-brand-dark">{article.title}</h2>
-                    {article.excerpt && <p className="mt-4 line-clamp-3 text-[15px] leading-7 text-text-muted">{article.excerpt}</p>}
-                    <Link href={`/insights/articles/${article.slug}`} className="mt-auto inline-flex items-center gap-2 pt-7 text-xs font-bold uppercase tracking-[.12em] text-brand-dark transition-colors group-hover:text-[#B96F38]">Read article <ArrowRight size={15} /></Link>
-                  </div>
-                </article>
+                <Link
+                  key={article.slug}
+                  href={`/insights/articles/${article.slug}`}
+                  className="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#B96F38]"
+                  aria-label={`Read ${article.title}`}
+                >
+                  <article className="flex min-h-[360px] h-full flex-col overflow-hidden border-b border-r border-[#071A2A]/15 bg-white">
+                    {article.image && <img src={article.image} alt="" className="aspect-[16/9] w-full border-b border-[#071A2A]/15 object-cover transition-transform duration-500 group-hover:scale-[1.01]" loading="lazy" />}
+                    <div className="flex flex-1 flex-col p-6 lg:p-8">
+                      <p className="text-[11px] font-bold uppercase tracking-[.14em] text-[#B96F38]">{article.category || "Insight"}{formatDate(article.publishedAt) ? ` · ${formatDate(article.publishedAt)}` : ""}</p>
+                      <h2 className="mt-4 text-2xl font-semibold leading-tight tracking-[-.035em] text-brand-dark">{article.title}</h2>
+                      {article.excerpt && <p className="mt-4 line-clamp-3 text-[15px] leading-7 text-text-muted">{article.excerpt}</p>}
+                      <span className="mt-auto inline-flex items-center gap-2 pt-7 text-xs font-bold uppercase tracking-[.12em] text-brand-dark transition-colors group-hover:text-[#B96F38]">Read article <ArrowRight size={15} /></span>
+                    </div>
+                  </article>
+                </Link>
               ))}
             </div>
           ) : (

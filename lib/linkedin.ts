@@ -155,6 +155,28 @@ function firstImage(post: LinkedInApiPost) {
   return image?.id ? { id: image.id, alt: image.altText || "Ereteam LinkedIn update" } : undefined;
 }
 
+async function resolvePublicPostImage(postId: string) {
+  const response = await fetch(
+    `https://www.linkedin.com/embed/feed/update/${encodeURIComponent(postId)}`,
+    {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; EreteamWebsite/1.0)" },
+      cache: "no-store",
+    }
+  );
+
+  if (!response.ok) return undefined;
+
+  const html = await response.text();
+  const match = html.match(/<meta[^>]+(?:property|name)=["']og:image["'][^>]+content=["']([^"']+)/i)
+    || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']og:image["']/i);
+  if (!match?.[1]) return undefined;
+
+  const imageUrl = new URL(match[1].replace(/&amp;/g, "&"));
+  const isLinkedInImage = imageUrl.hostname === "licdn.com" || imageUrl.hostname.endsWith(".licdn.com");
+  if (imageUrl.protocol !== "https:" || !isLinkedInImage) return undefined;
+  return imageUrl.toString();
+}
+
 async function resolveImageUrl(imageId: string) {
   const image = await linkedinGet<{ downloadUrl?: string }>(
     `/images/${encodeURIComponent(imageId)}`
@@ -202,6 +224,14 @@ async function fetchLinkedInPosts(): Promise<LinkedInFeedPost[]> {
       }
     }
 
+    if (!imageUrl) {
+      try {
+        imageUrl = await resolvePublicPostImage(post.id);
+      } catch (error) {
+        console.warn("LinkedIn post preview could not be resolved:", error instanceof Error ? error.message : error);
+      }
+    }
+
     const timestamp = post.publishedAt || post.createdAt || Date.now();
     const article = post.content?.article;
     const text = cleanCommentary(post.commentary) || article?.description || article?.title || "View this Ereteam update on LinkedIn.";
@@ -220,7 +250,7 @@ async function fetchLinkedInPosts(): Promise<LinkedInFeedPost[]> {
 
 const getCachedLinkedInPosts = unstable_cache(
   fetchLinkedInPosts,
-  ["ereteam-linkedin-feed-v6"],
+  ["ereteam-linkedin-feed-v7"],
   { tags: [LINKEDIN_CACHE_TAG], revalidate: LINKEDIN_REVALIDATE_SECONDS }
 );
 

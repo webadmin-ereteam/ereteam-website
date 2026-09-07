@@ -49,7 +49,9 @@ export default async function ArticlePage({ params }: PageProps) {
       <section className="detail-hero bg-[#071A2A] pb-14 pt-32 text-white lg:pb-20 lg:pt-40">
         <div className="site-container">
           <Link href="/insights/articles" className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.12em] text-white/60 transition-colors hover:text-white"><ArrowLeft size={15} /> All articles</Link>
-          <p className="site-kicker mt-10">{article.category || "Ereteam insight"}</p>
+          <div className="mt-10">
+            <p className="site-kicker">{article.category || "Ereteam insight"}</p>
+          </div>
           <h1 className="site-page-title site-page-title--compact mt-5 max-w-5xl">{article.title}</h1>
           <div className="mt-7 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/60">
             {article.author && <span>{article.author}</span>}
