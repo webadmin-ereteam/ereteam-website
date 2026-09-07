@@ -67,8 +67,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <Script id="google-consent-default" strategy="beforeInteractive">
-          {`
+        <script
+          id="google-consent-default"
+          dangerouslySetInnerHTML={{
+            __html: `
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             window.gtag = window.gtag || gtag;
@@ -79,8 +81,27 @@ export default function RootLayout({
               ad_personalization: 'denied',
               wait_for_update: 2000
             });
-          `}
-        </Script>
+
+            document.addEventListener('cookieyes_banner_load', function(event) {
+              window.__cookieYesAnalyticsAllowed = Boolean(
+                event.detail && event.detail.categories && event.detail.categories.analytics
+              );
+            });
+
+            document.addEventListener('cookieyes_banner_loaded', function(event) {
+              if (event.detail && event.detail.categories) {
+                window.__cookieYesAnalyticsAllowed = Boolean(event.detail.categories.analytics);
+              }
+            });
+
+            document.addEventListener('cookieyes_consent_update', function(event) {
+              window.__cookieYesAnalyticsAllowed = Boolean(
+                event.detail && event.detail.accepted && event.detail.accepted.includes('analytics')
+              );
+            });
+          `,
+          }}
+        />
         <Script
           id="cookieyes"
           src="https://cdn-cookieyes.com/client_data/e2d3115991fe36595be306d4bbde31b9/script.js"

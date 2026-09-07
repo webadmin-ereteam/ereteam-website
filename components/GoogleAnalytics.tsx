@@ -21,6 +21,7 @@ declare global {
     gtag: (...args: unknown[]) => void;
     getCkyConsent?: () => CookieYesConsent;
     __ereteamGaInitialized?: boolean;
+    __cookieYesAnalyticsAllowed?: boolean;
   }
 }
 
@@ -77,6 +78,11 @@ export default function GoogleAnalytics() {
     };
 
     const syncFromCookieYes = () => {
+      if (typeof window.__cookieYesAnalyticsAllowed === "boolean") {
+        applyConsent(window.__cookieYesAnalyticsAllowed);
+        return;
+      }
+
       const consent = window.getCkyConsent?.();
       if (consent) applyConsent(Boolean(consent.categories?.analytics));
     };
@@ -91,9 +97,9 @@ export default function GoogleAnalytics() {
       applyConsent(accepted.includes("analytics"));
     };
 
-    window.addEventListener("cookieyes_banner_load", handleBannerLoad);
-    window.addEventListener("cookieyes_banner_loaded", handleBannerLoad);
-    window.addEventListener("cookieyes_consent_update", handleConsentUpdate);
+    document.addEventListener("cookieyes_banner_load", handleBannerLoad);
+    document.addEventListener("cookieyes_banner_loaded", handleBannerLoad);
+    document.addEventListener("cookieyes_consent_update", handleConsentUpdate);
 
     syncFromCookieYes();
     const retryTimer = window.setInterval(syncFromCookieYes, 500);
@@ -105,9 +111,9 @@ export default function GoogleAnalytics() {
     return () => {
       window.clearInterval(retryTimer);
       window.clearTimeout(stopRetryTimer);
-      window.removeEventListener("cookieyes_banner_load", handleBannerLoad);
-      window.removeEventListener("cookieyes_banner_loaded", handleBannerLoad);
-      window.removeEventListener("cookieyes_consent_update", handleConsentUpdate);
+      document.removeEventListener("cookieyes_banner_load", handleBannerLoad);
+      document.removeEventListener("cookieyes_banner_loaded", handleBannerLoad);
+      document.removeEventListener("cookieyes_consent_update", handleConsentUpdate);
     };
   }, [isInternalArea]);
 
