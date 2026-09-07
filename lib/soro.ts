@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import Parser from "rss-parser";
 import sanitizeHtml from "sanitize-html";
 import { decode } from "he";
@@ -10,7 +11,6 @@ const SORO_RSS_URL =
 
 export const SORO_REVALIDATE_SECONDS = 300;
 export const SORO_CACHE_TAG = "soro-articles";
-const SORO_FETCH_VERSION = "2";
 
 type SoroFeedItem = Parser.Item & {
   fullContent?: string;
@@ -95,14 +95,11 @@ function validDate(value?: string) {
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 }
 
-export async function getSoroArticles(): Promise<SoroArticle[]> {
+async function fetchSoroArticles(): Promise<SoroArticle[]> {
   try {
     const response = await fetch(SORO_RSS_URL, {
-      next: { revalidate: SORO_REVALIDATE_SECONDS, tags: [SORO_CACHE_TAG] },
-      headers: {
-        Accept: "application/rss+xml, application/xml;q=0.9, text/xml;q=0.8",
-        "X-Ereteam-RSS-Version": SORO_FETCH_VERSION,
-      },
+      cache: "no-store",
+      headers: { Accept: "application/rss+xml, application/xml;q=0.9, text/xml;q=0.8" },
     });
 
     if (!response.ok) return [];
@@ -139,6 +136,8 @@ export async function getSoroArticles(): Promise<SoroArticle[]> {
     return [];
   }
 }
+
+export const getSoroArticles = cache(fetchSoroArticles);
 
 export async function getSoroArticle(slug: string) {
   return (await getSoroArticles()).find((article) => article.slug === slug);

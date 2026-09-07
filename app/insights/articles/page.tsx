@@ -4,9 +4,9 @@ import Link from "next/link";
 import { ArrowRight, BookOpen } from "lucide-react";
 import JsonLd from "@/components/seo/JsonLd";
 import { absoluteUrl, breadcrumbSchema, createPageMetadata, SITE_URL } from "@/lib/seo";
-import { getSoroArticles, SORO_REVALIDATE_SECONDS } from "@/lib/soro";
+import { getSoroArticles } from "@/lib/soro";
 
-export const revalidate = SORO_REVALIDATE_SECONDS;
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Enterprise Data and Analytics Articles",

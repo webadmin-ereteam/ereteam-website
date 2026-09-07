@@ -5,9 +5,9 @@ import { notFound } from "next/navigation";
 import ArticleShareActions from "@/components/insights/ArticleShareActions";
 import JsonLd from "@/components/seo/JsonLd";
 import { absoluteUrl, breadcrumbSchema, createPageMetadata, SITE_URL } from "@/lib/seo";
-import { getSoroArticle, SORO_REVALIDATE_SECONDS } from "@/lib/soro";
+import { getSoroArticle } from "@/lib/soro";
 
-export const revalidate = SORO_REVALIDATE_SECONDS;
+export const dynamic = "force-dynamic";
 
 type PageProps = { params: { slug: string } };
 

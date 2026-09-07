@@ -3,6 +3,7 @@ import { SITE_URL } from "@/lib/seo";
 import { getSoroArticles } from "@/lib/soro";
 
 const CORPORATE_UPDATED = new Date("2026-08-21T00:00:00.000Z");
+export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const articles = await getSoroArticles();
