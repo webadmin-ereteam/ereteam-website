@@ -1,9 +1,11 @@
 import { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/seo";
+import { getSoroArticles } from "@/lib/soro";
 
 const CORPORATE_UPDATED = new Date("2026-08-21T00:00:00.000Z");
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const articles = await getSoroArticles();
   const routes: MetadataRoute.Sitemap = [
     { url: SITE_URL, lastModified: CORPORATE_UPDATED, changeFrequency: "weekly", priority: 1 },
     { url: `${SITE_URL}/about`, lastModified: CORPORATE_UPDATED, changeFrequency: "monthly", priority: 0.8 },
@@ -19,10 +21,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/products/maturytics`, lastModified: CORPORATE_UPDATED, changeFrequency: "monthly", priority: 0.8 },
     { url: `${SITE_URL}/partners`, lastModified: CORPORATE_UPDATED, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/use-cases`, lastModified: CORPORATE_UPDATED, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${SITE_URL}/insights/articles`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE_URL}/social-media`, lastModified: CORPORATE_UPDATED, changeFrequency: "daily", priority: 0.7 },
     { url: `${SITE_URL}/contact`, lastModified: CORPORATE_UPDATED, changeFrequency: "monthly", priority: 0.8 },
     { url: `${SITE_URL}/privacy-policy`, lastModified: CORPORATE_UPDATED, changeFrequency: "yearly", priority: 0.3 },
   ];
 
-  return routes;
+  return [
+    ...routes,
+    ...articles.map((article) => ({
+      url: `${SITE_URL}/insights/articles/${article.slug}`,
+      lastModified: article.publishedAt ? new Date(article.publishedAt) : new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),
+  ];
 }

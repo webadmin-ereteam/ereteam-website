@@ -56,6 +56,7 @@ const groups: readonly NavGroup[] = [
     label: "Insights",
     href: "/use-cases",
     items: [
+      { label: "Articles", href: "/insights/articles" },
       { label: "Success Stories", href: "/use-cases" },
       { label: "Ereteam on LinkedIn", href: "/social-media" },
     ],

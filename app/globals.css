@@ -223,6 +223,27 @@ body:has(.site-header) main a[class*="bg-gradient-to-r"] {
 .detail-page [class*="rounded-"] { border-radius: 2px !important; }
 .detail-page [class*="text-center"] { text-wrap: balance; }
 
+.soro-article-body { color: var(--ink-soft); font-size: 1.075rem; line-height: 1.85; }
+.soro-article-body > * + * { margin-top: 1.4rem; }
+.soro-article-body h2,
+.soro-article-body h3,
+.soro-article-body h4 { color: var(--ink); font-weight: 650; line-height: 1.15; }
+.soro-article-body h2 { margin-top: 3.25rem; font-size: clamp(1.9rem, 3vw, 2.75rem) !important; }
+.soro-article-body h3 { margin-top: 2.5rem; font-size: clamp(1.35rem, 2vw, 1.75rem) !important; }
+.soro-article-body h4 { margin-top: 2rem; font-size: 1.2rem; }
+.soro-article-body ul,
+.soro-article-body ol { padding-left: 1.4rem; }
+.soro-article-body ul { list-style: disc; }
+.soro-article-body ol { list-style: decimal; }
+.soro-article-body li + li { margin-top: .55rem; }
+.soro-article-body a { color: var(--blue); text-decoration: underline; text-decoration-color: rgb(13 77 115 / .35); text-underline-offset: 3px; }
+.soro-article-body blockquote { border-left: 3px solid var(--copper); padding-left: 1.25rem; color: var(--ink); font-size: 1.2rem; }
+.soro-article-body img { width: 100%; height: auto; border: 1px solid var(--line); }
+.soro-article-body figcaption { margin-top: .6rem; color: #60717d; font-size: .85rem; }
+.soro-article-body table { display: block; width: 100%; overflow-x: auto; border-collapse: collapse; font-size: .95rem; }
+.soro-article-body th,
+.soro-article-body td { border: 1px solid var(--line); padding: .75rem; text-align: left; }
+
 @media (min-width: 768px) {
   .detail-page > section:not(.detail-hero) > div:not([class*="absolute"]) { width: min(100% - 4rem, 1280px) !important; }
 }
