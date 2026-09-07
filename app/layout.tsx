@@ -3,7 +3,7 @@ import Script from "next/script";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import ChatWidget from "@/components/ChatWidget";
+import LazyChatWidget from "@/components/LazyChatWidget";
 import CookieBannerGate from "@/components/CookieBannerGate";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import JsonLd from "@/components/seo/JsonLd";
@@ -116,12 +116,7 @@ export default function RootLayout({
         <Navbar />
         <main id="main-content">{children}</main>
         <Footer />
-        <ChatWidget />
-        <Script
-          id="hs-script-loader"
-          src="//js-eu1.hs-scripts.com/147286586.js"
-          strategy="afterInteractive"
-        />
+        <LazyChatWidget />
       </body>
     </html>
   );

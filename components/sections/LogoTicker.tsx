@@ -1,5 +1,3 @@
-"use client";
-
 import { clients } from "@/lib/data/clients";
 
 const ITEMS_PER_ROW = Math.ceil(clients.length / 2);

@@ -1,8 +1,5 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
 
 const services = [
@@ -39,18 +36,18 @@ export default function ServicesSection() {
         </div>
 
         <div className="border-t border-[#071A2A]/20">
-          {services.map((service, index) => (
-            <motion.article key={service.title} initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .25 }} transition={{ duration: .6, delay: index * .06 }} className="group grid border-b border-[#071A2A]/20 py-8 lg:grid-cols-[1fr_1fr] lg:items-center lg:gap-12 lg:py-12">
+          {services.map((service) => (
+            <article key={service.title} className="group grid border-b border-[#071A2A]/20 py-8 lg:grid-cols-[1fr_1fr] lg:items-center lg:gap-12 lg:py-12">
               <div className="pr-4">
                 <h3 className="site-display text-3xl text-brand-dark transition-colors group-hover:text-brand-primary sm:text-4xl">{service.title}</h3>
                 <p className="mt-5 max-w-2xl text-sm leading-7 text-text-muted">{service.description}</p>
                 <Link href={service.href} className="mt-7 inline-flex items-center gap-3 text-[11px] font-bold uppercase tracking-[.12em] text-brand-dark">Explore capability <ArrowUpRight size={15} /></Link>
               </div>
               <Link href={service.href} className="relative mt-7 block aspect-[16/9] overflow-hidden bg-brand-dark lg:mt-0">
-                <Image src={service.image} alt="" fill sizes="(min-width: 1024px) 42vw, 100vw" className="object-cover saturate-[.72] transition duration-700 group-hover:scale-[1.03] group-hover:saturate-100" />
+                <Image src={service.image} alt="" fill quality={65} sizes="(min-width: 1024px) 42vw, 60vw" className="object-cover saturate-[.72] transition duration-700 group-hover:scale-[1.03] group-hover:saturate-100" />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#071A2A]/35 to-transparent" />
               </Link>
-            </motion.article>
+            </article>
           ))}
         </div>
       </div>

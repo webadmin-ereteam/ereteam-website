@@ -45,11 +45,17 @@ export default function HeroSection() {
   return (
     <section className="relative min-h-[720px] bg-[#071A2A] text-white lg:min-h-[820px]" aria-roledescription="carousel" aria-label="Ereteam expertise">
       <div className="absolute inset-0">
-        {slides.map((slide, index) => (
-          <div key={slide.image} className={`absolute inset-0 transition-opacity duration-1000 ${index === active ? "opacity-100" : "pointer-events-none opacity-0"}`} aria-hidden={index !== active}>
-            <Image src={slide.image} alt="" fill priority={index === 0} sizes="100vw" className={`object-cover ${slide.position}`} />
-          </div>
-        ))}
+        <div key={slides[active].image} className="absolute inset-0 animate-[hero-bg-in_1s_ease-out_both]">
+          <Image
+            src={slides[active].image}
+            alt=""
+            fill
+            priority={active === 0}
+            quality={65}
+            sizes="100vw"
+            className={`object-cover ${slides[active].position}`}
+          />
+        </div>
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(4,17,28,.94)_0%,rgba(4,17,28,.72)_44%,rgba(4,17,28,.2)_75%,rgba(4,17,28,.46)_100%)]" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#071A2A]/85 via-transparent to-[#071A2A]/25" />
       </div>
@@ -82,7 +88,10 @@ export default function HeroSection() {
           </div>
         </div>
       </div>
-      <style jsx>{`@keyframes hero-in { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+      <style jsx>{`
+        @keyframes hero-in { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes hero-bg-in { from { opacity: 0; } to { opacity: 1; } }
+      `}</style>
     </section>
   );
 }

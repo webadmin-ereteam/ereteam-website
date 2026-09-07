@@ -2,7 +2,10 @@ import HeroSection from "@/components/sections/HeroSection";
 import StatsBar from "@/components/sections/StatsBar";
 import LogoTicker from "@/components/sections/LogoTicker";
 import CTABanner from "@/components/sections/CTABanner";
-import HomePageClient from "./HomePageClient";
+import ServicesSection from "@/components/sections/ServicesSection";
+import ProductsSection from "@/components/sections/ProductsSection";
+import WorkSection from "@/components/sections/WorkSection";
+import PartnersSection from "@/components/sections/PartnersSection";
 import { createPageMetadata } from "@/lib/seo";
 
 export const metadata = createPageMetadata({
@@ -20,7 +23,10 @@ export default function HomePage() {
     <>
       <HeroSection />
       <StatsBar />
-      <HomePageClient />
+      <ServicesSection />
+      <ProductsSection />
+      <WorkSection />
+      <PartnersSection />
       <LogoTicker />
       <CTABanner />
     </>

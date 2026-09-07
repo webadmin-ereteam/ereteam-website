@@ -58,6 +58,17 @@ function initializeAnalytics() {
   window.__ereteamGaInitialized = true;
 }
 
+function initializeHubSpot() {
+  if (document.getElementById("hs-script-loader")) return;
+
+  const script = document.createElement("script");
+  script.id = "hs-script-loader";
+  script.async = true;
+  script.defer = true;
+  script.src = "https://js-eu1.hs-scripts.com/147286586.js";
+  document.body.appendChild(script);
+}
+
 export default function GoogleAnalytics() {
   const pathname = usePathname();
   const [analyticsAllowed, setAnalyticsAllowed] = useState(false);
@@ -74,7 +85,10 @@ export default function GoogleAnalytics() {
     const applyConsent = (allowed: boolean) => {
       setAnalyticsConsent(allowed);
       setAnalyticsAllowed(allowed);
-      if (allowed) initializeAnalytics();
+      if (allowed) {
+        initializeAnalytics();
+        initializeHubSpot();
+      }
     };
 
     const syncFromCookieYes = () => {
