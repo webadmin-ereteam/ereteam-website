@@ -9,6 +9,8 @@ const SORO_RSS_URL =
   "https://app.trysoro.com/api/rss/0cfffdcd-4a36-41c8-a6d7-160ab20e98bf";
 
 export const SORO_REVALIDATE_SECONDS = 300;
+export const SORO_CACHE_TAG = "soro-articles";
+const SORO_FETCH_VERSION = "2";
 
 type SoroFeedItem = Parser.Item & {
   fullContent?: string;
@@ -23,6 +25,7 @@ export interface SoroArticle {
   slug: string;
   excerpt: string;
   content: string;
+  plainContent: string;
   publishedAt?: string;
   author?: string;
   category?: string;
@@ -95,8 +98,11 @@ function validDate(value?: string) {
 export async function getSoroArticles(): Promise<SoroArticle[]> {
   try {
     const response = await fetch(SORO_RSS_URL, {
-      next: { revalidate: SORO_REVALIDATE_SECONDS, tags: ["soro-articles"] },
-      headers: { Accept: "application/rss+xml, application/xml;q=0.9, text/xml;q=0.8" },
+      next: { revalidate: SORO_REVALIDATE_SECONDS, tags: [SORO_CACHE_TAG] },
+      headers: {
+        Accept: "application/rss+xml, application/xml;q=0.9, text/xml;q=0.8",
+        "X-Ereteam-RSS-Version": SORO_FETCH_VERSION,
+      },
     });
 
     if (!response.ok) return [];
@@ -120,6 +126,7 @@ export async function getSoroArticles(): Promise<SoroArticle[]> {
           slug,
           excerpt,
           content: safeArticleHtml(rawContent),
+          plainContent: plainText(rawContent),
           publishedAt: validDate(item.isoDate || item.pubDate),
           author: plainText(item.creator || item.author),
           category: item.categories?.[0] ? plainText(item.categories[0]) : undefined,

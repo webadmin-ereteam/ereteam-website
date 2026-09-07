@@ -157,6 +157,7 @@ export const pages = [
   { label: "Pharmeta product", path: "/products/pharmeta" },
   { label: "Maturytics product", path: "/products/maturytics" },
   { label: "Use Cases & client work", path: "/use-cases" },
+  { label: "Articles", path: "/insights/articles" },
   { label: "About Ereteam", path: "/about" },
   { label: "Careers", path: "/about/careers" },
   { label: "Contact", path: "/contact" },
