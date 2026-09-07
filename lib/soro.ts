@@ -1,6 +1,5 @@
 import "server-only";
 
-import { cache } from "react";
 import Parser from "rss-parser";
 import sanitizeHtml from "sanitize-html";
 import { decode } from "he";
@@ -97,9 +96,15 @@ function validDate(value?: string) {
 
 async function fetchSoroArticles(): Promise<SoroArticle[]> {
   try {
-    const response = await fetch(SORO_RSS_URL, {
+    const feedUrl = new URL(SORO_RSS_URL);
+    feedUrl.searchParams.set("ereteam_refresh", String(Math.floor(Date.now() / 60_000)));
+
+    const response = await fetch(feedUrl, {
       cache: "no-store",
-      headers: { Accept: "application/rss+xml, application/xml;q=0.9, text/xml;q=0.8" },
+      headers: {
+        Accept: "application/rss+xml, application/xml;q=0.9, text/xml;q=0.8",
+        "Cache-Control": "no-cache",
+      },
     });
 
     if (!response.ok) return [];
@@ -137,7 +142,7 @@ async function fetchSoroArticles(): Promise<SoroArticle[]> {
   }
 }
 
-export const getSoroArticles = cache(fetchSoroArticles);
+export const getSoroArticles = fetchSoroArticles;
 
 export async function getSoroArticle(slug: string) {
   return (await getSoroArticles()).find((article) => article.slug === slug);
