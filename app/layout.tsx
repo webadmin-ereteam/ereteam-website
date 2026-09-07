@@ -5,6 +5,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import ChatWidget from "@/components/ChatWidget";
 import CookieBannerGate from "@/components/CookieBannerGate";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
 import JsonLd from "@/components/seo/JsonLd";
 import { organizationSchema, SITE_URL, websiteSchema } from "@/lib/seo";
 
@@ -66,6 +67,20 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <Script id="google-consent-default" strategy="beforeInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            window.gtag = window.gtag || gtag;
+            gtag('consent', 'default', {
+              analytics_storage: 'denied',
+              ad_storage: 'denied',
+              ad_user_data: 'denied',
+              ad_personalization: 'denied',
+              wait_for_update: 2000
+            });
+          `}
+        </Script>
         <Script
           id="cookieyes"
           src="https://cdn-cookieyes.com/client_data/e2d3115991fe36595be306d4bbde31b9/script.js"
@@ -76,6 +91,7 @@ export default function RootLayout({
         <JsonLd data={[organizationSchema, websiteSchema]} />
         <a href="#main-content" className="site-skip-link">Skip to content</a>
         <CookieBannerGate />
+        <GoogleAnalytics />
         <Navbar />
         <main id="main-content">{children}</main>
         <Footer />
