@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { company, contact, industries, notableClients, services, products, pages } from "./siteData";
 import { getAllSuccessStories, getAllActiveJobPostings, getAllPartners, getPartnersBoard } from "./sanity/queries";
-import { getLinkedInPosts } from "./linkedin";
+import { getLinkedInPosts, LINKEDIN_CACHE_TAG } from "./linkedin";
 import { getSoroArticles, SORO_CACHE_TAG, SORO_REVALIDATE_SECONDS } from "./soro";
 
 export const CHAT_CACHE_TAG = "chat-context";
@@ -103,5 +103,5 @@ RULES:
 export const getChatContext = unstable_cache(
   buildChatContext,
   ["chat-context-v4"],
-  { tags: [CHAT_CACHE_TAG, SORO_CACHE_TAG], revalidate: SORO_REVALIDATE_SECONDS }
+  { tags: [CHAT_CACHE_TAG, LINKEDIN_CACHE_TAG, SORO_CACHE_TAG], revalidate: SORO_REVALIDATE_SECONDS }
 );

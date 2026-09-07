@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { CHAT_CACHE_TAG } from "@/lib/getChatContext";
+import { LINKEDIN_CACHE_TAG } from "@/lib/linkedin";
 import { SORO_CACHE_TAG } from "@/lib/soro";
 
 export async function POST(req: NextRequest) {
@@ -11,6 +12,7 @@ export async function POST(req: NextRequest) {
   }
 
   revalidateTag(CHAT_CACHE_TAG);
+  revalidateTag(LINKEDIN_CACHE_TAG);
   revalidateTag(SORO_CACHE_TAG);
   console.log("✅ Site content caches revalidated via webhook");
 

@@ -9,6 +9,8 @@ const LINKEDIN_VANITY_NAME = "ereteam";
 const LINKEDIN_CLIENT_ID = "77utxj920hnqpn";
 const LINKEDIN_POST_COUNT = 24;
 const LINKEDIN_PAGE_SIZE = 10;
+export const LINKEDIN_REVALIDATE_SECONDS = 1_800;
+export const LINKEDIN_CACHE_TAG = "linkedin-posts";
 
 let runtimeAccessToken: string | undefined;
 
@@ -218,8 +220,8 @@ async function fetchLinkedInPosts(): Promise<LinkedInFeedPost[]> {
 
 const getCachedLinkedInPosts = unstable_cache(
   fetchLinkedInPosts,
-  ["ereteam-linkedin-feed-v5"],
-  { revalidate: 21_600 }
+  ["ereteam-linkedin-feed-v6"],
+  { tags: [LINKEDIN_CACHE_TAG], revalidate: LINKEDIN_REVALIDATE_SECONDS }
 );
 
 export async function getLinkedInPosts() {
