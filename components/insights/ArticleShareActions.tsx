@@ -3,12 +3,22 @@
 import { useState } from "react";
 import { Check, Copy, Mail, MessageCircle, Share2 } from "lucide-react";
 
-export default function ArticleShareActions({ title }: { title: string }) {
+export default function ArticleShareActions({
+  title,
+  shareVersion,
+}: {
+  title: string;
+  shareVersion: string;
+}) {
   const [copied, setCopied] = useState(false);
   const buttonClass =
     "inline-flex min-h-11 items-center gap-2 border border-[#071A2A]/20 bg-white px-4 text-xs font-bold uppercase tracking-[.08em] text-brand-dark transition-colors hover:border-[#B96F38] hover:text-[#B96F38]";
 
-  const shareData = () => ({ title, url: window.location.href });
+  const shareData = () => {
+    const url = new URL(window.location.pathname, window.location.origin);
+    url.searchParams.set("share", shareVersion);
+    return { title, url: url.toString() };
+  };
   const openShareWindow = (url: string) => window.open(url, "_blank", "noopener,noreferrer");
 
   const copyLink = async () => {

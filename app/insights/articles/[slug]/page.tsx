@@ -64,7 +64,7 @@ export default async function ArticlePage({ params }: PageProps) {
         <div className="site-container grid gap-10 lg:grid-cols-[minmax(0,780px)_1fr] lg:gap-20">
           <article>
             <div className="soro-article-body" dangerouslySetInnerHTML={{ __html: article.content }} />
-            <ArticleShareActions title={article.title} />
+            <ArticleShareActions title={article.title} shareVersion={article.shareVersion} />
           </article>
           <aside className="border-t border-[#071A2A]/15 pt-6 lg:border-l lg:border-t-0 lg:pl-8" aria-label="Article information">
             <p className="text-xs font-bold uppercase tracking-[.16em] text-[#B96F38]">Ereteam perspective</p>

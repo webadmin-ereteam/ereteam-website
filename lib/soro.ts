@@ -1,5 +1,6 @@
 import "server-only";
 
+import { createHash } from "crypto";
 import Parser from "rss-parser";
 import sanitizeHtml from "sanitize-html";
 import { decode } from "he";
@@ -30,6 +31,7 @@ export interface SoroArticle {
   category?: string;
   image?: string;
   sourceUrl?: string;
+  shareVersion: string;
 }
 
 const parser = new Parser<Record<string, never>, SoroFeedItem>({
@@ -122,6 +124,12 @@ async function fetchSoroArticles(): Promise<SoroArticle[]> {
         const slug = duplicateNumber ? `${baseSlug}-${duplicateNumber + 1}` : baseSlug;
         const rawContent = item.fullContent || item.content || item.contentSnippet || item.summary || item.description || "";
         const excerpt = plainText(item.contentSnippet || item.summary || item.description || rawContent).slice(0, 220);
+        const publishedAt = validDate(item.isoDate || item.pubDate);
+        const image = item.enclosure?.url || item.media?.$?.url || firstImage(rawContent);
+        const shareVersion = createHash("sha256")
+          .update(JSON.stringify([title, excerpt, rawContent, image, publishedAt]))
+          .digest("hex")
+          .slice(0, 12);
 
         return {
           title,
@@ -129,11 +137,12 @@ async function fetchSoroArticles(): Promise<SoroArticle[]> {
           excerpt,
           content: safeArticleHtml(rawContent),
           plainContent: plainText(rawContent),
-          publishedAt: validDate(item.isoDate || item.pubDate),
+          publishedAt,
           author: plainText(item.creator || item.author),
           category: item.categories?.[0] ? plainText(item.categories[0]) : undefined,
-          image: item.enclosure?.url || item.media?.$?.url || firstImage(rawContent),
+          image,
           sourceUrl: item.link,
+          shareVersion,
         };
       });
   } catch (error) {
