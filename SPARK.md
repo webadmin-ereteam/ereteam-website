@@ -11,7 +11,7 @@ this file; do not use `PRESALES.md` as Spark documentation.
 - `/api/cron/spark` — Vercel Cron endpoint
 - `/api/spark/refresh` — Spark-session-protected manual refresh with a ten-minute cooldown
 - `/api/spark/chat` — Spark-session-protected, salt-okunur canlı HubSpot veri asistanı
-- `/api/spark/amplemarket/webhook` — authenticated Amplemarket event receiver
+- `/api/spark/amplemarket/webhook` — authenticated Amplemarket meeting receiver
 
 ## Schedule and reporting window
 
@@ -26,8 +26,7 @@ reach a new deployment, so redeploy after changing a secret.
 
 - HubSpot API: deals, invoices, orders, associations, owners and drill-down links
 - Vercel environment: reporting-year `Lisans + Servis` annual target
-- Amplemarket: webhook events stored in `SparkAmplemarketEvent`; the API key is
-  validated through `/account-info`
+- Amplemarket: Meeting Booked webhook events stored in `SparkAmplemarketEvent`
 
 The dashboard does not include an admin screen or historical archive. Data is
 cached and refreshed daily; source health is shown separately.
@@ -139,7 +138,6 @@ SPARK_PASSWORD=
 SPARK_LICENSE_TARGET_2026=1846145
 SPARK_SERVICE_TARGET_2026=4029926
 CRON_SECRET=
-AMPLEMARKET_API_KEY=
 AMPLEMARKET_WEBHOOK_SECRET=
 ```
 
@@ -193,61 +191,26 @@ The technical order-date property name is never rendered in the UI.
 
 ## Amplemarket webhook
 
-Use `/api/spark/amplemarket/webhook?key=<AMPLEMARKET_WEBHOOK_SECRET>` for all
-three active feeds:
+Use `/api/spark/amplemarket/webhook?key=<AMPLEMARKET_WEBHOOK_SECRET>` only for
+the Meeting Booked workflow. It must send `event_type: meeting` and the
+person/company details. Spark ignores every non-meeting Amplemarket event and
+does not report sent, Bulk, Duo, reply, positive, conversion or owner-send
+metrics. The former Analytics backfill endpoint and internal sync page were
+removed because that reporting could not remain reliably current.
 
-1. JSON Data: Email and LinkedIn activity on, `All new contacts`; this supplies
-   sends and all replies.
-2. Interested workflow: `event_type: positive`; this supplies the positive
-   subset.
-3. Meeting Booked workflow: `event_type: meeting`; this supplies meetings and
-   their person/company details.
-
-The separate All Replies workflow must remain paused because JSON Data already
-supplies replies. `replies` counts only `reply` events; positive events are not
-added again. Call, generic task, SMS/iMessage and WhatsApp JSON Data feeds are
-off. Workflow headers remain empty because authentication uses the URL key.
-Spark stores source events for rolling aggregation, not dashboard archives.
-Remove dummy `John Doe`/`Jane Doe` events after testing.
-
-Lead Generation follows the approved standalone HTML: exact sent, bulk, Duo,
-reply, positive and meeting totals; person-level bulk/Duo/total send breakdown;
-positive/reply conversion; and meetings booked within the rolling seven-day
-window. Manually entered priorities and action lists are not rendered.
-
-Bulk/Duo classification uses Amplemarket's `creation_method`: `duo` is Duo;
-`manual` and `ai_assisted` are bulk sequences. Never assume an unclassified sent
-event is bulk. Owner labels use the webhook's `user.first_name` and
-`user.last_name` (or `dynamic_fields.sender`); known Ereteam e-mail addresses
-are mapped to full names only when the source omits those fields.
+The dashboard shows only meetings booked within the rolling seven-day window,
+using the booking date rather than the scheduled meeting date. Owner labels use
+the webhook's `user.first_name` and `user.last_name` (or
+`dynamic_fields.sender`); known Ereteam e-mail addresses are mapped to full
+names only when the source omits those fields. Workflow headers remain empty
+because authentication uses the URL key.
 
 The live dashboard must preserve the visual hierarchy and interaction model of
 the approved standalone Spark HTML: branded dark header, three written numeric
 executive-summary cards, four KPI cards, dark weekly movement strip with inline
 deal-list buttons, target and invoicing cards, grouped New Business view,
-monthly trend, forecast and Lead Generation. Do not add a separate weekly deal
+monthly trend, forecast and Amplemarket meetings. Do not add a separate weekly deal
 movement card. Million-scale compact values always show two decimal places.
-
-The public Amplemarket REST API is used only for connection validation because
-it does not expose historical weekly sent/reply analytics. The official webhook
-payload also does not guarantee `creation_method`; exact Bulk/Duo send splits
-therefore require Amplemarket Analytics reconciliation. Never fill missing
-historical periods with sample values or silently classify unknown sends as
-bulk.
-
-Amplemarket MCP Analytics can provide exact daily owner and bulk/Duo
-aggregates. Submit those rows to the authenticated
-`/api/spark/amplemarket/backfill` endpoint. The endpoint creates deterministic,
-deduplicated source events and a daily coverage marker. On covered dates the
-Analytics send totals replace, rather than duplicate, raw webhook send events.
-Submitting a covered date again atomically replaces its earlier Analytics rows,
-then refreshes the dashboard cache. Webhooks remain authoritative for replies,
-positive replies and meetings; Analytics is authoritative for the sent
-Bulk/Duo split.
-
-Authenticated Spark users can submit the same rows without exposing the
-webhook secret at `/spark/amplemarket-sync`. This internal route is intentionally
-not linked from the dashboard.
 
 ## Commands
 

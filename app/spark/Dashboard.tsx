@@ -109,15 +109,6 @@ function RecordTable({
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className={styles.metric}>
-      <b>{value}</b>
-      <small>{label}</small>
-    </div>
-  );
-}
-
 export default function Dashboard({
   data,
   sources,
@@ -155,10 +146,6 @@ export default function Dashboard({
     ...data.monthlyInvoiceTrend.map((item) => item.amount),
     1,
   );
-  const positiveRate = data.leadGeneration.replies
-    ? pct(data.leadGeneration.positive ?? 0, data.leadGeneration.replies)
-    : 0;
-  const owners = data.leadGeneration.owners ?? [];
   const nb = data.newBusiness;
   const currentMonth = monthName(data.periodEnd);
   const dealRows =
@@ -778,109 +765,11 @@ export default function Dashboard({
 
       <section className={`${styles.card} ${styles.pad}`}>
         <div className={styles.cardHead}>
-          <h3>Lead generation</h3>
-          <small>Amplemarket funnel · son 7 gün</small>
+          <h3>Amplemarket toplantıları</h3>
+          <small>Son 7 gün · {data.leadGeneration.meetings.length} toplantı</small>
         </div>
         {sources.amplemarket.ok ? (
           <>
-            <div className={styles.metricStrip}>
-              <Metric
-                label="Sent"
-                value={String(data.leadGeneration.sent ?? 0)}
-              />
-              <Metric
-                label="Toplu sequence"
-                value={String(data.leadGeneration.bulk ?? 0)}
-              />
-              <Metric
-                label="Duo sequence"
-                value={String(data.leadGeneration.duo ?? 0)}
-              />
-              <Metric
-                label="Reply"
-                value={String(data.leadGeneration.replies ?? 0)}
-              />
-              <Metric
-                label="Positive"
-                value={String(data.leadGeneration.positive ?? 0)}
-              />
-              <Metric
-                label="Meeting"
-                value={String(data.leadGeneration.meetings.length)}
-              />
-            </div>
-            <div className={styles.cardHead}>
-              <h3>Kişi bazında gönderimler</h3>
-              <small>Toplu + Duo</small>
-            </div>
-            {owners.length ? (
-              <div className={styles.tableWrap}>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Kişi</th>
-                      <th>Toplu sequence</th>
-                      <th>Duo sequence</th>
-                      <th>Toplam</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {owners.map((owner) => (
-                      <tr key={owner.owner}>
-                        <td>
-                          <b>{ownerName(owner.owner)}</b>
-                        </td>
-                        <td>{owner.bulk}</td>
-                        <td>{owner.duo}</td>
-                        <td>
-                          <b>{owner.total}</b>
-                        </td>
-                      </tr>
-                    ))}
-                    <tr>
-                      <td>
-                        <b>Toplam</b>
-                      </td>
-                      <td>
-                        <b>{data.leadGeneration.bulk ?? 0}</b>
-                      </td>
-                      <td>
-                        <b>{data.leadGeneration.duo ?? 0}</b>
-                      </td>
-                      <td>
-                        <b>{data.leadGeneration.sent ?? 0}</b>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className={styles.empty}>
-                Webhook etkinleştirildikten sonra oluşan haftalık gönderim
-                bulunmuyor.
-              </div>
-            )}
-            <div className={styles.progressRow}>
-              <div className={styles.progressMeta}>
-                <b>Positive / reply</b>
-                <span>%{positiveRate.toFixed(1)}</span>
-              </div>
-              <div className={styles.track}>
-                <div
-                  className={`${styles.forecastFill} ${styles.green}`}
-                  style={{ width: `${Math.min(positiveRate, 100)}%` }}
-                />
-              </div>
-            </div>
-            <div className={styles.insight}>
-              <b>AI Insight:</b> {data.leadGeneration.positive ?? 0} olumlu
-              yanıt, {data.leadGeneration.replies ?? 0} toplam yanıtın %
-              {positiveRate.toFixed(1)}&apos;ini oluşturuyor.
-            </div>
-            <div className={styles.cardHead}>
-              <h3>Bu hafta ayarlanan toplantılar</h3>
-              <small>Ayarlanma tarihi esas alınır</small>
-            </div>
             {data.leadGeneration.meetings.length ? (
               <div className={styles.tableWrap}>
                 <table>

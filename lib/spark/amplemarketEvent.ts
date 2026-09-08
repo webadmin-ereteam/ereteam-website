@@ -15,50 +15,6 @@ const asObject = (value: unknown): JsonObject =>
 const asString = (value: unknown) =>
   typeof value === "string" && value.trim() ? value.trim() : undefined;
 
-function findString(value: unknown, keys: Set<string>, depth = 0): string | undefined {
-  if (!value || typeof value !== "object" || depth > 5) return undefined;
-  if (Array.isArray(value)) {
-    for (const child of value) {
-      const match = findString(child, keys, depth + 1);
-      if (match) return match;
-    }
-    return undefined;
-  }
-  for (const [key, child] of Object.entries(value as JsonObject)) {
-    if (keys.has(key.toLowerCase())) {
-      const match = asString(child);
-      if (match) return match;
-    }
-  }
-  for (const child of Object.values(value as JsonObject)) {
-    const match = findString(child, keys, depth + 1);
-    if (match) return match;
-  }
-  return undefined;
-}
-
-export function amplemarketSequenceKind(
-  payload: unknown,
-  sequenceName?: string | null,
-): "bulk" | "duo" | undefined {
-  const method = findString(payload, new Set([
-    "creation_method",
-    "sequence_kind",
-    "sequencekind",
-    "sequence_type",
-  ]))?.toLocaleLowerCase("en-US").replace(/[\s-]+/g, "_");
-
-  if (method === "duo" || method === "duo_copilot") return "duo";
-  if (["manual", "ai_assisted", "bulk", "standard"].includes(method || "")) return "bulk";
-  if (/\bduo\b/i.test(sequenceName || "")) return "duo";
-  return undefined;
-}
-
-export function isAmplemarketAnalyticsBackfill(payload: unknown) {
-  const source = asString(asObject(payload).source)?.toLocaleLowerCase("en-US");
-  return source === "amplemarket-mcp-backfill" || source === "amplemarket-analytics-snapshot";
-}
-
 export function amplemarketOwnerEmail(payload: unknown, fallback?: string | null) {
   const root = asObject(payload);
   const user = asObject(root.user);

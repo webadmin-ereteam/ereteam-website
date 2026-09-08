@@ -2,7 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/presales/db";
 import { Prisma } from "@/lib/generated/prisma/client";
-import { amplemarketOwnerEmail, amplemarketSequenceKind } from "@/lib/spark/amplemarketEvent";
+import { amplemarketOwnerEmail } from "@/lib/spark/amplemarketEvent";
 
 export const dynamic = "force-dynamic";
 
@@ -27,18 +27,16 @@ export async function POST(request: NextRequest) {
     : payload;
   const tags = Array.isArray(emailMessage.tag) ? emailMessage.tag.map(String) : [];
   const normalizedTags = tags.map((tag: string) => tag.toLowerCase());
-  const activityType = string(stage.type)?.toLowerCase();
   const rawType = string(payload.event_type)?.toLowerCase();
-  const positive = normalizedTags.includes("interested") || rawType === "positive" || rawType === "interested";
   const meeting = rawType?.includes("meeting") || normalizedTags.some((tag: string) => tag.includes("meeting"));
-  const isMessage = ["email", "linkedin_message", "linkedin_voice_message", "linkedin_video_message"].includes(activityType || "");
-  const eventType = meeting ? "meeting" : positive ? "positive" : rawType === "reply" || payload.is_reply === true ? "reply" : isMessage ? "sent" : "activity";
+  if (!meeting) return NextResponse.json({ ok: true, ignored: true });
+
+  const eventType = "meeting";
   const occurredValue = string(payload.date) || string(emailMessage.date) || string(stage.sending_date) || new Date().toISOString();
   const occurredAt = new Date(occurredValue);
   if (!Number.isFinite(occurredAt.getTime())) return NextResponse.json({ error: "Invalid event date" }, { status: 400 });
 
   const sequenceName = string(sequence.name);
-  const sequenceKind = amplemarketSequenceKind(payload, sequenceName);
   const externalId = string(payload.id) || string(emailMessage.id) || createHash("sha256").update(JSON.stringify(payload)).digest("hex");
   const firstName = string(dynamic.first_name); const lastName = string(dynamic.last_name);
 
@@ -46,7 +44,7 @@ export async function POST(request: NextRequest) {
     where: { externalId },
     update: {},
     create: {
-      externalId, eventType, sequenceKind, sequenceName,
+      externalId, eventType, sequenceName,
       ownerEmail: amplemarketOwnerEmail(payload),
       personName: [firstName, lastName].filter(Boolean).join(" ") || string(dynamic.name),
       companyName: string(dynamic.company_name) || string(dynamic.account_name), occurredAt,

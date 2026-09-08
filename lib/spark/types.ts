@@ -42,12 +42,6 @@ export type SparkData = {
     sameYearOrders: SparkRecord[];
   };
   leadGeneration: {
-    sent: number | null;
-    bulk: number | null;
-    duo: number | null;
-    replies: number | null;
-    positive: number | null;
-    owners: Array<{ owner: string; bulk: number; duo: number; total: number }>;
     meetings: Array<{ person: string; company: string; bookedAt: string; owner?: string }>;
   };
 };
