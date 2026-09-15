@@ -317,16 +317,6 @@ export default function Dashboard({
         </div>
         <div className={styles.kpis}>
           <article
-            className={`${styles.card} ${styles.kpi} ${styles.kpiGreen}`}
-          >
-            <div className={styles.label}>Yıl hedefi · Fatura + sipariş</div>
-            <div className={styles.value}>%{coveragePct.toFixed(2)}</div>
-            <div className={styles.sub}>
-              {shortMoney(coverage)} / {shortMoney(data.target)}
-            </div>
-            <span className={styles.chip}>Lisans + Servis</span>
-          </article>
-          <article
             className={`${styles.card} ${styles.kpi} ${styles.kpiTeal}`}
           >
             <div className={styles.label}>
@@ -339,6 +329,16 @@ export default function Dashboard({
             <span className={styles.chip}>
               Bu yıl weighted {shortMoney(data.yearWeightedPipeline)}
             </span>
+          </article>
+          <article
+            className={`${styles.card} ${styles.kpi} ${styles.kpiGreen}`}
+          >
+            <div className={styles.label}>Yıl hedefi · Fatura + sipariş</div>
+            <div className={styles.value}>%{coveragePct.toFixed(2)}</div>
+            <div className={styles.sub}>
+              {shortMoney(coverage)} / {shortMoney(data.target)}
+            </div>
+            <span className={styles.chip}>Lisans + Servis</span>
           </article>
           <article className={`${styles.card} ${styles.kpi} ${styles.kpiBlue}`}>
             <div className={styles.label}>Toplam pipeline</div>
