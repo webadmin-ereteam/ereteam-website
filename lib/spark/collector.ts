@@ -1,5 +1,4 @@
 import { fetchAnnualTarget } from "./budget";
-import { fetchAmplemarket } from "./amplemarket";
 import {
   dealRecord,
   fetchHubSpotData,
@@ -19,7 +18,6 @@ export async function collectSparkData(now = new Date()): Promise<{ data: SparkD
   const sourceState: SparkSourceState = {
     hubspot: { ok: false },
     budget: { ok: false },
-    amplemarket: { ok: false },
   };
 
   const hubspot = await fetchHubSpotData();
@@ -38,6 +36,10 @@ export async function collectSparkData(now = new Date()): Promise<{ data: SparkD
   const weeklyNewDeals = activeDeals.filter((deal) => isBetween(deal.properties.createdate, start, end)).map((row) => dealRecord(row, ownerMap));
   const weeklyWon = deals.filter((deal) => isWon(deal) && isBetween(deal.properties.closedate, start, end)).map((row) => dealRecord(row, ownerMap));
   const weeklyLost = deals.filter((deal) => isLost(deal) && isBetween(deal.properties.closedate, start, end)).map((row) => dealRecord(row, ownerMap));
+  const currentMonthOpenDeals = activeDeals
+    .filter((deal) => isReportingMonth(deal.properties.closedate, year, month))
+    .map((row) => dealRecord(row, ownerMap))
+    .sort((left, right) => new Date(left.date || 0).getTime() - new Date(right.date || 0).getTime());
 
   const newBusinessDeals = deals.filter((deal) => isWon(deal) && hubspotHelpers.lower(deal.properties.dealtype) === "newbusiness");
   const newBusinessIds = new Set(newBusinessDeals.map((deal) => deal.id));
@@ -69,14 +71,6 @@ export async function collectSparkData(now = new Date()): Promise<{ data: SparkD
     sourceState.budget = { ok: false, message: error instanceof Error ? error.message : "Hedef okunamadı" };
   }
 
-  let leadGeneration: SparkData["leadGeneration"] = { meetings: [] };
-  try {
-    leadGeneration = await fetchAmplemarket(start, end);
-    sourceState.amplemarket = { ok: true };
-  } catch (error) {
-    sourceState.amplemarket = { ok: false, message: error instanceof Error ? error.message : "Amplemarket okunamadı" };
-  }
-
   const monthlyInvoiceTrend = Array.from({ length: month }, (_, index) => ({
     month: new Intl.DateTimeFormat("tr-TR", { month: "short", timeZone: "Europe/Istanbul" }).format(new Date(Date.UTC(year, index, 1))),
     amount: invoiceRows.filter((row) => isReportingMonth(row.date, year, index + 1)).reduce((total, row) => total + row.amount, 0),
@@ -93,7 +87,7 @@ export async function collectSparkData(now = new Date()): Promise<{ data: SparkD
       return total + value * (probability > 1 ? probability / 100 : probability);
     }, 0),
     activeDeals: activeDeals.length,
-    weeklyNewPipeline: sum(weeklyNewDeals), weeklyNewDeals, weeklyWon, weeklyLost,
+    weeklyNewPipeline: sum(weeklyNewDeals), weeklyNewDeals, weeklyWon, weeklyLost, currentMonthOpenDeals,
     monthInvoices, monthOrders, monthlyInvoiceTrend,
     newBusiness: {
       invoices: nbInvoices,
@@ -102,7 +96,6 @@ export async function collectSparkData(now = new Date()): Promise<{ data: SparkD
       sameYearInvoices: nbInvoices.filter((row) => !row.carryover),
       sameYearOrders: nbOrders.filter((row) => !row.carryover),
     },
-    leadGeneration,
   };
   return { data, sourceState };
 }

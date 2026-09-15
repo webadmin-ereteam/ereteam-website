@@ -6,7 +6,6 @@ import { useState } from "react";
 import type {
   SparkData,
   SparkRecord,
-  SparkSourceState,
 } from "@/lib/spark/types";
 import styles from "./spark.module.css";
 import SparkChatWidget from "./SparkChatWidget";
@@ -54,17 +53,6 @@ const monthName = (value: string) =>
 const sum = (rows: SparkRecord[]) =>
   rows.reduce((total, row) => total + row.amount, 0);
 const pct = (part: number, whole: number) => (whole ? (part / whole) * 100 : 0);
-const ownerName = (value: string) =>
-  value.includes("@")
-    ? value
-        .split("@")[0]
-        .split(/[._-]/)
-        .map((part) =>
-          part ? part[0].toLocaleUpperCase("tr-TR") + part.slice(1) : "",
-        )
-        .join(" ")
-    : value;
-
 function RecordTable({
   rows,
   carryover = false,
@@ -111,10 +99,8 @@ function RecordTable({
 
 export default function Dashboard({
   data,
-  sources,
 }: {
   data: SparkData;
-  sources: SparkSourceState;
 }) {
   const router = useRouter();
   const [dealPanel, setDealPanel] = useState<"new" | "won" | "lost" | null>(
@@ -765,51 +751,17 @@ export default function Dashboard({
 
       <section className={`${styles.card} ${styles.pad}`}>
         <div className={styles.cardHead}>
-          <h3>Amplemarket toplantıları</h3>
-          <small>Son 7 gün · {data.leadGeneration.meetings.length} toplantı</small>
+          <h3>Bu ay kapanması beklenen açık deallar</h3>
+          <small>
+            {currentMonth} · {data.currentMonthOpenDeals.length} deal ·{" "}
+            {exactMoney(sum(data.currentMonthOpenDeals))}
+          </small>
         </div>
-        {sources.amplemarket.ok ? (
-          <>
-            {data.leadGeneration.meetings.length ? (
-              <div className={styles.tableWrap}>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Kişi</th>
-                      <th>Şirket</th>
-                      <th>Owner</th>
-                      <th>Ayarlanma tarihi</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.leadGeneration.meetings.map((meeting, index) => (
-                      <tr key={`${meeting.person}-${index}`}>
-                        <td>
-                          <b>{meeting.person}</b>
-                        </td>
-                        <td>{meeting.company}</td>
-                        <td>
-                          {meeting.owner ? ownerName(meeting.owner) : "-"}
-                        </td>
-                        <td>{date(meeting.bookedAt)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className={styles.empty}>
-                Amplemarket&apos;te bu hafta yeni ayarlanan toplantı bulunmuyor.
-              </div>
-            )}
-            <p className={styles.meetingNote}>
-              Bu bölüm yalnızca Amplemarket kampanyalarından gelen toplantıları
-              gösterir. Diğer kanallardan ayarlanan toplantılar burada yer almaz.
-            </p>
-          </>
+        {data.currentMonthOpenDeals.length ? (
+          <RecordTable rows={data.currentMonthOpenDeals} />
         ) : (
           <div className={styles.empty}>
-            Amplemarket bağlantısı şu anda veri sağlayamıyor.
+            {currentMonth} kapanış tarihli açık deal bulunmuyor.
           </div>
         )}
       </section>

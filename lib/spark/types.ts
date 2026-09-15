@@ -10,7 +10,7 @@ export type SparkRecord = {
 };
 
 export type SparkSourceState = Record<
-  "hubspot" | "budget" | "amplemarket",
+  "hubspot" | "budget",
   { ok: boolean; message?: string }
 >;
 
@@ -31,6 +31,7 @@ export type SparkData = {
   weeklyNewDeals: SparkRecord[];
   weeklyWon: SparkRecord[];
   weeklyLost: SparkRecord[];
+  currentMonthOpenDeals: SparkRecord[];
   monthInvoices: SparkRecord[];
   monthOrders: SparkRecord[];
   monthlyInvoiceTrend: Array<{ month: string; amount: number }>;
@@ -40,8 +41,5 @@ export type SparkData = {
     sameYearDeals: SparkRecord[];
     sameYearInvoices: SparkRecord[];
     sameYearOrders: SparkRecord[];
-  };
-  leadGeneration: {
-    meetings: Array<{ person: string; company: string; bookedAt: string; owner?: string }>;
   };
 };

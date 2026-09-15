@@ -11,7 +11,7 @@ this file; do not use `PRESALES.md` as Spark documentation.
 - `/api/cron/spark` — Vercel Cron endpoint
 - `/api/spark/refresh` — Spark-session-protected manual refresh with a ten-minute cooldown
 - `/api/spark/chat` — Spark-session-protected, salt-okunur canlı HubSpot veri asistanı
-- `/api/spark/amplemarket/webhook` — authenticated Amplemarket meeting receiver
+- `/api/spark/amplemarket/webhook` — legacy authenticated Amplemarket meeting receiver; not used by the dashboard
 
 ## Schedule and reporting window
 
@@ -26,7 +26,6 @@ reach a new deployment, so redeploy after changing a secret.
 
 - HubSpot API: deals, invoices, orders, associations, owners and drill-down links
 - Vercel environment: reporting-year `Lisans + Servis` annual target
-- Amplemarket: Meeting Booked webhook events stored in `SparkAmplemarketEvent`
 
 The dashboard does not include an admin screen or historical archive. Data is
 cached and refreshed daily; source health is shown separately.
@@ -181,6 +180,7 @@ The technical order-date property name is never rendered in the UI.
   distinguishable in drill-downs.
 - Monthly invoices/orders and weekly new/won/lost records have drill-down
   lists. Do not duplicate weekly deal movement elsewhere on the page.
+- Current-month open deals use `closedate` and exclude Closed Won and Closed Lost.
 - Monthly invoice/order cards use explicit record-count and `Kayıtları gör`
   calls to action. New Business drill-down controls live inside their metric
   cards; no separate list rows are shown below the cards, and only one inline
@@ -189,27 +189,16 @@ The technical order-date property name is never rendered in the UI.
   items, Business Development or automatically invented action priorities.
 - The executive summary is numeric and source-derived.
 
-## Amplemarket webhook
+## Legacy Amplemarket webhook
 
-Use `/api/spark/amplemarket/webhook?key=<AMPLEMARKET_WEBHOOK_SECRET>` only for
-the Meeting Booked workflow. It must send `event_type: meeting` and the
-person/company details. Spark ignores every non-meeting Amplemarket event and
-does not report sent, Bulk, Duo, reply, positive, conversion or owner-send
-metrics. The former Analytics backfill endpoint and internal sync page were
-removed because that reporting could not remain reliably current.
-
-The dashboard shows only meetings booked within the rolling seven-day window,
-using the booking date rather than the scheduled meeting date. Owner labels use
-the webhook's `user.first_name` and `user.last_name` (or
-`dynamic_fields.sender`); known Ereteam e-mail addresses are mapped to full
-names only when the source omits those fields. Workflow headers remain empty
-because authentication uses the URL key.
+The receiver and stored `SparkAmplemarketEvent` records remain available for
+legacy integrations, but Spark no longer reads or reports Amplemarket data.
 
 The live dashboard must preserve the visual hierarchy and interaction model of
 the approved standalone Spark HTML: branded dark header, three written numeric
 executive-summary cards, four KPI cards, dark weekly movement strip with inline
 deal-list buttons, target and invoicing cards, grouped New Business view,
-monthly trend, forecast and Amplemarket meetings. Do not add a separate weekly deal
+monthly trend, forecast and current-month open deals. Do not add a separate weekly deal
 movement card. Million-scale compact values always show two decimal places.
 
 ## Commands
