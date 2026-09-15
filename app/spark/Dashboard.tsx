@@ -122,6 +122,8 @@ export default function Dashboard({
   const [refreshMessage, setRefreshMessage] = useState("");
   const coverage = data.ytdInvoice + data.openOrders;
   const coveragePct = pct(coverage, data.target);
+  const forecastCoverage = coverage + data.yearWeightedPipeline;
+  const forecastCoveragePct = pct(forecastCoverage, data.target);
   const invoicePct = pct(data.ytdInvoice, data.target);
   const orderPct = pct(data.openOrders, data.target);
   const remaining = Math.max(data.target - coverage, 0);
@@ -323,6 +325,20 @@ export default function Dashboard({
               {shortMoney(coverage)} / {shortMoney(data.target)}
             </div>
             <span className={styles.chip}>Lisans + Servis</span>
+          </article>
+          <article
+            className={`${styles.card} ${styles.kpi} ${styles.kpiTeal}`}
+          >
+            <div className={styles.label}>
+              Yıl hedefi · Fatura + sipariş + weighted
+            </div>
+            <div className={styles.value}>%{forecastCoveragePct.toFixed(2)}</div>
+            <div className={styles.sub}>
+              {shortMoney(forecastCoverage)} / {shortMoney(data.target)}
+            </div>
+            <span className={styles.chip}>
+              Bu yıl weighted {shortMoney(data.yearWeightedPipeline)}
+            </span>
           </article>
           <article className={`${styles.card} ${styles.kpi} ${styles.kpiBlue}`}>
             <div className={styles.label}>Toplam pipeline</div>

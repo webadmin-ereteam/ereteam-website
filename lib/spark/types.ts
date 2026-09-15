@@ -26,6 +26,7 @@ export type SparkData = {
   monthExpected: number;
   pipeline: number;
   weightedForecast: number;
+  yearWeightedPipeline: number;
   activeDeals: number;
   weeklyNewPipeline: number;
   weeklyNewDeals: SparkRecord[];

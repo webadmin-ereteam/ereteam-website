@@ -40,6 +40,11 @@ export async function collectSparkData(now = new Date()): Promise<{ data: SparkD
     .filter((deal) => isReportingMonth(deal.properties.closedate, year, month))
     .map((row) => dealRecord(row, ownerMap))
     .sort((left, right) => new Date(left.date || 0).getTime() - new Date(right.date || 0).getTime());
+  const weightedAmount = (deal: HubSpotObject) => {
+    const value = hubspotHelpers.amount(deal, "amount_in_home_currency");
+    const probability = Number(deal.properties.hs_deal_stage_probability ?? dealStages.get(deal.properties.dealstage || "")?.probability ?? 0);
+    return value * (probability > 1 ? probability / 100 : probability);
+  };
 
   const newBusinessDeals = deals.filter((deal) => isWon(deal) && hubspotHelpers.lower(deal.properties.dealtype) === "newbusiness");
   const newBusinessIds = new Set(newBusinessDeals.map((deal) => deal.id));
@@ -81,11 +86,10 @@ export async function collectSparkData(now = new Date()): Promise<{ data: SparkD
     target,
     ytdInvoice: sum(invoiceRows), monthInvoice: sum(monthInvoices), openOrders: sum(orderRows), monthExpected: sum(monthOrders),
     pipeline: activeDeals.reduce((total, deal) => total + hubspotHelpers.amount(deal, "amount_in_home_currency"), 0),
-    weightedForecast: activeDeals.reduce((total, deal) => {
-      const value = hubspotHelpers.amount(deal, "amount_in_home_currency");
-      const probability = Number(deal.properties.hs_deal_stage_probability ?? dealStages.get(deal.properties.dealstage || "")?.probability ?? 0);
-      return total + value * (probability > 1 ? probability / 100 : probability);
-    }, 0),
+    weightedForecast: activeDeals.reduce((total, deal) => total + weightedAmount(deal), 0),
+    yearWeightedPipeline: activeDeals
+      .filter((deal) => isReportingYear(deal.properties.closedate, year))
+      .reduce((total, deal) => total + weightedAmount(deal), 0),
     activeDeals: activeDeals.length,
     weeklyNewPipeline: sum(weeklyNewDeals), weeklyNewDeals, weeklyWon, weeklyLost, currentMonthOpenDeals,
     monthInvoices, monthOrders, monthlyInvoiceTrend,

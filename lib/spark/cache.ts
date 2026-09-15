@@ -3,7 +3,7 @@ import { collectSparkData } from "./collector";
 
 export const getSparkData = unstable_cache(
   async () => collectSparkData(),
-  ["spark-current-dashboard-v2"],
+  ["spark-current-dashboard-v3"],
   { tags: ["spark-current-dashboard"], revalidate: 26 * 60 * 60 }
 );
 

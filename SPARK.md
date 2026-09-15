@@ -172,6 +172,9 @@ The technical order-date property name is never rendered in the UI.
 - Target coverage is YTD invoices plus reporting-year open orders, divided by
   the annual `Lisans + Servis` target. Changing either target variable requires
   a redeploy before it affects Spark.
+- Forecast coverage is reporting-year invoices plus reporting-year open orders
+  plus weighted active deals whose `closedate` is in the reporting year, divided
+  by the same annual target.
 - Invoice, order and deal values must use the company/home-currency USD fields
   above. Never substitute example or remembered totals.
 - New Business has two populations: all reporting-year invoices/open orders
