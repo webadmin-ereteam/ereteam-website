@@ -10,7 +10,7 @@ LinkedIn: https://www.linkedin.com/company/ereteam
 
 - Data, Cloud and AI: https://www.ereteam.com/services/data-cloud-ai
 - Financial Performance and IBM Planning Analytics: https://www.ereteam.com/services/financial-performance-intelligence
-- Marketing Intelligence and HCL Unica: https://www.ereteam.com/services/marketing-intelligence
+- Marketing Intelligence: https://www.ereteam.com/services/marketing-intelligence
 
 ## Ereteam products
 

@@ -75,8 +75,8 @@ const departments = [
     icon: Zap,
     title: "Marketing Technology",
     description:
-      "Implement and optimize enterprise marketing platforms for global FMCG, retail, and telecom clients. Deep hands-on expertise in HCL Unica — campaign management, audience segmentation, and omnichannel execution at scale.",
-    roles: ["HCL Unica Consultant", "Marketing Automation Specialist", "Campaign Technical Lead", "MarTech Integration Engineer"],
+      "Design and optimize enterprise marketing solutions for global FMCG, retail, and telecom clients, spanning campaign management, audience segmentation, personalization, and omnichannel execution at scale.",
+    roles: ["Marketing Intelligence Consultant", "Marketing Automation Specialist", "Campaign Technical Lead", "MarTech Integration Engineer"],
   },
   {
     icon: TrendingUp,

@@ -64,7 +64,7 @@ export const services = [
       "Data Governance & Quality",
       "Self-Service Analytics",
     ],
-    technologies: ["IBM", "AWS", "Databricks", "Snowflake", "HCL Software"],
+    technologies: ["IBM", "AWS", "Databricks", "Snowflake"],
   },
   {
     title: "Financial Performance & Intelligence",

@@ -30,8 +30,12 @@ async function buildChatContext(): Promise<string> {
         .join("\n")}`
     : "\nOPEN POSITIONS: No active postings at the moment. Visit /about/careers for updates.";
 
-  const partnersSection = partners.length > 0
-    ? `\nTECHNOLOGY PARTNERS: ${partners.map((p) => p.name).join(", ")}`
+  const currentPartners = partners.filter(
+    (partner) => !/\b(?:hcl|unica)\b/i.test(`${partner.name} ${partner.description ?? ""}`)
+  );
+
+  const partnersSection = currentPartners.length > 0
+    ? `\nTECHNOLOGY PARTNERS: ${currentPartners.map((p) => p.name).join(", ")}`
     : "";
 
   const partnersBoardSection = partnersBoard.length > 0

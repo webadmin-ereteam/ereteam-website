@@ -105,7 +105,7 @@ export const organizationSchema = {
     "Financial planning and analysis",
     "IBM Planning Analytics",
     "Marketing intelligence",
-    "HCL Unica",
+    "Campaign management",
     "Data governance",
   ],
 };

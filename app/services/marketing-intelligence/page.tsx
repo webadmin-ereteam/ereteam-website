@@ -11,10 +11,10 @@ const serviceAreas = [
     icon: Megaphone,
     color: "bg-blue-500",
     title: "Multichannel Campaign Management",
-    summary: "Inbound and outbound omnichannel orchestration (HCL Unica)",
+    summary: "Inbound and outbound omnichannel orchestration",
     content:
-      "We implement HCL Unica Campaign and Unica Interact to deliver fully orchestrated omnichannel campaigns — combining mass outbound (email, SMS, direct mail) with real-time inbound decisioning across web, mobile, and contact center channels. Our implementations cover audience selection, segmentation, suppression logic, offer management, and response tracking at enterprise scale.",
-    technologies: ["HCL Unica Campaign", "HCL Unica Interact", "HCL Unica Communicate"],
+      "We design and implement fully orchestrated omnichannel campaigns — combining mass outbound engagement across email, SMS, and direct mail with real-time decisioning across web, mobile, and contact center channels. Our work covers audience selection, segmentation, suppression logic, offer management, and response tracking at enterprise scale.",
+    technologies: ["Campaign Orchestration", "Real-Time Decisioning", "Channel Integration"],
     image: "/images/editorial/service-detail/marketing-multichannel-campaigns.jpg",
   },
   {
@@ -24,7 +24,7 @@ const serviceAreas = [
     summary: "Customer lifecycle tracking and conversion optimization",
     content:
       "We build customer journey analytics frameworks that stitch together touchpoints across channels and time — from first acquisition contact through onboarding, engagement, and retention events. By mapping drop-off points and conversion drivers at each lifecycle stage, we give marketing and CX teams the evidence base to intervene at the right moment.",
-    technologies: ["HCL Unica Campaign", "Tableau", "Python", "SQL"],
+    technologies: ["Tableau", "Python", "SQL", "Journey Analytics"],
     image: "/images/editorial/service-detail/marketing-journey-funnel.jpg",
   },
   {
@@ -33,8 +33,8 @@ const serviceAreas = [
     title: "Next Best Offer & Personalization",
     summary: "Real-time decisioning for banking, insurance, and retail",
     content:
-      "We design and deploy Next Best Offer (NBO) engines powered by HCL Unica Interact — serving personalized, context-aware offers in real time across inbound digital channels and contact center interactions. Our models factor in customer value, product eligibility, behavioral propensity scores, and business rules to recommend the most relevant offer at each moment.",
-    technologies: ["HCL Unica Interact", "DataRobot", "Python"],
+      "We design and deploy Next Best Offer (NBO) engines that serve personalized, context-aware offers in real time across inbound digital channels and contact center interactions. Our models factor in customer value, product eligibility, behavioral propensity scores, and business rules to recommend the most relevant offer at each moment.",
+    technologies: ["DataRobot", "Python", "Decisioning APIs"],
     image: "/images/editorial/service-detail/marketing-next-best-offer.jpg",
   },
   {
@@ -43,47 +43,47 @@ const serviceAreas = [
     title: "Customer Data Platform",
     summary: "Unified customer profiles and segment activation",
     content:
-      "We build unified customer data layers that consolidate behavioral, transactional, and demographic data into actionable customer profiles. These profiles feed directly into Unica segmentation and audience selection, ensuring every campaign and personalization decision is grounded in a complete, current view of the customer.",
-    technologies: ["HCL Unica Platform", "Python", "SQL", "AWS"],
+      "We build unified customer data layers that consolidate behavioral, transactional, and demographic data into actionable customer profiles. These profiles support segmentation and audience activation, ensuring every campaign and personalization decision is grounded in a complete, current view of the customer.",
+    technologies: ["Customer Data Platforms", "Python", "SQL", "AWS"],
     image: "/images/editorial/service-detail/marketing-customer-data-platform.jpg",
   },
   {
     icon: Monitor,
     color: "bg-sky-500",
     title: "Digital Analytics & Web Intelligence",
-    summary: "Session replay, heatmaps, UX diagnostics (HCL Discover)",
+    summary: "Session replay, heatmaps, and UX diagnostics",
     content:
-      "We implement HCL Discover (formerly Tealeaf) to give digital teams full visibility into online customer behavior — capturing session replays, interaction heatmaps, form analytics, and struggle detection. This enables product and CX teams to diagnose UX friction, investigate customer complaints, and continuously improve digital conversion rates.",
-    technologies: ["HCL Discover", "HCL Unica Platform"],
+      "We implement digital behavior analytics capabilities that give teams clear visibility into online customer experiences — including session replay, interaction heatmaps, form analytics, and struggle detection. This enables product and CX teams to diagnose UX friction, investigate customer complaints, and continuously improve digital conversion rates.",
+    technologies: ["Behavior Analytics", "Session Replay", "Journey Analytics"],
     image: "/images/editorial/service-detail/marketing-digital-analytics.jpg",
   },
   {
     icon: Settings,
     color: "bg-rose-500",
     title: "Marketing Operations",
-    summary: "Agency coordination, budget tracking, and asset lifecycle (Unica Plan)",
+    summary: "Agency coordination, budget tracking, and asset lifecycle",
     content:
-      "We implement HCL Unica Plan to bring structure and visibility to marketing operations — from campaign intake and creative brief management to agency workflow coordination, asset approvals, and budget tracking. Marketing teams get a governed, auditable process for every campaign from idea to in-market execution.",
-    technologies: ["HCL Unica Plan", "HCL Unica Director"],
+      "We bring structure and visibility to marketing operations — from campaign intake and creative brief management to agency workflow coordination, asset approvals, and budget tracking. Marketing teams get a governed, auditable process for every campaign from idea to in-market execution.",
+    technologies: ["Workflow Automation", "Budget Management", "Asset Governance"],
     image: "/images/editorial/service-detail/marketing-operations.jpg",
   },
 ];
 
-const techPartners = [
-  { name: "HCL Unica Platform" },
-  { name: "HCL Unica Campaign" },
-  { name: "HCL Unica Interact" },
-  { name: "HCL Unica Plan" },
-  { name: "HCL Unica Director" },
-  { name: "HCL Unica Communicate" },
-  { name: "HCL Discover" },
+const technologyExpertise = [
+  { name: "Campaign Orchestration" },
+  { name: "Customer Data Platforms" },
+  { name: "Real-Time Decisioning" },
+  { name: "Journey Analytics" },
+  { name: "DataRobot" },
+  { name: "Tableau" },
+  { name: "AWS" },
 ];
 
 const featuredUseCases = [
   {
     industry: "Banking",
     project: "Omnichannel Campaign Management",
-    technologies: ["HCL Unica Campaign", "HCL Unica Interact", "HCL Unica Communicate"],
+    technologies: ["Campaign Orchestration", "Real-Time Decisioning", "Channel Integration"],
     summary: "Implemented a unified marketing hub capable of orchestrating highly personalized, real-time inbound and mass outbound campaigns across all digital channels.",
     result: "Real-time inbound + mass SMS/email campaigns across full customer base",
     image: "https://images.unsplash.com/photo-1639754390580-2e7437267698?auto=format&fit=crop&q=80&w=1000",
@@ -91,23 +91,23 @@ const featuredUseCases = [
   {
     industry: "Banking",
     project: "Internet Banking UX Diagnostics",
-    technologies: ["HCL Discover"],
+    technologies: ["Session Replay", "Behavior Analytics"],
     summary: "Deployed advanced session replay and behavioral analytics to identify and resolve user friction points within the internet banking application.",
     result: "Session replay and struggle detection deployed for digital banking channel",
     image: "https://images.unsplash.com/photo-1621264448270-9ef00e88a935?auto=format&fit=crop&q=80&w=1000",
   },
   {
     industry: "Banking",
-    project: "Full Unica Suite Implementation",
-    technologies: ["HCL Unica Campaign", "HCL Unica Interact", "HCL Unica Plan"],
-    summary: "End-to-end deployment of the HCL Unica suite, enabling marketing teams to plan, execute, and analyze complex campaigns from a single interface.",
+    project: "Enterprise Marketing Platform Implementation",
+    technologies: ["Campaign Management", "Real-Time Decisioning", "Marketing Operations"],
+    summary: "Delivered an end-to-end enterprise marketing platform, enabling teams to plan, execute, and analyze complex campaigns through a unified operating model.",
     result: "Real-time and mass campaign management on a single unified platform",
     image: "/images/editorial/service-marketing-v2.png",
   },
   {
     industry: "Insurance",
     project: "Real-Time Online Insurance & Call Center Offers",
-    technologies: ["HCL Unica Interact", "HCL Unica Campaign"],
+    technologies: ["Real-Time Decisioning", "Campaign Management"],
     summary: "Integrated a custom loyalty module with real-time decisioning engines to provide Next-Best-Action recommendations to call center agents and online portals.",
     result: "Real-time NBO deployed online + contact center with custom loyalty module",
     image: "https://images.unsplash.com/photo-1707157281599-d155d1da5b4c?auto=format&fit=crop&q=80&w=1000",
@@ -115,7 +115,7 @@ const featuredUseCases = [
   {
     industry: "Aviation",
     project: "Marketing Operations Platform",
-    technologies: ["HCL Unica Plan"],
+    technologies: ["Marketing Operations", "Workflow Automation"],
     summary: "Digitalized marketing operations for a major airline, streamlining agency collaboration, campaign approvals, and budget tracking.",
     result: "Agency management, budget control, and asset lifecycle fully operationalized",
     image: "https://images.unsplash.com/photo-1556761175-4b46a572b786?auto=format&fit=crop&q=80&w=1000",
@@ -125,14 +125,14 @@ const featuredUseCases = [
 const processSteps = [
   { title: "Discover", description: "Audit current marketing tech stack and campaign workflows" },
   { title: "Design", description: "Define audience model, offer catalogue, and channel strategy" },
-  { title: "Build", description: "Implement Unica modules, integrate data sources, configure rules" },
+  { title: "Build", description: "Implement marketing capabilities, integrate data sources, and configure rules" },
   { title: "Optimize", description: "A/B test, refine NBO models, and scale across channels" },
 ];
 
 const whyStats = [
-  { stat: "5+", label: "Tier-1 banks running Unica in production via Ereteam" },
+  { stat: "5+", label: "Tier-1 banks supported by Ereteam marketing solutions" },
   { stat: "Real-time", label: "Inbound decisioning across web, mobile, and contact center" },
-  { stat: "Full suite", label: "Campaign, Interact, Plan, Director, Communicate — all covered" },
+  { stat: "End-to-end", label: "Campaigns, decisioning, analytics, and operations covered" },
 ];
 
 export default function MarketingIntelligencePage() {
@@ -141,7 +141,7 @@ export default function MarketingIntelligencePage() {
       <ServiceDetailHero
         title="Marketing Intelligence"
         tagline="Orchestrate personalized customer engagement in real time."
-        description="Powered by HCL Unica, we help organizations coordinate personalized customer engagement across every channel and turn campaign operations into a measurable enterprise capability."
+        description="We help organizations coordinate personalized customer engagement across every channel and turn campaign operations into a measurable enterprise capability."
         bullets={[
           "Omnichannel campaign management",
           "Real-time Next-Best-Action decisioning",
@@ -232,19 +232,19 @@ export default function MarketingIntelligencePage() {
         </div>
       </section>
 
-      {/* Technology Partners */}
+      {/* Technology Expertise */}
       <section className="py-16 bg-brand-light">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl font-extrabold text-brand-dark mb-8 text-center">
-            Technology Partners
+            Technology Expertise
           </h2>
           <div className="flex flex-wrap justify-center gap-3">
-            {techPartners.map((partner) => (
+            {technologyExpertise.map((technology) => (
               <div
-                key={partner.name}
+                key={technology.name}
                 className="px-5 py-3 bg-white rounded-xl border border-gray-200 shadow-sm"
               >
-                <span className="font-bold text-brand-dark">{partner.name}</span>
+                <span className="font-bold text-brand-dark">{technology.name}</span>
               </div>
             ))}
           </div>

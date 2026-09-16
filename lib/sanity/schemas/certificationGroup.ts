@@ -42,7 +42,7 @@ export const certificationGroupSchema = defineType({
         list: [
           { title: "🔵 Blue (IBM)", value: "blue" },
           { title: "🟠 Orange (AWS)", value: "orange" },
-          { title: "🔴 Red (HCL)", value: "red" },
+          { title: "🔴 Red", value: "red" },
           { title: "🩵 Sky (Alteryx)", value: "sky" },
           { title: "🩵 Cyan (Tableau)", value: "cyan" },
           { title: "🟣 Violet (DataRobot)", value: "violet" },

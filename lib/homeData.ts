@@ -105,7 +105,6 @@ export const selectedWork = [
 export const partners = [
   { name: "IBM", logo: "/logos/partners/ibm.png" },
   { name: "AWS", logo: "/logos/partners/aws.png" },
-  { name: "HCL Software", logo: "/logos/partners/hcl.png" },
   { name: "Databricks", logo: "/logos/partners/databricks.png" },
   { name: "Alteryx", logo: "/logos/partners/alteryx.png" },
   { name: "Tableau", logo: "/logos/partners/tableau.png" },

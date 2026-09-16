@@ -50,13 +50,6 @@ const partners = [
     order: 2,
   },
   {
-    name: "HCL Software",
-    description: "Authorized partner for the full HCL Unica suite and HCL Discover. Implementing omnichannel campaign management, marketing operations, and digital analytics for banking, insurance, and telecom.",
-    areas: ["Campaign Management", "Marketing Operations", "Digital Analytics", "Customer Experience"],
-    useCases: ["VakıfBank omnichannel campaigns", "Fibabanka campaign management", "Turkish Airlines marketing ops"],
-    order: 3,
-  },
-  {
     name: "Databricks",
     description: "Lakehouse architecture, MLflow, Delta Lake, and collaborative data engineering on the Databricks platform.",
     areas: ["Lakehouse Architecture", "MLflow & MLOps", "Delta Lake", "Data Engineering"],
@@ -132,16 +125,6 @@ const certGroups = [
       { name: "AWS Certified Developer — Associate", level: "Associate", color: "bg-orange-500" },
     ],
     order: 2,
-  },
-  {
-    vendor: "HCL Software",
-    description: "Authorized partner for the full HCL Unica marketing suite.",
-    certifications: [
-      { name: "HCL Unica Campaign — Expert", level: "Expert", color: "bg-red-700" },
-      { name: "HCL Unica Interact — Advanced", level: "Advanced", color: "bg-red-600" },
-      { name: "HCL Discover — Certified", level: "Certified", color: "bg-red-500" },
-    ],
-    order: 3,
   },
   {
     vendor: "Alteryx",

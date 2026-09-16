@@ -11,7 +11,6 @@ const client = createClient({
 const colorMap = {
   "certGroup-ibm":       "blue",
   "certGroup-aws":       "orange",
-  "certGroup-hcl":       "red",
   "certGroup-alteryx":   "sky",
   "certGroup-tableau":   "cyan",
   "certGroup-datarobot": "violet",

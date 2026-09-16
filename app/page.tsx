@@ -15,7 +15,7 @@ export const metadata = createPageMetadata({
   path: "/",
   image: "/images/editorial/hero-data-ai.png",
   absoluteTitle: true,
-  keywords: ["enterprise data analytics consulting", "AI consulting", "IBM Planning Analytics consulting", "HCL Unica consulting"],
+  keywords: ["enterprise data analytics consulting", "AI consulting", "IBM Planning Analytics consulting", "marketing intelligence consulting"],
 });
 
 export default function HomePage() {

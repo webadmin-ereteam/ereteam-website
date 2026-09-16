@@ -14,7 +14,7 @@ export const metadata: Metadata = createPageMetadata({
   description: "Explore Ereteam success stories across banking, insurance, telecom, pharma, retail and manufacturing, with measurable enterprise data and analytics outcomes.",
   path: "/use-cases",
   image: "/images/ai/usecases_bg.png",
-  keywords: ["data analytics case studies", "IBM Planning Analytics success stories", "enterprise AI case studies", "HCL Unica case studies"],
+  keywords: ["data analytics case studies", "IBM Planning Analytics success stories", "enterprise AI case studies", "marketing intelligence case studies"],
 });
 
 export default async function UseCasesPage() {

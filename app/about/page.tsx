@@ -59,7 +59,7 @@ export default function AboutPage() {
             <p className="mt-5 text-sm leading-7 text-text-muted">Founded in 2001 · New Jersey and Istanbul · 80+ data professionals</p>
           </div>
           <div className="space-y-6 text-lg leading-8 text-[#40515d]">
-            <p>Ereteam designs and delivers enterprise data systems that support decisions across finance, operations, marketing and executive leadership. Our work spans modern cloud data platforms, applied AI, IBM Planning Analytics, HCL Unica and purpose-built software products.</p>
+            <p>Ereteam designs and delivers enterprise data systems that support decisions across finance, operations, marketing and executive leadership. Our work spans modern cloud data platforms, applied AI, IBM Planning Analytics, marketing intelligence and purpose-built software products.</p>
             <p>We combine specialist consulting teams in the United States and Türkiye with delivery experience across 17 countries. The result is a firm built for complex, long-lived enterprise programs—not short-term technology installation.</p>
           </div>
         </div>

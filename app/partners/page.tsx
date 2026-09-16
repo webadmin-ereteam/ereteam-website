@@ -13,16 +13,15 @@ import EditorialOverviewHero from "@/components/sections/EditorialOverviewHero";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Technology Partners",
-  description: "Explore Ereteam's enterprise technology ecosystem across IBM, AWS, HCL Software, Databricks, Alteryx, Tableau, Snowflake and specialist platforms.",
+  description: "Explore Ereteam's enterprise technology ecosystem across IBM, AWS, Databricks, Alteryx, Tableau, Snowflake and specialist platforms.",
   path: "/partners",
   image: "/images/ai/partners_bg.png",
-  keywords: ["Ereteam partners", "IBM business partner", "HCL Software partner", "Databricks consulting partner"],
+  keywords: ["Ereteam partners", "IBM business partner", "AWS consulting partner", "Databricks consulting partner"],
 });
 
 const localLogos: Record<string, string> = {
   "IBM": "/logos/partners/ibm.png",
   "AWS": "/logos/partners/aws.png",
-  "HCL Software": "/logos/partners/hcl.png",
   "Databricks": "/logos/partners/databricks.png",
   "Alteryx": "/logos/partners/alteryx.png",
   "Tableau": "/logos/partners/tableau.png",
@@ -58,7 +57,9 @@ function PartnerLogo({ partner }: { partner: SanityPartner }) {
 }
 
 export default async function PartnersPage() {
-  const partners = await getAllPartners();
+  const partners = (await getAllPartners()).filter(
+    (partner) => !/\b(?:hcl|unica)\b/i.test(`${partner.name} ${partner.description ?? ""}`)
+  );
 
   return (
     <>
