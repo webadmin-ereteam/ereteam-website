@@ -68,5 +68,7 @@ export async function generateChatResponse(
     );
   }
 
-  return data.choices?.[0]?.message?.content || "";
+  const content = data.choices?.[0]?.message?.content?.trim();
+  if (!content) throw new LlmApiError("LLM returned an empty response", 502);
+  return content;
 }

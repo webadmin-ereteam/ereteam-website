@@ -44,9 +44,9 @@ async function buildChatContext(): Promise<string> {
 
   const linkedInSection = linkedInPosts.length > 0
     ? `\nRECENT LINKEDIN UPDATES (use these as current Ereteam sources and link users to the matching full post on the website):\n${linkedInPosts
-        .slice(0, 8)
+        .slice(0, 4)
         .map((post) => {
-          const excerpt = post.text.length > 900 ? `${post.text.slice(0, 900).trim()}…` : post.text;
+          const excerpt = post.text.length > 450 ? `${post.text.slice(0, 450).trim()}…` : post.text;
           const internalUrl = `/social-media?post=${encodeURIComponent(post.id)}`;
           return `- ${post.publishedAt.slice(0, 10)}${post.articleTitle ? ` — ${post.articleTitle}` : ""}: ${excerpt} [Read full post](${internalUrl})`;
         })
@@ -55,10 +55,10 @@ async function buildChatContext(): Promise<string> {
 
   const articlesSection = articles.length > 0
     ? `\nPUBLISHED ERETEAM ARTICLES (use these as authoritative Ereteam sources and link to the matching article):\n${articles
-        .slice(0, 8)
+        .slice(0, 4)
         .map((article) => {
-          const content = article.plainContent.length > 4_000
-            ? `${article.plainContent.slice(0, 4_000).trim()}…`
+          const content = article.plainContent.length > 1_200
+            ? `${article.plainContent.slice(0, 1_200).trim()}…`
             : article.plainContent;
           return `- ${article.title}: ${content} [Read article](/insights/articles/${article.slug})`;
         })
@@ -106,6 +106,6 @@ RULES:
 
 export const getChatContext = unstable_cache(
   buildChatContext,
-  ["chat-context-v4"],
+  ["chat-context-v5"],
   { tags: [CHAT_CACHE_TAG, LINKEDIN_CACHE_TAG, SORO_CACHE_TAG], revalidate: SORO_REVALIDATE_SECONDS }
 );

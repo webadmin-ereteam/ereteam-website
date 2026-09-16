@@ -22,6 +22,20 @@ const chatRequestSchema = z.object({
   sessionId: z.string().trim().min(1).max(100),
 });
 
+function recentMessagesWithinBudget(messages: ChatMessage[], maxCharacters = 8_000) {
+  const selected: ChatMessage[] = [];
+  let characters = 0;
+
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (characters + message.content.length > maxCharacters && selected.length > 0) break;
+    selected.unshift(message);
+    characters += message.content.length;
+  }
+
+  return selected;
+}
+
 export async function POST(req: NextRequest) {
   let logContext: { sessionId: string; page: string; question: string } | null = null;
 
@@ -62,15 +76,16 @@ export async function POST(req: NextRequest) {
       ? `\nCURRENT PAGE: The user is currently on the "${PAGE_LABELS[currentPage]}". Tailor your response accordingly.`
       : "";
 
-    const mappedMessages: ChatMessage[] = messages.map((m) => ({
+    const mappedMessages = recentMessagesWithinBudget(messages.map((m) => ({
       role: m.role,
       content: m.content,
-    }));
+    })));
 
     const text = await generateChatResponse(systemPrompt, mappedMessages, apiKey, pageContext, {
       model: process.env.SITE_CHAT_MODEL || "openai/gpt-oss-20b",
       temperature: 0.55,
       maxTokens: 700,
+      reasoningEffort: "low",
     });
 
     await logChatExchange({

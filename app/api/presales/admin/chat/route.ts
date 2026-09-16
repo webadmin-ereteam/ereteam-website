@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       mappedMessages,
       apiKey,
       `\n\nPRESALES VERİTABANI:\n${context}`,
-      { model: "llama-3.3-70b-versatile", temperature: 0.15, maxTokens: 700 }
+      { model: "openai/gpt-oss-20b", temperature: 0.15, maxTokens: 700, reasoningEffort: "low" }
     );
 
     return NextResponse.json({ content: text });
