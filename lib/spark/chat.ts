@@ -6,8 +6,13 @@ import {
   fetchHubSpotOwners,
   fetchHubSpotPropertyCatalog,
   fetchHubSpotStages,
+  hubspotDealState,
+  isHubSpotOpenOrder,
+  isIncludedInvoice,
+  validateInvoiceStatusProperty,
   type HubSpotObject,
   type HubSpotProperty,
+  type StageMap,
 } from "./hubspot";
 import { generateChatResponse, LlmApiError } from "@/lib/services/llmService";
 import {
@@ -202,6 +207,29 @@ export function resolveSparkDateRange(question: string, now = new Date()): DateR
     return { start: isoDate(selectedYear, halfYear.startMonth, 1), endExclusive, label: `${selectedYear} ${halfYear.label}` };
   }
 
+  if (/\b(ytd|year\s+to\s+date|yilbasindan\s+bugune)\b/.test(text)) {
+    return { start: isoDate(year, 1, 1), endExclusive: shiftCalendarDay(year, month, day, 1), label: "Yılbaşından bugüne" };
+  }
+  if (/\b(mtd|month\s+to\s+date|aybasindan\s+bugune)\b/.test(text)) {
+    return { start: isoDate(year, month, 1), endExclusive: shiftCalendarDay(year, month, day, 1), label: "Aybaşından bugüne" };
+  }
+  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  const daysSinceMonday = (weekday + 6) % 7;
+  if (/\bgecen\s+hafta\b/.test(text)) {
+    return {
+      start: shiftCalendarDay(year, month, day, -daysSinceMonday - 7),
+      endExclusive: shiftCalendarDay(year, month, day, -daysSinceMonday),
+      label: "Geçen hafta",
+    };
+  }
+  if (/\bbu\s+hafta\b/.test(text)) {
+    return {
+      start: shiftCalendarDay(year, month, day, -daysSinceMonday),
+      endExclusive: shiftCalendarDay(year, month, day, 1),
+      label: "Bu hafta",
+    };
+  }
+
   if (/\bgecen\s+ay\b/.test(text)) {
     return { start: isoDate(previousMonthYear, previousMonth, 1), endExclusive: isoDate(year, month, 1), label: "Geçen ay" };
   }
@@ -224,9 +252,9 @@ export function resolveSparkDateRange(question: string, now = new Date()): DateR
   if (/\bdun\b/.test(text)) {
     return { start: shiftCalendarDay(year, month, day, -1), endExclusive: isoDate(year, month, day), label: "Dün" };
   }
-  const rollingDays = text.match(/\bson\s+(7|30)\s+gun\b/)?.[1];
+  const rollingDays = text.match(/\bson\s+(\d{1,3})\s+gun\b/)?.[1];
   if (rollingDays) {
-    const days = Number(rollingDays);
+    const days = Math.min(Math.max(Number(rollingDays), 1), 365);
     return { start: shiftCalendarDay(year, month, day, 1 - days), endExclusive: shiftCalendarDay(year, month, day, 1), label: `Son ${days} gün` };
   }
   if (explicitYear) {
@@ -238,7 +266,7 @@ export function resolveSparkDateRange(question: string, now = new Date()): DateR
 
 function explicitObject(question: string): ObjectType | null {
   const text = semanticText(question);
-  if (/\bbeklenen\s+fatura/.test(text) || /\b(open|acik)\s+order\w*/.test(text)) return "orders";
+  if (/\bbeklenen\s+fatura/.test(text) || /\b(open|acik|aktif)\s+(order|siparis)\w*/.test(text)) return "orders";
   if (/\b(fatura|faturalan|invoice)/.test(text)) return "invoices";
   if (/\b(order\w*|siparis\w*)/.test(text)) return "orders";
   if (/\b(deal|firsat|pipeline|won|lost)/.test(text)) return "deals";
@@ -258,7 +286,7 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
   const domain = detectSparkDomain(text);
   const businessType = detectSparkDealBusinessType(text);
   const weightedPipelineIntent = SPARK_CHAT_KNOWLEDGE.compositeMetrics.weightedPipeline.pattern.test(text) || plan.metricKind === "weighted_pipeline";
-  const stageIntent = /\b(pipeline|aktif|acik\s+(firsat|order)|open|won|lost|kazanilan|kaybedilen|beklenen\s+fatura)\b/.test(text);
+  const stageIntent = /\b(pipeline|aktif|acik\s+(firsat|order|siparis)|open|won|lost|kazanilan|kaybedilen|beklenen\s+fatura)\b/.test(text);
   const possessiveOwner = text.match(/\b([a-z]{2,30})['’]?(?:nin|nun|in|un)\s+(?:deal\w*|firsat\w*|fatura\w*|order\w*|siparis\w*)\b/)?.[1];
   const companyIntent = SPARK_CHAT_KNOWLEDGE.companies.triggerPattern.test(text);
   const requestedGroupBy = detectSparkGroupBy(text);
@@ -346,7 +374,7 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
       filters = filters.filter((filter) => filter.property !== "dealtype");
       associatedDealFilters = associatedDealFilters.filter((filter) => filter.property !== "dealtype");
     }
-    if (!stageIntent) filters = filters.filter((filter) => !["dealstage", "hs_is_closed_won", "hs_pipeline_stage", "_stage_label"].includes(filter.property));
+    if (!stageIntent) filters = filters.filter((filter) => !["dealstage", "hs_is_closed", "hs_is_closed_won", "hs_pipeline_stage", "_stage_label", "_is_open", "_is_closed", "_is_won"].includes(filter.property));
     if (!ownerIntent) {
       filters = filters.filter((filter) => !["_owner_name", "hubspot_owner_id"].includes(filter.property));
       associatedDealFilters = associatedDealFilters.filter((filter) => !["_owner_name", "hubspot_owner_id"].includes(filter.property));
@@ -375,23 +403,23 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
       { property: dateProperty, operator: "lt", value: enforcedRange.endExclusive },
     );
   }
-  if (object === "orders" && (/\bbeklenen\s+fatura/.test(text) || /\b(open|acik)\s+order\w*/.test(text))) {
-    filters = filters.filter((filter) => filter.property !== "_stage_label");
-    filters.push({ property: "_stage_label", operator: "eq", value: "Open" });
+  if (object === "orders" && (/\bbeklenen\s+fatura/.test(text) || /\b(open|acik|aktif)\s+(order|siparis)\w*/.test(text))) {
+    filters = filters.filter((filter) => !["_stage_label", "hs_pipeline_stage", "_is_open"].includes(filter.property));
+    filters.push({ property: "_is_open", operator: "eq", value: "true" });
   }
   if (object === "deals") {
     if (/\b(pipeline|aktif|acik\s+firsat)/.test(text)) {
-      filters = filters.filter((filter) => !["dealstage", "hs_is_closed_won", "_stage_label"].includes(filter.property));
-      filters.push(
-        { property: "_stage_label", operator: "not_contains", value: "won" },
-        { property: "_stage_label", operator: "not_contains", value: "lost" },
-      );
+      filters = filters.filter((filter) => !["dealstage", "hs_is_closed", "hs_is_closed_won", "_stage_label", "_is_open", "_is_closed", "_is_won"].includes(filter.property));
+      filters.push({ property: "_is_open", operator: "eq", value: "true" });
     } else if (/\b(kazanilan|closed\s+won|won)\b/.test(text)) {
-      filters = filters.filter((filter) => filter.property !== "_stage_label");
-      filters.push({ property: "_stage_label", operator: "contains", value: "won" });
+      filters = filters.filter((filter) => !["dealstage", "hs_is_closed", "hs_is_closed_won", "_stage_label", "_is_open", "_is_closed", "_is_won"].includes(filter.property));
+      filters.push({ property: "_is_won", operator: "eq", value: "true" });
     } else if (/\b(kaybedilen|closed\s+lost|lost)\b/.test(text)) {
-      filters = filters.filter((filter) => filter.property !== "_stage_label");
-      filters.push({ property: "_stage_label", operator: "contains", value: "lost" });
+      filters = filters.filter((filter) => !["dealstage", "hs_is_closed", "hs_is_closed_won", "_stage_label", "_is_open", "_is_closed", "_is_won"].includes(filter.property));
+      filters.push(
+        { property: "_is_closed", operator: "eq", value: "true" },
+        { property: "_is_won", operator: "eq", value: "false" },
+      );
     }
   }
   if (object !== "deals") {
@@ -403,9 +431,9 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
     }
   }
   if (object !== "deals" && businessType) {
-    associatedDealFilters = associatedDealFilters.filter((filter) => !["dealtype", "_stage_label"].includes(filter.property));
+    associatedDealFilters = associatedDealFilters.filter((filter) => !["dealtype", "_stage_label", "_is_won"].includes(filter.property));
     associatedDealFilters.push({ property: "dealtype", operator: "eq", value: businessType });
-    if (businessType === "newbusiness") associatedDealFilters.push({ property: "_stage_label", operator: "contains", value: "won" });
+    if (businessType === "newbusiness") associatedDealFilters.push({ property: "_is_won", operator: "eq", value: "true" });
   }
   if (groupBy === "country" && countries.length) {
     filters = filters.filter((filter) => filter.property !== "country");
@@ -508,8 +536,50 @@ function catalogText(catalogs: Record<ObjectType, HubSpotProperty[]>, question: 
       const text = normalized(`${property.name} ${property.label}`);
       return required.has(property.name) || contextProperties.has(property.name) || terms.some((term) => text.includes(term));
     }).slice(0, 60);
-    return `${type}:\n${relevant.map((property) => `${property.name} | ${property.label}`).join("\n")}`;
+    return `${type}:\n${relevant.map((property) => {
+      const options = property.options?.filter((option) => !option.hidden).map((option) => option.value).slice(0, 40) ?? [];
+      return `${property.name} | ${property.label}${options.length ? ` | enum: ${options.join(", ")}` : ""}`;
+    }).join("\n")}`;
   }).join("\n\n");
+}
+
+function liveEnumValues(catalog: HubSpotProperty[], propertyName: string) {
+  return catalog.find((property) => property.name === propertyName)?.options
+    ?.filter((option) => !option.hidden)
+    .map((option) => option.value)
+    .filter(Boolean) ?? [];
+}
+
+function applyLiveCatalogContracts(plan: QueryPlan, question: string, catalogs: Record<ObjectType, HubSpotProperty[]>): QueryPlan {
+  const revenueIntent = detectSparkRevenueIntent(semanticText(question));
+  const catalog = catalogs[plan.object];
+  const liveRevenueValues = liveEnumValues(catalog, "revenue_type");
+  let filters = plan.filters;
+  if (revenueIntent?.kind === "service" && liveRevenueValues.length) {
+    const licenseValues = new Set(SPARK_CHAT_KNOWLEDGE.revenue.licenseValues.map(normalizeSparkChatText));
+    const serviceValues = liveRevenueValues.filter((value) => !licenseValues.has(normalizeSparkChatText(value)));
+    filters = filters.filter((filter) => filter.property !== "revenue_type");
+    if (serviceValues.length) filters.push({ property: "revenue_type", operator: "in", values: serviceValues });
+  }
+
+  const resolveEnumFilter = (filter: QueryPlan["filters"][number], objectCatalog: HubSpotProperty[]) => {
+    const property = objectCatalog.find((item) => item.name === filter.property);
+    if (!property?.options?.length) return filter;
+    const resolve = (value: string) => property.options?.find((option) =>
+      normalizeSparkChatText(option.value) === normalizeSparkChatText(value)
+      || normalizeSparkChatText(option.label) === normalizeSparkChatText(value)
+    )?.value ?? value;
+    return {
+      ...filter,
+      value: filter.value == null ? filter.value : resolve(filter.value),
+      values: filter.values?.map(resolve),
+    };
+  };
+  return planSchema.parse({
+    ...plan,
+    filters: filters.map((filter) => resolveEnumFilter(filter, catalog)),
+    associatedDealFilters: plan.associatedDealFilters.map((filter) => resolveEnumFilter(filter, catalogs.deals)),
+  });
 }
 
 async function createPlan(question: string, catalogs: Record<ObjectType, HubSpotProperty[]>, apiKey: string, context: SparkChatContextItem[], model: string, retry = false) {
@@ -524,7 +594,7 @@ Yalnızca API tarafından zorunlu tutulan sorgu planını döndür. Kullanılmay
 Her yanıtta şu anahtarların tamamını yaz: responseType, title, object, metricKind, properties, filters, associatedDealFilters, aggregate, groupBy, answer, sort, limit.
 Tek bir sayı/değer soruluyorsa metric, kayıtlar veya detaylar isteniyorsa records seç. Açıklama, yorum, selamlama veya "ne demek/nasıl hesaplanır" sorularında text seç ve yalnızca doğrulanmış sözleşmeye dayanan kısa Türkçe answer yaz. Metric için aggregate zorunlu. Tutar toplamında sum kullan. Kırılım istenirse metric ve groupBy kullan.
 Birleşik veya hesaplanmış iş metriği sorularında nesne kelimesine takılmadan metricKind seç; object alanını bileşen sorgusu için invoices yap. metricKind yalnız gerçekten bu iş anlamı varsa dolu olmalı.
-Sanal alanlar: _stage_label, _owner_name ve lisans/servis kırılımı için _revenue_group kullanılabilir. Tarih değerlerini YYYY-MM-DD yaz. "Bu ay", "geçen ay", "bu yıl", "geçen yıl", "bugün", "dün" ve "son 7/30 gün" ifadelerinde tam takvim aralığını uygula; tarih filtresini asla atlama.
+ Sanal alanlar: _stage_label, _owner_name, _is_open, _is_closed, _is_won ve lisans/servis kırılımı için _revenue_group kullanılabilir. Durum kararında stage label metnini yorumlama; sanal boolean alanları kullan. Tarih değerlerini YYYY-MM-DD yaz. "Bu ay", "geçen ay", "bu yıl", "geçen yıl", "YTD", "MTD", "bu/geçen hafta", "bugün", "dün" ve "son N gün" ifadelerinde tam takvim aralığını uygula; tarih filtresini asla atlama.
 Bağlı faturanın/orderın deal özellikleri sorulursa associatedDealFilters kullan. Örneğin New Business için dealtype eq newbusiness.
 Kayıt görünümünde gerekli isim, tarih, tutar, owner ve şirket alanlarını properties içine ekle. Verilen katalog dışında gerçek property uydurma.`,
       [{ role: "user", content: `${context.length ? `SON 5 KONUŞMA ÖZETİ VE DOĞRULANMIŞ SORGU BAĞLAMI (detay kayıt içermez):\n${JSON.stringify(context)}\n\nTakip sorusunda önceki queryContext kapsamını koru; yalnızca kullanıcı yeni nesne, dönem veya filtre belirttiyse ilgili kısmı değiştir.\n\n` : ""}SORU:\n${question}\n\nİLGİLİ PROPERTY KATALOĞU:\n${catalogText(catalogs, question, context)}${retry ? "\n\nÖnceki plan şemaya uymadı. Bu kez hiçbir istenen filtreyi atlamadan tüm zorunlu alanlarla geçerli, sade JSON üret." : ""}` }],
@@ -590,11 +660,17 @@ Kayıt görünümünde gerekli isim, tarih, tutar, owner ve şirket alanlarını
   }
   raw.limit = Math.min(100, Math.max(1, Number(raw.limit) || 50));
   raw.title = String(raw.title || "HubSpot canlı sonucu").slice(0, 100);
-  const plan = applySparkQueryGuardrails(planSchema.parse(raw), question, new Date(), context);
+  const plan = applyLiveCatalogContracts(
+    applySparkQueryGuardrails(planSchema.parse(raw), question, new Date(), context),
+    question,
+    catalogs,
+  );
   if (plan.responseType === "metric" && !plan.aggregate) throw new Error("Metric sorgusunda hesaplama eksik");
-  const virtualProperties = plan.object === "invoices" ? ["_owner_name", "_company_name", "_revenue_group"] : ["_owner_name", "_company_name", "_stage_label", "_revenue_group"];
+  const virtualProperties = plan.object === "invoices"
+    ? ["_owner_name", "_company_name", "_revenue_group"]
+    : ["_owner_name", "_company_name", "_stage_label", "_revenue_group", "_is_open", "_is_closed", "_is_won"];
   const objectFilterProperties = new Set([...catalogs[plan.object].map((property) => property.name), ...virtualProperties]);
-  const dealFilterProperties = new Set([...catalogs.deals.map((property) => property.name), "_owner_name", "_stage_label"]);
+  const dealFilterProperties = new Set([...catalogs.deals.map((property) => property.name), "_owner_name", "_stage_label", "_is_open", "_is_closed", "_is_won"]);
   const invalidFilter = plan.filters.find((filter) => !objectFilterProperties.has(filter.property));
   const invalidDealFilter = plan.associatedDealFilters.find((filter) => !dealFilterProperties.has(filter.property));
   const invalidProperty = plan.properties.find((property) => !objectFilterProperties.has(property));
@@ -614,8 +690,10 @@ function recordUrl(type: ObjectType, id: string) {
   return `https://app.hubspot.com/contacts/${portal}/objects/0-53?filters=%5B%7B%22property%22%3A%22hs_object_id%22%2C%22operator%22%3A%22EQ%22%2C%22value%22%3A%22${id}%22%7D%5D`;
 }
 
-function flatten(type: ObjectType, row: HubSpotObject, owners: Map<string, string>, stages: Map<string, { label: string }>): FlatRecord {
+function flatten(type: ObjectType, row: HubSpotObject, owners: Map<string, string>, stages: StageMap): FlatRecord {
   const stageKey = type === "deals" ? "dealstage" : type === "orders" ? "hs_pipeline_stage" : "";
+  const dealState = type === "deals" ? hubspotDealState(row, stages) : null;
+  const orderOpen = type === "orders" ? isHubSpotOpenOrder(row, stages) : false;
   const flat = {
     _id: row.id,
     _url: recordUrl(type, row.id),
@@ -625,6 +703,9 @@ function flatten(type: ObjectType, row: HubSpotObject, owners: Map<string, strin
     _company_name: type === "invoices" ? row.properties.hs_invoice_latest_company_name ?? ""
       : type === "deals" ? row.properties.dealname ?? "" : "",
     _stage_label: stageKey ? stages.get(row.properties[stageKey] ?? "")?.label ?? "" : "",
+    _is_open: String(dealState === "open" || orderOpen),
+    _is_closed: String(dealState === "won" || dealState === "lost"),
+    _is_won: String(dealState === "won"),
   };
   return {
     ...flat,
@@ -718,7 +799,7 @@ export function sparkChatComparableValue(value?: string | null) {
 
 export function sparkChatMatchesFilter(record: Record<string, string>, filter: z.infer<typeof filterSchema>) {
   const raw = record[filter.property] ?? "";
-  const multiValue = SPARK_CHAT_KNOWLEDGE.filterContracts.multiValueProperties.includes(filter.property as "vendor_name" | "revenue_type");
+  const multiValue = SPARK_CHAT_KNOWLEDGE.filterContracts.multiValueProperties.includes(filter.property as "vendor_name" | "revenue_type" | "_revenue_group");
   const tokens = multiValue ? sparkMultiValueTokens(raw) : [raw];
   const tokenMatches = (value?: string | null) => normalized(value) === "" && raw.trim() === ""
     ? true
@@ -836,9 +917,10 @@ export async function executeSparkChatQuery(question: string, apiKey: string, co
     fetchHubSpotPropertyCatalog("deals"), fetchHubSpotPropertyCatalog("invoices"), fetchHubSpotPropertyCatalog("orders"),
   ]));
   const catalogs: Record<ObjectType, HubSpotProperty[]> = { deals: dealCatalog, invoices: invoiceCatalog, orders: orderCatalog };
+  validateInvoiceStatusProperty(invoiceCatalog);
   if (detectedCompositeMetric) {
     const object = explicitObject(question) ?? "invoices";
-    const basePlan = applySparkQueryGuardrails(planSchema.parse({
+    const basePlan = applyLiveCatalogContracts(applySparkQueryGuardrails(planSchema.parse({
       responseType: "metric",
       title: detectedCompositeMetric === "guaranteed_revenue" ? "Garanti gelir" : "Beklenen gelir",
       object,
@@ -851,7 +933,7 @@ export async function executeSparkChatQuery(question: string, apiKey: string, co
       answer: null,
       sort: null,
       limit: 50,
-    }), question, new Date(), context);
+    }), question, new Date(), context), question, catalogs);
     return executeCompositeRevenueFromPlan(question, detectedCompositeMetric, basePlan, catalogs);
   }
   const plan = await stage("planner", async () => {
@@ -901,7 +983,7 @@ async function executeCompositeRevenueFromPlan(
           { property: dateProperty, operator: "lt", value: fullMonth.endExclusive },
         );
       }
-      filters.push({ property: "_stage_label", operator: "eq", value: "Open" });
+       filters.push({ property: "_is_open", operator: "eq", value: "true" });
     }
     return planSchema.parse({
       ...plan,
@@ -992,7 +1074,10 @@ async function executePlannedSparkQuery(plan: QueryPlan, catalogs: Record<Object
           : row._company_name),
     }));
   }
-  let filtered = flattenedRows.filter((row) => resolvedPlan.filters.every((filter) => sparkChatMatchesFilter(row, filter)));
+  let filtered = flattenedRows.filter((row) =>
+    (resolvedPlan.object !== "invoices" || isIncludedInvoice({ id: row._id, properties: row }))
+    && resolvedPlan.filters.every((filter) => sparkChatMatchesFilter(row, filter))
+  );
 
   if (resolvedPlan.associatedDealFilters.length && resolvedPlan.object !== "deals") {
     const associatedObject: "invoices" | "orders" = resolvedPlan.object;
@@ -1023,7 +1108,7 @@ async function executePlannedSparkQuery(plan: QueryPlan, catalogs: Record<Object
       const groupFilter = resolvedPlan.filters.find((filter) => filter.property === resolvedPlan.groupBy && ["eq", "in"].includes(filter.operator));
       const requestedGroups = groupFilter?.operator === "in" ? groupFilter.values ?? [] : groupFilter?.value ? [groupFilter.value] : [];
       const defaultGroups = resolvedPlan.groupBy === "_revenue_group" ? ["license", "service"] : [];
-      const multiValueGroup = SPARK_CHAT_KNOWLEDGE.filterContracts.multiValueProperties.includes(resolvedPlan.groupBy as "vendor_name" | "revenue_type");
+      const multiValueGroup = SPARK_CHAT_KNOWLEDGE.filterContracts.multiValueProperties.includes(resolvedPlan.groupBy as "vendor_name" | "revenue_type" | "_revenue_group");
       const discoveredGroups = filtered.flatMap((row) => {
         const values = multiValueGroup ? sparkMultiValueTokens(row[resolvedPlan.groupBy!]) : [row[resolvedPlan.groupBy!] ?? ""];
         return values.length ? values : [""];

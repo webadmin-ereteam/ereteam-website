@@ -27,6 +27,12 @@ reach a new deployment, so redeploy after changing a secret.
 - HubSpot API: deals, invoices, orders, associations, owners and drill-down links
 - Vercel environment: reporting-year `Lisans + Servis` annual target
 
+The management report includes a 12-month operating view, active pipeline stage
+funnel, country/vendor/revenue-type/domain breakdowns, and an action-oriented
+pipeline-hygiene section. Every amount in these sections has a HubSpot record
+drill-down. Activity, email and calendar metrics are intentionally excluded because
+their integrations are not reliable enough to be management-report sources.
+
 The dashboard does not include an admin screen or historical archive. Data is
 cached and refreshed daily; source health is shown separately.
 The header also shows the exact Istanbul update time. Authenticated users can
@@ -55,7 +61,8 @@ read-only, never exposes tokens to the browser, rate
 limits requests, and only works with a valid `spark_session`. Calculations use the
 approved USD fields. Common Turkish periods (`bu/geçen ay`, `bu/geçen yıl`,
 `ilk/ikinci/üçüncü/dördüncü çeyrek`, `Q1–Q4`, `yılın ilk/ikinci yarısı`, `H1/H2`,
-`bugün`, `dün`, `son 7/30 gün`), record type,
+`YTD/yılbaşından bugüne`, `MTD/aybaşından bugüne`, `bu/geçen hafta`, `bugün`,
+`dün`, `son N gün` up to 365 days), record type,
 amount/count intent and the matching
 HubSpot date/amount fields are enforced deterministically after planning. Invalid
 or incomplete filters, properties, sorting and aggregations trigger model fallback
@@ -77,6 +84,13 @@ to a fixed phrase list; deterministic code validates and executes the calculatio
 `Weighted pipeline`, `ağırlıklı pipeline` and `weighted forecast` sum the live
 `hs_projected_amount_in_home_currency` field for active deals; the chatbot does not
 recalculate HubSpot's projected amount.
+Invoice queries first validate that the live catalog contains the custom `status`
+enum with `invoiced` and `cancelled` options. Only records whose custom status is
+exactly `cancelled` are excluded; blank, `invoiced`, and any future non-cancelled
+value remain included. This rule is shared by the dashboard and assistant.
+Deal Open/Won/Lost and order Open filters use virtual state fields derived from
+HubSpot closed/won properties and live pipeline metadata. Stage labels are display
+values only and are never parsed for state decisions.
 Country intent uses the live `country` enum on deals, invoices and orders:
 `Türkiye`/`Turkey` map to `Turkiye`; `Amerika`/`ABD`/`USA`/`United States` map to
 `USA`. Country-only follow-ups retain the prior validated object and scope.
@@ -95,6 +109,11 @@ Existing Business map to `dealtype = newbusiness|existingbusiness`; invoice and 
 questions apply that classification through their associated deals. `vendor_name` and
 `revenue_type` are multi-select fields, so a semicolon-separated value matches each of
 its selected enums rather than behaving like one combined label.
+The assistant receives live enum options for relevant catalog properties. Static
+aliases recognize business language; execution resolves them to live enum values.
+Service means every current `revenue_type` option except `License` and `SNS`, so a
+new HubSpot service enum is not silently omitted. Mixed multi-select records such
+as `License;Project` contribute to both license and service breakdown groups.
 Ereteam expertise questions use `ereteam_domain` on all three objects: data work
 maps to `Data, Cloud & AI (DC&AI)`, finance work to `Enterprise Planning (EP)`,
 and marketing work to `Intelligent MarTech (IM)`.
@@ -110,6 +129,11 @@ aliases, grouped revenue definitions, planner rules and regression examples. Upd
 that file first when a new interpretation gap is found; runtime guardrails and the
 planner prompt both consume it. Run `npm run test:spark-chat` after every update;
 its regression cases are maintained in the same knowledge file.
+`lib/spark/hubspot.ts` is the single runtime source for invoice inclusion,
+deal-state and open-order classification. Do not duplicate these decisions in the
+dashboard or chatbot. The regression suite covers custom invoice status, blank
+status inclusion, metadata-based state decisions, multi-select revenue grouping,
+owner matching, date periods, intent guardrails and field selection.
 Metric questions can also return a deterministic multi-value breakdown through a
 validated `groupBy` property. For example, a Türkiye/USA country comparison returns
 both values and a short calculated difference sentence. Explanation, interpretation,
@@ -150,15 +174,21 @@ header. `SPARK_CRON_SECRET` is legacy and can be removed.
 ## HubSpot field contract
 
 - Invoice amount/date: `hs_amount_billed_in_company_currency`, `hs_invoice_date`
+- Invoice status: custom enum `status`, with contract values `invoiced` and
+  `cancelled`. Exclude only exact `cancelled`; include blank, `invoiced`, and any
+  other non-cancelled value. Do not use standard `hs_invoice_status`.
 - Order amount/date: `hs_homecurrency_amount`, `hs_processed_date` (internal only)
 - Deal amount: `amount_in_home_currency`
 - Guaranteed revenue: period invoices + period open orders
 - Expected invoice/revenue total: period invoices + period open orders; detail questions list open orders
 - Weighted pipeline: sum `hs_projected_amount_in_home_currency` over active deals
+- Deal state: `hs_is_closed`, `hs_is_closed_won`, and pipeline stage metadata;
+  labels are display-only and are never parsed to decide Open/Won/Lost state
 - Country: `country` with enum values `Turkiye` and `USA` on deals, invoices and orders
 - Vendor: `vendor_name` on deals, invoices and orders
 - Customer/company: virtual `_company_name`; direct HubSpot company association first, then invoice latest company name, deal name, or an order's associated deal names
-- Revenue classification: `revenue_type`; license revenue = `License` + `SNS`, service revenue = all other values
+- Revenue classification: `revenue_type`; license revenue = `License` + `SNS`,
+  service revenue = all other live enum options
 - Multi-select matching: `vendor_name` and `revenue_type` split HubSpot `;` values and match individual selected enums
 - Deal business type: `dealtype = newbusiness|existingbusiness`
 - Ereteam expertise: `ereteam_domain` with `Data, Cloud & AI (DC&AI)`, `Enterprise Planning (EP)`, and `Intelligent MarTech (IM)`
@@ -169,7 +199,7 @@ The technical order-date property name is never rendered in the UI.
 
 ## Reporting rules
 
-- Target coverage is YTD invoices plus reporting-year open orders, divided by
+- Target coverage is invoices through `generatedAt` plus reporting-year open orders, divided by
   the annual `Lisans + Servis` target. Changing either target variable requires
   a redeploy before it affects Spark.
 - Forecast coverage is reporting-year invoices plus reporting-year open orders
@@ -183,11 +213,19 @@ The technical order-date property name is never rendered in the UI.
   distinguishable in drill-downs.
 - Monthly invoices/orders and weekly new/won/lost records have drill-down
   lists. Do not duplicate weekly deal movement elsewhere on the page.
+- Weekly new deals use `createdate` across all deals, regardless of their current
+  open/won/lost state.
+- The 12-month operating table shows non-cancelled invoices through `generatedAt`, open orders, active
+  close-date pipeline and HubSpot projected weighted pipeline for every month in
+  the reporting year.
+- Revenue breakdowns use `country`, `vendor_name`, `revenue_type`, and
+  `ereteam_domain`. Missing values remain visible as `Belirtilmemiş`. Vendor and
+  revenue type are multi-select fields, so category totals may overlap.
+- Pipeline hygiene shows overdue, 90+ day, missing-close-date, missing-owner and
+  missing-amount active deals. A deal may appear in more than one action group.
 - Current-month open deals use `closedate` and exclude Closed Won and Closed Lost.
-- Monthly invoice/order cards use explicit record-count and `Kayıtları gör`
-  calls to action. New Business drill-down controls live inside their metric
-  cards; no separate list rows are shown below the cards, and only one inline
-  record table is open at a time.
+- Monthly, breakdown, funnel, New Business and hygiene values expose record-count
+  drill-downs in one shared modal; only one record detail modal is open at a time.
 - Do not show Pipeline Health Score, external meetings, manually entered focus
   items, Business Development or automatically invented action priorities.
 - The executive summary is numeric and source-derived.
@@ -197,12 +235,11 @@ The technical order-date property name is never rendered in the UI.
 The receiver and stored `SparkAmplemarketEvent` records remain available for
 legacy integrations, but Spark no longer reads or reports Amplemarket data.
 
-The live dashboard must preserve the visual hierarchy and interaction model of
-the approved standalone Spark HTML: branded dark header, three written numeric
-executive-summary cards, four KPI cards, dark weekly movement strip with inline
-deal-list buttons, target and invoicing cards, grouped New Business view,
-monthly trend, forecast and current-month open deals. Do not add a separate weekly deal
-movement card. Million-scale compact values always show two decimal places.
+The live dashboard uses a minimal management-report hierarchy: branded dark
+header, target/revenue/pipeline summary, compact weekly movement, 12-month table,
+stage funnel, revenue breakdowns, New Business, and pipeline hygiene. Record
+details open in one shared modal rather than expanding the page. Million-scale
+compact values always show two decimal places.
 
 ## Commands
 

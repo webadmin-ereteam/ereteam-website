@@ -38,10 +38,10 @@ export const SPARK_CHAT_KNOWLEDGE = {
   },
   filterContracts: {
     common: ["_company_name", "country", "vendor_name", "revenue_type", "ereteam_domain", "_owner_name"],
-    deals: ["createdate", "closedate", "_stage_label", "dealtype"],
+    deals: ["createdate", "closedate", "_stage_label", "_is_open", "_is_closed", "_is_won", "dealtype"],
     invoices: ["hs_invoice_date"],
-    orders: ["hs_processed_date", "_stage_label"],
-    multiValueProperties: ["vendor_name", "revenue_type"],
+    orders: ["hs_processed_date", "_stage_label", "_is_open"],
+    multiValueProperties: ["vendor_name", "revenue_type", "_revenue_group"],
     missingValueLabel: "Belirtilmemiş",
   },
   objects: {
@@ -49,14 +49,14 @@ export const SPARK_CHAT_KNOWLEDGE = {
       label: "Deal",
       dateProperty: "closedate",
       amountProperty: "amount_in_home_currency",
-      requiredProperties: ["dealname", "dealstage", "createdate", "closedate", "amount_in_home_currency", "hs_projected_amount_in_home_currency", "hs_is_closed_won", "dealtype", "country", "vendor_name", "revenue_type", "ereteam_domain", "hubspot_owner_id"],
+      requiredProperties: ["dealname", "dealstage", "createdate", "closedate", "amount_in_home_currency", "hs_projected_amount_in_home_currency", "hs_is_closed", "hs_is_closed_won", "dealtype", "country", "vendor_name", "revenue_type", "ereteam_domain", "hubspot_owner_id"],
       coreFields: ["dealname", "_company_name", "closedate", "amount_in_home_currency", "country", "vendor_name", "revenue_type", "ereteam_domain", "dealtype", "_owner_name", "_stage_label"],
     },
     invoices: {
       label: "Fatura",
       dateProperty: "hs_invoice_date",
       amountProperty: "hs_amount_billed_in_company_currency",
-      requiredProperties: ["hs_number", "invoice_name", "hs_invoice_latest_company_name", "hs_invoice_date", "hs_amount_billed_in_company_currency", "country", "vendor_name", "revenue_type", "ereteam_domain", "hubspot_owner_id"],
+      requiredProperties: ["hs_number", "invoice_name", "hs_invoice_latest_company_name", "hs_invoice_date", "hs_amount_billed_in_company_currency", "status", "country", "vendor_name", "revenue_type", "ereteam_domain", "hubspot_owner_id"],
       coreFields: ["hs_number", "invoice_name", "_company_name", "hs_invoice_date", "hs_amount_billed_in_company_currency", "country", "vendor_name", "revenue_type", "ereteam_domain", "_owner_name"],
     },
     orders: {
@@ -100,7 +100,7 @@ export const SPARK_CHAT_KNOWLEDGE = {
       invoices: ["Cloud", "License", "Outsource", "Project", "SNS", "Training", "Maintenance & Support", "Eski_Backlog"],
       orders: ["Cloud", "License", "Outsource", "Project", "SNS", "Training", "Maintenance & Support", "Engineering", "Eski_Backlog"],
     },
-    licenseGroupPatterns: [/\blisans\s+gelir/, /\bne\s+kadari\s+lisans\w*/, /\blisans\w*\s+toplam/],
+    licenseGroupPatterns: [/\b(lisans|license)\w*\b/],
     serviceGroupPatterns: [/\bservis\w*\b/, /\bdanismanlik\w*\b/],
     exactAliases: [
       { value: "License", pattern: /\b(lisans|license)\b/ },
@@ -168,10 +168,10 @@ export const SPARK_CHAT_KNOWLEDGE = {
     'İş metriğini kelime eşleşmesiyle sınırlama: Kullanıcının farklı bir ifadeyle gerçekleşen faturalar + açık order beklentisini sorması expected_revenue; garanti geliri sorması guaranteed_revenue; olasılık ağırlıklı aktif pipeline istemesi weighted_pipeline metricKind değeridir.',
     'expected_revenue için bu ay faturaları bugüne kadar, açık orderları ay sonuna kadar hesapla. Diğer açık dönemlerde iki bileşene de sorulan takvim aralığını uygula.',
     '"Faturalanan/kesilen fatura" object invoices demektir.',
-    '"Aktif pipeline/açık fırsat" Closed Won ve Closed Lost olmayan deal kayıtlarıdır. Won/Lost sorularında closedate kullan.',
-    '"Garanti gelir" aynı dönem için faturalanan gelir ile açık order toplamıdır. Fatura tarafında hs_invoice_date + hs_amount_billed_in_company_currency; order tarafında hs_processed_date + hs_homecurrency_amount + Open stage kullan.',
+    '"Aktif pipeline/açık fırsat" _is_open eq true; kazanılan/Won _is_won eq true; kaybedilen/Lost _is_closed eq true ve _is_won eq false kullanır. Won/Lost sorularında closedate kullan.',
+    'Invoice kapsamı custom status alanında cancelled olmayan kayıtlardır. "Garanti gelir" aynı dönem için faturalanan gelir ile açık order toplamıdır. Order tarafında hs_processed_date + hs_homecurrency_amount + _is_open eq true kullan.',
     '"Weighted pipeline/ağırlıklı pipeline/weighted forecast" yalnızca aktif deallardaki hazır hs_projected_amount_in_home_currency alanının toplamıdır. Bu alan HubSpot tarafından deal tutarı ve kapanma olasılığıyla hesaplanır; chatbot yeniden hesaplama yapmaz.',
-    "Fatura veya order için yeni iş/New Business sorusunda bağlı deal üzerinde dealtype eq newbusiness ve Closed Won filtresini associatedDealFilters ile uygula. Mevcut iş/Existing Business için bağlı deal üzerinde dealtype eq existingbusiness kullan.",
+    "Fatura veya order için yeni iş/New Business sorusunda bağlı deal üzerinde dealtype eq newbusiness ve _is_won eq true filtresini associatedDealFilters ile uygula. Mevcut iş/Existing Business için bağlı deal üzerinde dealtype eq existingbusiness kullan.",
     "country enumları Turkiye ve USA: Türkiye/Turkey -> Turkiye; Amerika/ABD/USA/United States -> USA.",
     'Müşteri/firma sorularında tüm nesnelerde sanal _company_name alanını kullan. Önce HubSpot company ilişkisini, ilişki yoksa nesnenin kontrollü müşteri adı yedeğini kullan. "Migros\'a kestiğimiz faturalar" müşteri Migros filtresidir; vendor değildir.',
     'vendor_name yalnızca kullanıcı açıkça vendor, satıcı, üretici, partner veya iş ortağı dediğinde kullanılır. "Vendorı IBM" ve "partneri IBM" vendor filtresidir.',
@@ -185,32 +185,33 @@ export const SPARK_CHAT_KNOWLEDGE = {
     "Kırılım, bazında, karşılaştırma veya iki rakam istenirse groupBy alanına ilgili property adını yaz; kategoriyi tek bir filtreye indirgeme. Boş sınıflandırmaları uydurma ve kırılımda Belirtilmemiş olarak koru.",
     "Kullanıcının istediği hiçbir dönem, owner, stage, tür veya bağlantı filtresini sessizce atlama. Katalogda olmayan property uydurma.",
     "Kullanıcının açıkça istemediği ülke, vendor, müşteri, revenue type, domain veya iş tipi filtresini ekleme. Geçerli bir HubSpot property olması, kendiliğinden filtre uygulama izni değildir.",
-    "Stage, pipeline, açık, won/kazanılan, lost/kaybedilen veya beklenen fatura açıkça söylenmedikçe dealstage, hs_is_closed_won, hs_pipeline_stage ya da _stage_label filtresi ekleme.",
+    "Stage, pipeline, açık, won/kazanılan, lost/kaybedilen veya beklenen fatura açıkça söylenmedikçe dealstage, hs_is_closed, hs_is_closed_won, hs_pipeline_stage, _stage_label, _is_open, _is_closed ya da _is_won filtresi ekleme.",
   ],
   regressionCases: [
     { question: "Geçen ay ne kadar fatura kestik?", object: "invoices", expectedProperty: "hs_invoice_date" },
     { question: "Geçen ay ABD servis faturalarının toplamı neydi?", object: "invoices", plannerMetricKind: "expected_revenue", expectedMetricKind: null, expectedProperty: "revenue_type", expectedValues: ["Cloud", "Outsource", "Project", "Training", "Maintenance & Support", "Eski_Backlog"] },
     { question: "Bu ay gerçekleşen faturalarla açık siparişleri beraber düşünürsek toplam ne eder?", object: "invoices", plannerMetricKind: "expected_revenue", expectedMetricKind: "expected_revenue", expectedResponseType: "metric" },
-    { question: "Bu ay beklenen faturaların detaylarını göster", object: "orders", expectedResponseType: "records", expectedFilterProperties: ["hs_processed_date", "_stage_label"], expectedDateRange: ["2026-08-01", "2026-09-01"] },
+    { question: "Bu ay beklenen faturaların detaylarını göster", object: "orders", expectedResponseType: "records", expectedFilterProperties: ["hs_processed_date", "_is_open"], expectedDateRange: ["2026-08-01", "2026-09-01"] },
     { question: "Türkiye faturaları ne kadar?", object: "invoices", expectedProperty: "country", expectedValues: ["Turkiye"] },
     { question: "IBM vendor aktif pipeline ne kadar?", object: "deals", expectedProperty: "vendor_name", expectedValues: ["IBM"] },
-    { question: "Weighted pipeline değerimiz ne kadar?", object: "deals", plannerFilters: [{ property: "hs_is_closed_won", operator: "neq", value: "true" }, { property: "dealstage", operator: "not_contains", value: "lost" }], expectedResponseType: "metric", expectedAggregateProperty: "hs_projected_amount_in_home_currency", expectedFilterProperties: ["_stage_label"], expectedForbiddenProperties: ["hs_is_closed_won", "dealstage"] },
+    { question: "Weighted pipeline değerimiz ne kadar?", object: "deals", plannerFilters: [{ property: "hs_is_closed_won", operator: "neq", value: "true" }, { property: "dealstage", operator: "not_contains", value: "lost" }], expectedResponseType: "metric", expectedAggregateProperty: "hs_projected_amount_in_home_currency", expectedFilterProperties: ["_is_open"], expectedForbiddenProperties: ["hs_is_closed_won", "dealstage", "_stage_label"] },
     { question: "Partneri IBM olan faturalar ne kadar?", object: "invoices", expectedProperty: "vendor_name", expectedValues: ["IBM"] },
     { question: "Migros'a kestiğimiz faturalar ne kadar?", object: "invoices", plannerFilters: [{ property: "vendor_name", operator: "eq", value: "Migros" }], expectedProperty: "_company_name", expectedValues: ["migros"], unexpectedProperty: "vendor_name" },
     { question: "Migros firmasına ait siparişleri göster", object: "orders", expectedProperty: "_company_name", expectedValues: ["migros"], expectedResponseType: "records" },
     { question: "Mevcut iş deallarının toplamı", object: "deals", expectedProperty: "dealtype", expectedValues: ["existingbusiness"] },
-    { question: "Yeni iş siparişlerinin toplamı ne kadar?", object: "orders", expectedAssociatedProperty: "dealtype", expectedAssociatedValues: ["newbusiness"], expectedAssociatedStage: "won" },
+    { question: "Yeni iş siparişlerinin toplamı ne kadar?", object: "orders", expectedAssociatedProperty: "dealtype", expectedAssociatedValues: ["newbusiness"], expectedAssociatedWon: true },
     { question: "Mevcut iş faturalarını göster", object: "invoices", expectedAssociatedProperty: "dealtype", expectedAssociatedValues: ["existingbusiness"], expectedResponseType: "records" },
     { question: "Ne kadarı lisanstı?", object: "invoices", expectedProperty: "revenue_type", expectedValues: ["License", "SNS"] },
     { question: "Ne kadarı servisti?", object: "invoices", expectedProperty: "revenue_type", excludedValues: ["License", "SNS"] },
     { question: "Finans işi faturaları ne kadar?", object: "invoices", expectedProperty: "ereteam_domain", expectedValues: ["Enterprise Planning (EP)"] },
     { question: "MarTech faturalarını göster", object: "invoices", expectedProperty: "ereteam_domain", expectedValues: ["Intelligent MarTech (IM)"], expectedResponseType: "records" },
-    { question: "2026'da toplam açık orderı Türkiye ve ABD kırılımında iki rakam olarak göster", object: "orders", expectedProperty: "country", expectedValues: ["Turkiye", "USA"], expectedResponseType: "metric", expectedGroupBy: "country", expectedFilterProperties: ["country", "hs_processed_date", "_stage_label"] },
+    { question: "2026'da toplam açık orderı Türkiye ve ABD kırılımında iki rakam olarak göster", object: "orders", expectedProperty: "country", expectedValues: ["Turkiye", "USA"], expectedResponseType: "metric", expectedGroupBy: "country", expectedFilterProperties: ["country", "hs_processed_date", "_is_open"] },
     { question: "Lisans ve servis gelirini iki rakam olarak karşılaştır", object: "invoices", plannerFilters: [{ property: "country", operator: "in", values: ["Turkiye", "USA"] }, { property: "ereteam_domain", operator: "in", values: ["Data, Cloud & AI (DC&AI)"] }, { property: "revenue_type", operator: "in", values: ["License", "SNS"] }, { property: "_stage_label", operator: "contains", value: "won" }, { property: "hubspot_owner_id", operator: "not_empty" }], expectedResponseType: "metric", expectedGroupBy: "_revenue_group", expectedForbiddenProperties: ["country", "ereteam_domain", "revenue_type", "_stage_label", "hubspot_owner_id"] },
     { question: "Selda'nın deallarını göster", object: "deals", expectedProperty: "_owner_name", expectedValues: ["selda"], expectedResponseType: "records" },
     { question: "2026 yılının ilk yarısında ABD için kesilen toplam servis faturası ne kadardır?", object: "invoices", expectedProperty: "revenue_type", excludedValues: ["License", "SNS"], expectedResponseType: "metric", expectedFilterProperties: ["hs_invoice_date", "country", "revenue_type"], expectedDateRange: ["2026-01-01", "2026-07-01"] },
     { question: "2026 ilkyarısının toplam danışmanlık faturası ne kadar?", object: "invoices", expectedProperty: "revenue_type", excludedValues: ["License", "SNS"], expectedResponseType: "metric", expectedFilterProperties: ["hs_invoice_date", "revenue_type"], expectedDateRange: ["2026-01-01", "2026-07-01"] },
-    { question: "2026 3. çeyreğinde açık order toplamı nedir?", object: "orders", expectedResponseType: "metric", expectedFilterProperties: ["hs_processed_date", "_stage_label"], expectedDateRange: ["2026-07-01", "2026-10-01"] },
+    { question: "2026 3. çeyreğinde açık order toplamı nedir?", object: "orders", expectedResponseType: "metric", expectedFilterProperties: ["hs_processed_date", "_is_open"], expectedDateRange: ["2026-07-01", "2026-10-01"] },
+    { question: "Bu ay açık siparişleri göster", object: "orders", expectedResponseType: "records", expectedFilterProperties: ["hs_processed_date", "_is_open"] },
   ],
 } as const;
 
@@ -241,7 +242,10 @@ export function sparkMultiValueTokens(value?: string | null) {
 
 export function sparkRevenueGroup(value?: string | null) {
   const licenseValues = new Set(SPARK_CHAT_KNOWLEDGE.revenue.licenseValues.map(normalizeSparkChatText));
-  return sparkMultiValueTokens(value).some((item) => licenseValues.has(normalizeSparkChatText(item))) ? "license" : "service";
+  const tokens = sparkMultiValueTokens(value);
+  if (!tokens.length) return "";
+  const groups = new Set(tokens.map((item) => licenseValues.has(normalizeSparkChatText(item)) ? "license" : "service"));
+  return Array.from(groups).join(";");
 }
 
 export function detectSparkCompositeRevenueMetric(question: string): SparkCompositeRevenueMetricKind | null {

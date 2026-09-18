@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { applySparkQueryGuardrails, normalizeSparkPlanProperties, resolveSparkDateRange, resolveSparkOwnerFilter, resolveSparkOwnerName, sparkChatComparableValue, sparkChatMatchesFilter, sparkQueryPlanJsonSchema } from "../lib/spark/chat";
 import { SPARK_CHAT_KNOWLEDGE, detectSparkCompanyName, detectSparkCompositeRevenueMetric, sparkRevenueGroup, type SparkObjectType } from "../lib/spark/chatKnowledge";
+import { hubspotDealState, isHubSpotOpenOrder, isIncludedInvoice, validateInvoiceStatusProperty, type HubSpotObject, type StageMap } from "../lib/spark/hubspot";
 
 const amountProperties: Record<SparkObjectType, string> = {
   deals: "amount_in_home_currency",
@@ -33,7 +34,7 @@ assert.equal(recoveredExpectedDetails.object, "orders");
 assert.equal(recoveredExpectedDetails.responseType, "records");
 assert.deepEqual(recoveredExpectedDetails.properties, []);
 assert.equal(recoveredExpectedDetails.metricKind, null);
-assert.equal(recoveredExpectedDetails.filters.find((filter) => filter.property === "_stage_label")?.value, "Open");
+assert.equal(recoveredExpectedDetails.filters.find((filter) => filter.property === "_is_open")?.value, "true");
 
 assert.equal(sparkChatComparableValue("2027-01-01"), Date.parse("2026-12-31T21:00:00Z"), "İstanbul takvim günü UTC sınırı yanlış");
 assert.ok(sparkChatComparableValue("2026-12-31T21:00:00Z") >= sparkChatComparableValue("2027-01-01"), "1 Ocak İstanbul kaydı 2026 aralığına girmemeli");
@@ -53,6 +54,11 @@ assert.deepEqual(resolveSparkDateRange("H2 2026", new Date("2026-08-10T12:00:00Z
 assert.deepEqual(resolveSparkDateRange("2026 yılının ilk çeyreği", new Date("2026-08-10T12:00:00Z")), { start: "2026-01-01", endExclusive: "2026-04-01", label: "2026 1. çeyrek" });
 assert.deepEqual(resolveSparkDateRange("2026 Q4", new Date("2026-08-10T12:00:00Z")), { start: "2026-10-01", endExclusive: "2027-01-01", label: "2026 4. çeyrek" });
 assert.deepEqual(resolveSparkDateRange("Bu ay sonuna kadar", new Date("2026-08-14T12:00:00Z")), { start: "2026-08-01", endExclusive: "2026-09-01", label: "Bu ay" });
+assert.deepEqual(resolveSparkDateRange("YTD faturalar", new Date("2026-08-14T12:00:00Z")), { start: "2026-01-01", endExclusive: "2026-08-15", label: "Yılbaşından bugüne" });
+assert.deepEqual(resolveSparkDateRange("MTD faturalar", new Date("2026-08-14T12:00:00Z")), { start: "2026-08-01", endExclusive: "2026-08-15", label: "Aybaşından bugüne" });
+assert.deepEqual(resolveSparkDateRange("Bu hafta açılan fırsatlar", new Date("2026-08-14T12:00:00Z")), { start: "2026-08-10", endExclusive: "2026-08-15", label: "Bu hafta" });
+assert.deepEqual(resolveSparkDateRange("Geçen hafta kazanılan fırsatlar", new Date("2026-08-14T12:00:00Z")), { start: "2026-08-03", endExclusive: "2026-08-10", label: "Geçen hafta" });
+assert.deepEqual(resolveSparkDateRange("Son 90 gün", new Date("2026-08-14T12:00:00Z")), { start: "2026-05-17", endExclusive: "2026-08-15", label: "Son 90 gün" });
 assert.equal(detectSparkCompanyName("Migrosa kestiğimiz faturalar"), "migros");
 assert.equal(detectSparkCompanyName("2026 yılında Coca Cola'ya kestiğimiz faturalar"), "coca cola");
 assert.equal(detectSparkCompanyName("Migros firmasına ait siparişler"), "migros");
@@ -60,8 +66,26 @@ assert.equal(detectSparkCompanyName("Partneri IBM olan faturalar"), null);
 assert.equal(sparkChatMatchesFilter({ vendor_name: "Ereteam;IBM" }, { property: "vendor_name", operator: "eq", value: "IBM" }), true);
 assert.equal(sparkChatMatchesFilter({ vendor_name: "IBMX" }, { property: "vendor_name", operator: "eq", value: "IBM" }), false);
 assert.equal(sparkChatMatchesFilter({ revenue_type: "License;Project" }, { property: "revenue_type", operator: "in", values: ["License", "SNS"] }), true);
-assert.equal(sparkRevenueGroup("License;Project"), "license");
+assert.equal(sparkRevenueGroup("License;Project"), "license;service");
 assert.equal(sparkRevenueGroup("Project"), "service");
+assert.equal(sparkRevenueGroup(""), "");
+assert.equal(isIncludedInvoice({ id: "1", properties: { status: "cancelled" } }), false);
+assert.equal(isIncludedInvoice({ id: "2", properties: { status: "invoiced" } }), true);
+assert.equal(isIncludedInvoice({ id: "3", properties: {} }), true);
+assert.equal(validateInvoiceStatusProperty([{ name: "status", label: "Status", options: [{ label: "Invoiced", value: "invoiced" }, { label: "Cancelled", value: "cancelled" }] }]).name, "status");
+assert.throws(() => validateInvoiceStatusProperty([{ name: "hs_invoice_status", label: "Invoice status", options: [] }]), /custom status sözleşmesi/);
+
+const stageMap: StageMap = new Map([
+  ["active-tr-label", { label: "Görüşme", probability: 0.5, isClosed: false, displayOrder: 0, pipelineLabel: "Sales" }],
+  ["won-tr-label", { label: "Kazanıldı", probability: 1, isClosed: true, displayOrder: 1, pipelineLabel: "Sales" }],
+  ["lost-tr-label", { label: "Kapandı", probability: 0, isClosed: true, displayOrder: 2, pipelineLabel: "Sales" }],
+]);
+const object = (dealstage: string, extra: Record<string, string> = {}): HubSpotObject => ({ id: dealstage, properties: { dealstage, ...extra } });
+assert.equal(hubspotDealState(object("active-tr-label"), stageMap), "open");
+assert.equal(hubspotDealState(object("won-tr-label"), stageMap), "won");
+assert.equal(hubspotDealState(object("lost-tr-label"), stageMap), "lost");
+assert.equal(hubspotDealState(object("active-tr-label", { hs_is_closed_won: "true" }), stageMap), "won");
+assert.equal(isHubSpotOpenOrder({ id: "order", properties: { hs_pipeline_stage: "active-tr-label" } }, stageMap), true);
 assert.equal(SPARK_CHAT_KNOWLEDGE.compositeMetrics.guaranteedRevenue.pattern.test("2026 toplam garanti gelirim"), true);
 assert.equal(detectSparkCompositeRevenueMetric("Bu ay beklenen fatura toplamı nedir?"), "expected_revenue");
 assert.equal(detectSparkCompositeRevenueMetric("Bu ay beklenen faturaların toplamı nedir?"), "expected_revenue");
@@ -100,7 +124,7 @@ for (const testCase of SPARK_CHAT_KNOWLEDGE.regressionCases) {
     const values = filter.values ?? (filter.value ? [filter.value] : []);
     if ("expectedAssociatedValues" in testCase) assert.deepEqual([...values].sort(), [...testCase.expectedAssociatedValues].sort(), `${testCase.question}: bağlı deal değerleri yanlış`);
   }
-  if ("expectedAssociatedStage" in testCase) assert.equal(plan.associatedDealFilters.find((filter) => filter.property === "_stage_label")?.value, testCase.expectedAssociatedStage, `${testCase.question}: bağlı deal stage filtresi yanlış`);
+  if ("expectedAssociatedWon" in testCase) assert.equal(plan.associatedDealFilters.find((filter) => filter.property === "_is_won")?.value, "true", `${testCase.question}: bağlı deal won filtresi yanlış`);
   if ("unexpectedProperty" in testCase) assert.ok(!plan.filters.some((filter) => filter.property === testCase.unexpectedProperty), `${testCase.question}: ${testCase.unexpectedProperty} filtresi kullanılmamalı`);
   if ("expectedForbiddenProperties" in testCase) assert.ok(testCase.expectedForbiddenProperties.every((property) => !plan.filters.some((filter) => filter.property === property)), `${testCase.question}: istenmeyen boyut filtresi temizlenmedi`);
   if ("expectedGroupBy" in testCase) assert.equal(plan.groupBy, testCase.expectedGroupBy, `${testCase.question}: kırılım alanı yanlış`);

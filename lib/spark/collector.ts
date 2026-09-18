@@ -2,15 +2,25 @@ import { fetchAnnualTarget } from "./budget";
 import {
   dealRecord,
   fetchHubSpotData,
+  hubspotDealState,
   hubspotHelpers,
   invoiceRecord,
+  isHubSpotOpenOrder,
+  isIncludedInvoice,
   orderRecord,
   type HubSpotObject,
 } from "./hubspot";
 import { isBetween, isReportingMonth, isReportingYear, istanbulParts, reportDateKey, rollingPeriod } from "./time";
-import type { SparkData, SparkRecord, SparkSourceState } from "./types";
+import type { SparkBreakdown, SparkData, SparkRecord, SparkSourceState } from "./types";
 
 const sum = (records: SparkRecord[]) => records.reduce((total, record) => total + record.amount, 0);
+
+function values(value: string | undefined, multiValue: boolean) {
+  const result = multiValue
+    ? (value ?? "").split(";").map((item) => item.trim()).filter(Boolean)
+    : [value?.trim()].filter((item): item is string => Boolean(item));
+  return result.length ? result : ["Belirtilmemiş"];
+}
 
 export async function collectSparkData(now = new Date()): Promise<{ data: SparkData; sourceState: SparkSourceState }> {
   const { start, end } = rollingPeriod(now);
@@ -23,28 +33,46 @@ export async function collectSparkData(now = new Date()): Promise<{ data: SparkD
   const hubspot = await fetchHubSpotData();
   sourceState.hubspot = { ok: true };
   const { deals, invoices, orders, dealStages, orderStages, ownerMap, invoiceDeals, orderDeals } = hubspot;
-  const stageLabel = (deal: HubSpotObject) => dealStages.get(deal.properties.dealstage || "")?.label || deal.properties.dealstage || "";
-  const isWon = (deal: HubSpotObject) => deal.properties.hs_is_closed_won === "true" || hubspotHelpers.lower(stageLabel(deal)).includes("won");
-  const isLost = (deal: HubSpotObject) => hubspotHelpers.lower(stageLabel(deal)).includes("lost");
-  const activeDeals = deals.filter((deal) => !isWon(deal) && !isLost(deal));
-  const openOrders = orders.filter((order) => hubspotHelpers.lower(orderStages.get(order.properties.hs_pipeline_stage || "")?.label) === "open");
+  const dealStage = (deal: HubSpotObject) => dealStages.get(deal.properties.dealstage || "");
+  const isWon = (deal: HubSpotObject) => hubspotDealState(deal, dealStages) === "won";
+  const isLost = (deal: HubSpotObject) => hubspotDealState(deal, dealStages) === "lost";
+  const activeDeals = deals.filter((deal) => hubspotDealState(deal, dealStages) === "open");
+  const openOrders = orders.filter((order) => isHubSpotOpenOrder(order, orderStages));
+  const finalizedInvoices = invoices.filter(isIncludedInvoice);
+  const stageLabel = (deal: HubSpotObject) => dealStage(deal)?.label || "Tanımsız stage";
+  const toDealRecord = (
+    deal: HubSpotObject,
+    options: { dateProperty?: "createdate" | "closedate"; issues?: string[] } = {},
+  ) => dealRecord(deal, ownerMap, { ...options, stage: stageLabel(deal), now });
 
-  const invoiceRows = invoices.filter((invoice) => isReportingYear(invoice.properties.hs_invoice_date, year)).map((row) => invoiceRecord(row, ownerMap));
-  const orderRows = openOrders.filter((order) => isReportingYear(order.properties.hs_processed_date, year)).map((row) => orderRecord(row, ownerMap));
+  const isInvoiceThroughReport = (invoice: HubSpotObject) => {
+    const timestamp = new Date(invoice.properties.hs_invoice_date || "").getTime();
+    return isReportingYear(invoice.properties.hs_invoice_date, year) && Number.isFinite(timestamp) && timestamp <= now.getTime();
+  };
+
+  const invoiceRows = finalizedInvoices
+    .filter(isInvoiceThroughReport)
+    .map((row) => invoiceRecord(row, ownerMap));
+  const orderRows = openOrders
+    .filter((order) => isReportingYear(order.properties.hs_processed_date, year))
+    .map((row) => orderRecord(row, ownerMap));
   const monthInvoices = invoiceRows.filter((row) => isReportingMonth(row.date, year, month));
   const monthOrders = orderRows.filter((row) => isReportingMonth(row.date, year, month));
-  const weeklyNewDeals = activeDeals.filter((deal) => isBetween(deal.properties.createdate, start, end)).map((row) => dealRecord(row, ownerMap));
-  const weeklyWon = deals.filter((deal) => isWon(deal) && isBetween(deal.properties.closedate, start, end)).map((row) => dealRecord(row, ownerMap));
-  const weeklyLost = deals.filter((deal) => isLost(deal) && isBetween(deal.properties.closedate, start, end)).map((row) => dealRecord(row, ownerMap));
+  const weeklyNewDeals = deals
+    .filter((deal) => isBetween(deal.properties.createdate, start, end))
+    .map((row) => toDealRecord(row, { dateProperty: "createdate" }));
+  const weeklyWon = deals
+    .filter((deal) => isWon(deal) && isBetween(deal.properties.closedate, start, end))
+    .map((row) => toDealRecord(row, { dateProperty: "closedate" }));
+  const weeklyLost = deals
+    .filter((deal) => isLost(deal) && isBetween(deal.properties.closedate, start, end))
+    .map((row) => toDealRecord(row, { dateProperty: "closedate" }));
   const currentMonthOpenDeals = activeDeals
     .filter((deal) => isReportingMonth(deal.properties.closedate, year, month))
-    .map((row) => dealRecord(row, ownerMap))
+    .map((row) => toDealRecord(row, { dateProperty: "closedate" }))
     .sort((left, right) => new Date(left.date || 0).getTime() - new Date(right.date || 0).getTime());
-  const weightedAmount = (deal: HubSpotObject) => {
-    const value = hubspotHelpers.amount(deal, "amount_in_home_currency");
-    const probability = Number(deal.properties.hs_deal_stage_probability ?? dealStages.get(deal.properties.dealstage || "")?.probability ?? 0);
-    return value * (probability > 1 ? probability / 100 : probability);
-  };
+  const weightedAmount = (deal: HubSpotObject) => hubspotHelpers.amount(deal, "hs_projected_amount_in_home_currency");
+  const yearActiveDeals = activeDeals.filter((deal) => isReportingYear(deal.properties.closedate, year));
 
   const newBusinessDeals = deals.filter((deal) => isWon(deal) && hubspotHelpers.lower(deal.properties.dealtype) === "newbusiness");
   const newBusinessIds = new Set(newBusinessDeals.map((deal) => deal.id));
@@ -53,8 +81,8 @@ export async function collectSparkData(now = new Date()): Promise<{ data: SparkD
   const linkedTo = (associationMap: Map<string, string[]>, recordId: string, dealIds: Set<string>) =>
     (associationMap.get(recordId) ?? []).some((dealId) => dealIds.has(dealId));
 
-  const nbInvoices = invoices
-    .filter((row) => isReportingYear(row.properties.hs_invoice_date, year) && linkedTo(invoiceDeals, row.id, newBusinessIds))
+  const nbInvoices = finalizedInvoices
+    .filter((row) => isInvoiceThroughReport(row) && linkedTo(invoiceDeals, row.id, newBusinessIds))
     .map((row) => {
       const record = invoiceRecord(row, ownerMap);
       record.carryover = !linkedTo(invoiceDeals, row.id, sameYearIds);
@@ -76,9 +104,124 @@ export async function collectSparkData(now = new Date()): Promise<{ data: SparkD
     sourceState.budget = { ok: false, message: error instanceof Error ? error.message : "Hedef okunamadı" };
   }
 
-  const monthlyInvoiceTrend = Array.from({ length: month }, (_, index) => ({
-    month: new Intl.DateTimeFormat("tr-TR", { month: "short", timeZone: "Europe/Istanbul" }).format(new Date(Date.UTC(year, index, 1))),
-    amount: invoiceRows.filter((row) => isReportingMonth(row.date, year, index + 1)).reduce((total, row) => total + row.amount, 0),
+  const monthLabel = (index: number) => new Intl.DateTimeFormat("tr-TR", {
+    month: "short",
+    timeZone: "Europe/Istanbul",
+  }).format(new Date(Date.UTC(year, index, 1)));
+  const monthlyPerformance = Array.from({ length: 12 }, (_, index) => {
+    const reportMonth = index + 1;
+    const monthDeals = yearActiveDeals
+      .filter((deal) => isReportingMonth(deal.properties.closedate, year, reportMonth))
+      .map((deal) => toDealRecord(deal, { dateProperty: "closedate" }));
+    return {
+      month: reportMonth,
+      label: monthLabel(index),
+      invoices: invoiceRows.filter((row) => isReportingMonth(row.date, year, reportMonth)),
+      orders: orderRows.filter((row) => isReportingMonth(row.date, year, reportMonth)),
+      deals: monthDeals,
+      weightedPipeline: monthDeals.reduce((total, deal) => total + (deal.weightedAmount ?? 0), 0),
+    };
+  });
+  const monthlyInvoiceTrend = monthlyPerformance.map((item) => ({
+    month: item.label,
+    amount: sum(item.invoices),
+  }));
+
+  const stageFunnel = Array.from(new Set(activeDeals.map((deal) => deal.properties.dealstage || "unknown")))
+    .map((stageId) => {
+      const stage = dealStages.get(stageId);
+      const stageDeals = activeDeals.filter((deal) => (deal.properties.dealstage || "unknown") === stageId);
+      const records = stageDeals.map((deal) => toDealRecord(deal, { dateProperty: "closedate" }));
+      return {
+        id: stageId,
+        label: stage?.label || "Tanımsız stage",
+        probability: stage?.probability ?? 0,
+        records,
+        weightedPipeline: stageDeals.reduce((total, deal) => total + weightedAmount(deal), 0),
+        averageAgeDays: records.length
+          ? records.reduce((total, record) => total + (record.ageDays ?? 0), 0) / records.length
+          : 0,
+        order: stage?.displayOrder ?? Number.MAX_SAFE_INTEGER,
+      };
+    })
+    .sort((left, right) => left.order - right.order)
+    .map((stage) => ({
+      id: stage.id,
+      label: stage.label,
+      probability: stage.probability,
+      records: stage.records,
+      weightedPipeline: stage.weightedPipeline,
+      averageAgeDays: stage.averageAgeDays,
+    }));
+
+  const dimensions: Array<{
+    key: SparkBreakdown["key"];
+    label: string;
+    property: "country" | "vendor_name" | "revenue_type" | "ereteam_domain";
+    multiValue: boolean;
+  }> = [
+    { key: "country", label: "Ülke", property: "country", multiValue: false },
+    { key: "vendor", label: "Vendor", property: "vendor_name", multiValue: true },
+    { key: "revenueType", label: "Revenue Type", property: "revenue_type", multiValue: true },
+    { key: "domain", label: "Ereteam Domain", property: "ereteam_domain", multiValue: false },
+  ];
+  const revenueBreakdowns = dimensions.map((dimension): SparkBreakdown => {
+    const categoryNames = new Set<string>();
+    for (const row of [
+      ...finalizedInvoices.filter(isInvoiceThroughReport),
+      ...openOrders.filter((item) => isReportingYear(item.properties.hs_processed_date, year)),
+      ...yearActiveDeals,
+    ]) {
+      values(row.properties[dimension.property], dimension.multiValue).forEach((value) => categoryNames.add(value));
+    }
+    const entries = Array.from(categoryNames).map((category) => {
+      const matches = (row: HubSpotObject) => values(row.properties[dimension.property], dimension.multiValue).includes(category);
+      const matchingInvoices = finalizedInvoices
+        .filter((row) => isInvoiceThroughReport(row) && matches(row));
+      const matchingOrders = openOrders
+        .filter((row) => isReportingYear(row.properties.hs_processed_date, year) && matches(row));
+      const matchingDeals = yearActiveDeals.filter(matches);
+      return {
+        key: category,
+        label: category,
+        invoices: matchingInvoices.map((row) => invoiceRecord(row, ownerMap)),
+        orders: matchingOrders.map((row) => orderRecord(row, ownerMap)),
+        deals: matchingDeals.map((row) => toDealRecord(row, { dateProperty: "closedate" })),
+        weightedPipeline: matchingDeals.reduce((total, deal) => total + weightedAmount(deal), 0),
+      };
+    }).sort((left, right) =>
+      (sum(right.invoices) + sum(right.orders) + sum(right.deals)) -
+      (sum(left.invoices) + sum(left.orders) + sum(left.deals))
+    );
+    return { key: dimension.key, label: dimension.label, multiValue: dimension.multiValue, entries };
+  });
+
+  const todayStart = new Date(`${reportDateKey(now)}T00:00:00+03:00`).getTime();
+  const overdueDeals = activeDeals.filter((deal) => {
+    const closeTime = new Date(deal.properties.closedate || "").getTime();
+    return Number.isFinite(closeTime) && closeTime < todayStart;
+  });
+  const missingCloseDate = activeDeals.filter((deal) => !deal.properties.closedate);
+  const missingOwner = activeDeals.filter((deal) => !deal.properties.hubspot_owner_id);
+  const missingAmount = activeDeals.filter((deal) => hubspotHelpers.amount(deal, "amount_in_home_currency") <= 0);
+  const oldDeals = activeDeals.filter((deal) => {
+    const createdAt = new Date(deal.properties.createdate || "").getTime();
+    return Number.isFinite(createdAt) && (now.getTime() - createdAt) / 86_400_000 >= 90;
+  });
+  const hygiene = [
+    { key: "overdue", label: "Close date'i geçmiş", description: "Kapanış tarihi bugünden önce olan aktif fırsatlar", rows: overdueDeals },
+    { key: "old", label: "90+ gündür açık", description: "En az 90 gündür açık olan fırsatlar", rows: oldDeals },
+    { key: "noCloseDate", label: "Close date eksik", description: "Planlanan kapanış tarihi bulunmayan aktif fırsatlar", rows: missingCloseDate },
+    { key: "noOwner", label: "Owner eksik", description: "Sorumlu atanmamış aktif fırsatlar", rows: missingOwner },
+    { key: "noAmount", label: "Tutar eksik", description: "Tutarı boş veya sıfır olan aktif fırsatlar", rows: missingAmount },
+  ].map((group) => ({
+    key: group.key,
+    label: group.label,
+    description: group.description,
+    records: group.rows.map((row) => toDealRecord(row, {
+      dateProperty: "closedate",
+      issues: [group.label],
+    })),
   }));
 
   const data: SparkData = {
@@ -87,16 +230,14 @@ export async function collectSparkData(now = new Date()): Promise<{ data: SparkD
     ytdInvoice: sum(invoiceRows), monthInvoice: sum(monthInvoices), openOrders: sum(orderRows), monthExpected: sum(monthOrders),
     pipeline: activeDeals.reduce((total, deal) => total + hubspotHelpers.amount(deal, "amount_in_home_currency"), 0),
     weightedForecast: activeDeals.reduce((total, deal) => total + weightedAmount(deal), 0),
-    yearWeightedPipeline: activeDeals
-      .filter((deal) => isReportingYear(deal.properties.closedate, year))
-      .reduce((total, deal) => total + weightedAmount(deal), 0),
+    yearWeightedPipeline: yearActiveDeals.reduce((total, deal) => total + weightedAmount(deal), 0),
     activeDeals: activeDeals.length,
     weeklyNewPipeline: sum(weeklyNewDeals), weeklyNewDeals, weeklyWon, weeklyLost, currentMonthOpenDeals,
-    monthInvoices, monthOrders, monthlyInvoiceTrend,
+    monthInvoices, monthOrders, monthlyInvoiceTrend, monthlyPerformance, stageFunnel, revenueBreakdowns, hygiene,
     newBusiness: {
       invoices: nbInvoices,
       orders: nbOrders,
-      sameYearDeals: sameYearNewBusiness.map((row) => dealRecord(row, ownerMap)),
+      sameYearDeals: sameYearNewBusiness.map((row) => toDealRecord(row, { dateProperty: "closedate" })),
       sameYearInvoices: nbInvoices.filter((row) => !row.carryover),
       sameYearOrders: nbOrders.filter((row) => !row.carryover),
     },

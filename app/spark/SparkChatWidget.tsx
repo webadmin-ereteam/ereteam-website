@@ -37,7 +37,7 @@ function compactContext(history: HistoryItem[]) {
 const suggestions = [
   "Bu ay beklenen fatura toplamı nedir?",
   "Bu ay beklenen faturaların detaylarını göster",
-  "Açık orderları owner bazında listele",
+  "Açık sipariş tutarını owner bazında göster",
 ];
 
 function formatCell(value: string, format: Column["format"]) {
@@ -103,13 +103,15 @@ export default function SparkChatWidget() {
     const question = (value ?? input).trim();
     if (!question || loading) return;
     setInput(""); setLoading(true); setHistory((current) => [...current, { question }]);
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 60_000);
     try {
-      const response = await fetch("/api/spark/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question, context: compactContext(history) }) });
+      const response = await fetch("/api/spark/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question, context: compactContext(history) }), signal: controller.signal });
       const result = await response.json();
       setHistory((current) => current.map((item, index) => index === current.length - 1 ? { ...item, ...(response.ok ? { result } : { error: result.error || "Sorgu tamamlanamadı." }) } : item));
     } catch {
       setHistory((current) => current.map((item, index) => index === current.length - 1 ? { ...item, error: "Canlı veri bağlantısı şu anda yanıt vermiyor." } : item));
-    } finally { setLoading(false); }
+    } finally { window.clearTimeout(timeout); setLoading(false); }
   }
 
   return <div className={styles.shell}>

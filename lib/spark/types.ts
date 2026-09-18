@@ -7,6 +7,51 @@ export type SparkRecord = {
   company?: string;
   url: string;
   carryover?: boolean;
+  stage?: string;
+  weightedAmount?: number;
+  ageDays?: number;
+  issues?: string[];
+};
+
+export type SparkRecordGroup = {
+  key: string;
+  label: string;
+  description?: string;
+  records: SparkRecord[];
+};
+
+export type SparkMonthPerformance = {
+  month: number;
+  label: string;
+  invoices: SparkRecord[];
+  orders: SparkRecord[];
+  deals: SparkRecord[];
+  weightedPipeline: number;
+};
+
+export type SparkStagePerformance = {
+  id: string;
+  label: string;
+  probability: number;
+  records: SparkRecord[];
+  weightedPipeline: number;
+  averageAgeDays: number;
+};
+
+export type SparkBreakdownEntry = {
+  key: string;
+  label: string;
+  invoices: SparkRecord[];
+  orders: SparkRecord[];
+  deals: SparkRecord[];
+  weightedPipeline: number;
+};
+
+export type SparkBreakdown = {
+  key: "country" | "vendor" | "revenueType" | "domain";
+  label: string;
+  multiValue: boolean;
+  entries: SparkBreakdownEntry[];
 };
 
 export type SparkSourceState = Record<
@@ -36,6 +81,10 @@ export type SparkData = {
   monthInvoices: SparkRecord[];
   monthOrders: SparkRecord[];
   monthlyInvoiceTrend: Array<{ month: string; amount: number }>;
+  monthlyPerformance: SparkMonthPerformance[];
+  stageFunnel: SparkStagePerformance[];
+  revenueBreakdowns: SparkBreakdown[];
+  hygiene: SparkRecordGroup[];
   newBusiness: {
     invoices: SparkRecord[];
     orders: SparkRecord[];

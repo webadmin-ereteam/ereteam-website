@@ -1,8 +1,20 @@
 import type { SparkRecord } from "./types";
 
 export type HubSpotObject = { id: string; properties: Record<string, string | undefined> };
-export type HubSpotProperty = { name: string; label: string; type?: string; fieldType?: string };
-export type StageMap = Map<string, { label: string; probability: number }>;
+export type HubSpotProperty = {
+  name: string;
+  label: string;
+  type?: string;
+  fieldType?: string;
+  options?: Array<{ label: string; value: string; hidden?: boolean }>;
+};
+export type StageMap = Map<string, {
+  label: string;
+  probability: number;
+  isClosed?: boolean;
+  displayOrder: number;
+  pipelineLabel: string;
+}>;
 
 const PORTAL_ID = "147286586";
 
@@ -13,17 +25,25 @@ function token() {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`https://api.hubapi.com${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${token()}`,
-      "Content-Type": "application/json",
-      ...init?.headers,
-    },
-    cache: "no-store",
-  });
-  if (!response.ok) throw new Error(`HubSpot ${path}: ${response.status}`);
-  return response.json() as Promise<T>;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const response = await fetch(`https://api.hubapi.com${path}`, {
+      ...init,
+      headers: {
+        Authorization: `Bearer ${token()}`,
+        "Content-Type": "application/json",
+        ...init?.headers,
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (response.ok) return response.json() as Promise<T>;
+    const retryable = response.status === 429 || response.status >= 500;
+    if (!retryable || attempt === 2) throw new Error(`HubSpot ${path}: ${response.status}`);
+    const retryAfter = Number(response.headers.get("retry-after"));
+    const delay = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1_000 : 500 * 2 ** attempt;
+    await new Promise((resolve) => setTimeout(resolve, Math.min(delay, 5_000)));
+  }
+  throw new Error(`HubSpot ${path}: istek tamamlanamadı`);
 }
 
 export async function fetchHubSpotObjects(objectType: string, properties: string[]) {
@@ -63,23 +83,46 @@ export async function fetchHubSpotPropertyCatalog(objectType: string) {
 }
 
 export async function fetchHubSpotStages(objectType: "deals" | "orders") {
-  const result = await request<{ results: Array<{ stages: Array<{ id: string; label: string; metadata?: { probability?: string } }> }> }>(
+  const result = await request<{ results: Array<{
+    label: string;
+    stages: Array<{
+      id: string;
+      label: string;
+      displayOrder: number;
+      metadata?: { probability?: string; isClosed?: string };
+    }>;
+  }> }>(
     `/crm/v3/pipelines/${objectType}`
   );
   const map: StageMap = new Map();
   for (const pipeline of result.results) {
     for (const stage of pipeline.stages) {
-      map.set(stage.id, { label: stage.label, probability: Number(stage.metadata?.probability ?? 0) });
+      map.set(stage.id, {
+        label: stage.label,
+        probability: Number(stage.metadata?.probability ?? 0),
+        isClosed: stage.metadata?.isClosed == null ? undefined : stage.metadata.isClosed === "true",
+        displayOrder: stage.displayOrder,
+        pipelineLabel: pipeline.label,
+      });
     }
   }
   return map;
 }
 
 export async function fetchHubSpotOwners() {
-  const result = await request<{ results: Array<{ id: string; firstName?: string; lastName?: string; email?: string }> }>(
-    "/crm/v3/owners?limit=500&archived=false"
-  );
-  return new Map(result.results.map((owner) => [owner.id, `${owner.firstName ?? ""} ${owner.lastName ?? ""}`.trim() || owner.email || owner.id]));
+  const owners: Array<{ id: string; firstName?: string; lastName?: string; email?: string }> = [];
+  let after: string | undefined;
+  do {
+    const params = new URLSearchParams({ limit: "500", archived: "false" });
+    if (after) params.set("after", after);
+    const result = await request<{
+      results: Array<{ id: string; firstName?: string; lastName?: string; email?: string }>;
+      paging?: { next?: { after: string } };
+    }>(`/crm/v3/owners?${params}`);
+    owners.push(...result.results);
+    after = result.paging?.next?.after;
+  } while (after);
+  return new Map(owners.map((owner) => [owner.id, `${owner.firstName ?? ""} ${owner.lastName ?? ""}`.trim() || owner.email || owner.id]));
 }
 
 export async function fetchHubSpotAssociations(
@@ -102,15 +145,43 @@ export async function fetchHubSpotAssociations(
 const amount = (row: HubSpotObject, property: string) => Number(row.properties[property] ?? 0) || 0;
 const lower = (value?: string) => (value ?? "").trim().toLowerCase();
 
+export function hubspotDealState(row: HubSpotObject, stages: StageMap): "open" | "won" | "lost" {
+  const stage = stages.get(row.properties.dealstage || "");
+  const won = row.properties.hs_is_closed_won === "true" || (stage?.isClosed === true && stage.probability === 1);
+  if (won) return "won";
+  const closed = row.properties.hs_is_closed === "true" || stage?.isClosed === true;
+  return closed ? "lost" : "open";
+}
+
+export function isHubSpotOpenOrder(row: HubSpotObject, stages: StageMap) {
+  const stage = stages.get(row.properties.hs_pipeline_stage || "");
+  return stage?.isClosed === false || (stage?.isClosed == null && lower(stage?.label) === "open");
+}
+
+export function isIncludedInvoice(row: HubSpotObject) {
+  return lower(row.properties.status) !== "cancelled";
+}
+
+export function validateInvoiceStatusProperty(catalog: HubSpotProperty[]) {
+  const property = catalog.find((item) => item.name === "status");
+  const values = new Set(property?.options?.map((option) => lower(option.value)) ?? []);
+  if (!property || !values.has("invoiced") || !values.has("cancelled")) {
+    throw new Error("HubSpot invoice custom status sözleşmesi bulunamadı (status: invoiced/cancelled)");
+  }
+  return property;
+}
+
 export async function fetchHubSpotData() {
-  const [deals, invoices, orders, dealStages, orderStages, ownerMap] = await Promise.all([
-    fetchHubSpotObjects("deals", ["dealname", "dealstage", "createdate", "closedate", "amount_in_home_currency", "hs_deal_stage_probability", "hs_is_closed_won", "dealtype", "hubspot_owner_id"]),
-    fetchHubSpotObjects("invoices", ["hs_number", "invoice_name", "hs_invoice_latest_company_name", "hs_invoice_date", "hs_amount_billed_in_company_currency", "hubspot_owner_id"]),
-    fetchHubSpotObjects("orders", ["hs_order_name", "hs_pipeline_stage", "hs_processed_date", "hs_homecurrency_amount", "hubspot_owner_id"]),
+  const [deals, invoices, orders, dealStages, orderStages, ownerMap, invoiceCatalog] = await Promise.all([
+    fetchHubSpotObjects("deals", ["dealname", "dealstage", "createdate", "closedate", "amount_in_home_currency", "hs_projected_amount_in_home_currency", "hs_is_closed", "hs_is_closed_won", "dealtype", "country", "vendor_name", "revenue_type", "ereteam_domain", "hubspot_owner_id"]),
+    fetchHubSpotObjects("invoices", ["hs_number", "invoice_name", "hs_invoice_latest_company_name", "hs_invoice_date", "hs_amount_billed_in_company_currency", "status", "country", "vendor_name", "revenue_type", "ereteam_domain", "hubspot_owner_id"]),
+    fetchHubSpotObjects("orders", ["hs_order_name", "hs_pipeline_stage", "hs_processed_date", "hs_homecurrency_amount", "country", "vendor_name", "revenue_type", "ereteam_domain", "hubspot_owner_id"]),
     fetchHubSpotStages("deals"),
     fetchHubSpotStages("orders"),
     fetchHubSpotOwners(),
+    fetchHubSpotPropertyCatalog("invoices"),
   ]);
+  validateInvoiceStatusProperty(invoiceCatalog);
   const [invoiceDeals, orderDeals] = await Promise.all([
     fetchHubSpotAssociations("invoices", invoices.map((row) => row.id)),
     fetchHubSpotAssociations("orders", orders.map((row) => row.id)),
@@ -118,13 +189,27 @@ export async function fetchHubSpotData() {
   return { deals, invoices, orders, dealStages, orderStages, ownerMap, invoiceDeals, orderDeals };
 }
 
-export function dealRecord(row: HubSpotObject, ownerMap: Map<string, string>): SparkRecord {
+export function dealRecord(
+  row: HubSpotObject,
+  ownerMap: Map<string, string>,
+  options: { dateProperty?: "createdate" | "closedate"; stage?: string; now?: Date; issues?: string[] } = {},
+): SparkRecord {
+  const createdAt = new Date(row.properties.createdate || "").getTime();
+  const ageDays = Number.isFinite(createdAt) && options.now
+    ? Math.max(0, Math.floor((options.now.getTime() - createdAt) / 86_400_000))
+    : undefined;
   return {
     id: row.id,
     name: row.properties.dealname || `Deal ${row.id}`,
-    date: row.properties.closedate || row.properties.createdate,
+    date: options.dateProperty
+      ? row.properties[options.dateProperty]
+      : row.properties.closedate || row.properties.createdate,
     amount: amount(row, "amount_in_home_currency"),
     owner: ownerMap.get(row.properties.hubspot_owner_id || ""),
+    stage: options.stage,
+    weightedAmount: amount(row, "hs_projected_amount_in_home_currency"),
+    ageDays,
+    issues: options.issues,
     url: `https://app.hubspot.com/contacts/${PORTAL_ID}/record/0-3/${row.id}?utm_source=spark_dashboard&utm_medium=web&utm_campaign=revenue_growth`,
   };
 }
