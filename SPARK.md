@@ -37,11 +37,14 @@ CRM-hygiene section. Every amount in these sections has a HubSpot record
 drill-down. Activity, email and calendar metrics are intentionally excluded because
 their integrations are not reliable enough to be management-report sources.
 
-The dashboard does not include an admin screen or historical archive. Data is
-cached without age-based revalidation and refreshed twice daily by cron; opening
-the report reuses the current snapshot instead of intentionally querying HubSpot.
-If the platform cache is cold or evicted, the cache remains read-through and the
-first request can repopulate it. Source health is shown separately.
+The dashboard does not include an admin screen or historical archive. The current
+snapshot is persisted in PostgreSQL and refreshed twice daily by cron; opening the
+report only reads that snapshot and never queries HubSpot or changes `generatedAt`.
+Deployments and platform cache misses therefore do not trigger data collection.
+Cron and an explicit manual refresh are the only paths that collect HubSpot data
+and replace the persisted snapshot. A non-expiring platform read cache sits in front
+of PostgreSQL for fast page loads; a cache miss falls back only to the persisted
+snapshot, never to HubSpot. Source health is stored with the snapshot and shown separately.
 The header also shows the exact Istanbul update time. Authenticated users can
 request a quiet manual refresh; requests made within ten minutes of the latest
 generated report reuse the current snapshot instead of calling the sources.

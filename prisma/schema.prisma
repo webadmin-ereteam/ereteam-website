@@ -330,3 +330,10 @@ model SparkAmplemarketEvent {
   @@index([occurredAt])
   @@index([eventType, occurredAt])
 }
+
+model SparkDashboardSnapshot {
+  id          String   @id
+  payload     Json
+  generatedAt DateTime
+  updatedAt   DateTime @updatedAt
+}
