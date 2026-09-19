@@ -197,13 +197,12 @@
 .breakdownTable td:first-child { width: 220px; }
 .breakdownTable td:last-child small { color: var(--muted); font-size: 8px; }
 .breakdownVisual { display: grid; grid-template-columns: 190px 1fr; align-items: center; gap: 28px; padding: 22px 26px; border-bottom: 1px solid var(--line); background: linear-gradient(135deg, #f8fbfa, #fff); }
-.breakdownSummary { display: grid; justify-items: center; gap: 10px; }
-.breakdownSummary > span { color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
 .donut { width: 154px; aspect-ratio: 1; display: grid; place-items: center; margin-inline: auto; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(16,43,55,.06); }
 .donut > div { width: 88px; aspect-ratio: 1; display: grid; place-content: center; text-align: center; border-radius: 50%; background: #fff; box-shadow: 0 5px 18px rgba(16,43,55,.1); }
 .donut strong { display: block; font-size: 24px; line-height: 1; }
 .donut span { display: block; margin-top: 4px; color: var(--muted); font-size: 8px; text-transform: uppercase; }
 .donutLegend { display: grid; grid-template-columns: repeat(2, minmax(180px, 1fr)); gap: 8px 20px; }
+.breakdownLegendTitle { grid-column: 1 / -1; color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
 .donutLegend > div { display: grid; grid-template-columns: 9px minmax(80px, 1fr) auto 42px; align-items: center; gap: 8px; min-height: 31px; padding-bottom: 6px; border-bottom: 1px solid #edf0ef; font-size: 10px; }
 .donutLegend i { width: 8px; height: 8px; border-radius: 50%; }
 .donutLegend b { text-align: right; }

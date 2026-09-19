@@ -287,13 +287,11 @@ function DonutChart({ entries, overlapping }: { entries: Array<{ label: string; 
 
   return (
     <div className={styles.breakdownVisual}>
-      <div className={styles.breakdownSummary}>
-        <span>Fatura + açık order</span>
-        <div className={styles.donut} style={{ background: gradient ? `conic-gradient(${gradient})` : "#e8edeb" }}>
-          <div><strong>{items.length}</strong><span>{overlapping ? "kategori" : "pay"}</span></div>
-        </div>
+      <div className={styles.donut} style={{ background: gradient ? `conic-gradient(${gradient})` : "#e8edeb" }}>
+        <div><strong>{items.length}</strong><span>{overlapping ? "kategori" : "pay"}</span></div>
       </div>
       <div className={styles.donutLegend}>
+        <span className={styles.breakdownLegendTitle}>Fatura + açık order</span>
         {items.map((entry, index) => (
           <div key={entry.label}>
             <i style={{ background: chartColors[index % chartColors.length] }} />
@@ -630,7 +628,7 @@ export default function Dashboard({ data }: { data: SparkData }) {
               <div className={styles.hygieneIcon}>{index < 2 ? <AlertTriangle size={18} /> : index === 4 ? <CircleDollarSign size={18} /> : <BarChart3 size={18} />}</div>
               <span>{group.label}</span>
               <strong>{group.records.length}</strong>
-              <p>{shortMoney(sum(group.records))} pipeline</p>
+              <p>{shortMoney(sum(group.records))} {group.key.startsWith("missing-") ? "toplam tutar" : "pipeline"}</p>
               <small>{group.description}</small>
               <button type="button" disabled={!group.records.length} onClick={() => openRecords(group.label, group.records)}>Kayıtları incele <ArrowUpRight size={13} /></button>
             </article>
