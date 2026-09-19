@@ -205,7 +205,6 @@ function RecordTable({
             {property ? <th>Seç</th> : null}
             <th>Kayıt</th>
             {showObjectType ? <th>Tür</th> : null}
-            <th>Şirket</th>
             {showStage ? <th>Stage</th> : null}
             <th>Tarih</th>
             {showAge ? <th>Yaş</th> : null}
@@ -221,7 +220,6 @@ function RecordTable({
               {property ? <td><input type="checkbox" checked={selected.has(row.url)} onChange={(event) => setSelected((current) => { const next = new Set(current); if (event.target.checked) next.add(row.url); else next.delete(row.url); return next; })} aria-label={`${row.name} kaydını seç`} /></td> : null}
               <td><a href={row.url} target="_blank" rel="noreferrer">{row.name}<ArrowUpRight size={12} /></a></td>
               {showObjectType ? <td><span className={styles.objectPill}>{row.objectType || "-"}</span></td> : null}
-              <td>{row.company || "-"}</td>
               {showStage ? <td><span className={styles.stagePill}>{row.stage || "-"}</span></td> : null}
               <td>{formatDate(row.date)}</td>
               {showAge ? <td>{row.ageDays != null ? `${row.ageDays} gün` : "-"}</td> : null}

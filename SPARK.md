@@ -251,6 +251,9 @@ The technical order-date property name is never rendered in the UI.
 - Current-month open deals use `closedate` and exclude Closed Won and Closed Lost.
 - Monthly, breakdown, funnel, New Business and hygiene values expose record-count
   drill-downs in one shared modal; only one record detail modal is open at a time.
+  Record-detail tables do not show a separate company column because company data is
+  not reliably populated by HubSpot and the record names already contain the useful
+  company context.
 - Do not show Pipeline Health Score, external meetings, manually entered focus
   items, Business Development or automatically invented action priorities.
 - The executive summary is numeric and source-derived.
