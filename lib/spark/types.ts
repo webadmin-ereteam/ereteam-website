@@ -1,5 +1,6 @@
 export type SparkRecord = {
   id: string;
+  objectType?: "Deal" | "Invoice" | "Order";
   name: string;
   date?: string;
   amount: number;

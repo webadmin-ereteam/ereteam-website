@@ -9,6 +9,8 @@
   --lime: #b8d638;
   --amber: #d99532;
   --red: #c85252;
+  --blue: #4f7cac;
+  --violet: #845ec2;
   max-width: 1480px;
   margin: 0 auto;
   padding: 24px 32px 48px;
@@ -84,6 +86,8 @@
 .metricCard > p { margin: 7px 0 0; color: var(--muted); font-size: 10px; }
 .metricPrimary { color: #fff; background: var(--teal); border-color: var(--teal); }
 .metricPrimary > span, .metricPrimary > p { color: rgba(255,255,255,.75); }
+.metricForecast { border-color: #ead7b9; background: linear-gradient(145deg, #fffaf1, #fff); }
+.metricForecast > strong { color: #a76c18; }
 .progress { height: 4px; margin-top: 14px; overflow: hidden; border-radius: 9px; background: rgba(255,255,255,.2); }
 .progress i { display: block; height: 100%; background: var(--lime); border-radius: inherit; }
 
@@ -119,6 +123,24 @@
 .infoNote svg { flex: 0 0 auto; color: var(--teal); }
 .infoNote code { padding: 1px 4px; color: #3d545e; border-radius: 4px; background: #e7ecec; font-size: 9px; }
 
+.periodGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 10px; }
+.periodCard { overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.periodCard::before { content: ""; display: block; height: 4px; background: linear-gradient(90deg, var(--teal), var(--blue), var(--amber)); }
+.periodQuarter::before { background: linear-gradient(90deg, var(--blue), var(--violet), var(--amber)); }
+.periodTitle { display: flex; align-items: center; justify-content: space-between; padding: 15px 17px 9px; }
+.periodTitle span { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.periodTitle b { color: var(--teal); font-size: 11px; }
+.periodQuarter .periodTitle b { color: var(--blue); }
+.periodMetrics { display: grid; grid-template-columns: repeat(4, 1fr); padding: 0 8px 12px; }
+.periodMetrics .valueButton { min-height: 74px; align-items: flex-start; justify-content: center; flex-direction: column; padding: 10px; border-left: 1px solid #edf0ef; }
+.periodMetrics .valueButton:first-child { border-left: 0; }
+.periodMetrics .valueButton > span { color: var(--muted); font-size: 8px; font-weight: 800; text-transform: uppercase; }
+.periodMetrics .valueButton > b { font-size: 16px; }
+.periodMetrics .valueButton:nth-child(1) > b { color: var(--teal); }
+.periodMetrics .valueButton:nth-child(2) > b { color: #81991c; }
+.periodMetrics .valueButton:nth-child(3) > b { color: var(--blue); }
+.periodMetrics .valueButton:nth-child(4) > b { color: #a76c18; }
+
 .dataCard { overflow: hidden; }
 .tableWrap { width: 100%; overflow: auto; }
 .page table { width: 100%; min-width: 800px; border-collapse: collapse; background: #fff; }
@@ -131,9 +153,19 @@
 .monthTable th:first-child, .monthTable td:first-child { position: sticky; left: 0; z-index: 2; background: #fff; }
 .monthTable th:first-child { background: #f7f9f8; }
 .monthTable td:first-child { width: 110px; }
+.monthTable td:first-child > small { display: block; margin-top: 3px; color: #99a4a8; font-size: 7px; font-weight: 800; }
 .currentRow td { background: #f2f9f6 !important; }
 .currentRow td:first-child { box-shadow: inset 3px 0 var(--teal); }
+.pastRow:not(.currentRow) td { background: #fcfdfc; }
+.futureRow td { background: #fbfbfd; }
+.futureRow td:first-child { color: #65727d; }
+.quarterStart td { border-top: 2px solid #cbd7da; }
 .nowPill { display: inline-block; margin-left: 7px; padding: 2px 5px; color: var(--teal); border-radius: 99px; background: #dcefeb; font-size: 7px; font-weight: 800; text-transform: uppercase; }
+.monthComposition { min-width: 190px; }
+.monthComposition > div { height: 7px; display: flex; overflow: hidden; border-radius: 99px; background: #e8edeb; }
+.monthComposition > div i { display: block; height: 100%; }
+.monthComposition > span { display: block; margin-top: 5px; color: var(--muted); font-size: 8px; white-space: nowrap; }
+.monthComposition > span b { color: var(--ink); }
 .valueButton { position: relative; display: inline-flex; align-items: center; gap: 5px; padding: 0; color: var(--ink); border: 0; background: transparent; font: inherit; text-align: left; cursor: pointer; }
 .valueButton b { display: block; font-size: 12px; }
 .valueButton small { display: block; color: var(--muted); font-size: 8px; }
@@ -141,29 +173,59 @@
 .valueButton:disabled { cursor: default; opacity: .58; }
 .countCell { display: inline-grid; min-width: 28px; height: 28px; place-items: center; color: var(--teal); border-radius: 8px; background: #e7f3f0; font-weight: 800; }
 
-.funnelList > button { width: 100%; min-height: 68px; display: grid; grid-template-columns: 35px minmax(150px, .8fr) minmax(170px, 1.6fr) 100px 100px 20px; align-items: center; gap: 14px; padding: 12px 16px; color: inherit; border: 0; border-top: 1px solid var(--line); background: #fff; font: inherit; text-align: left; cursor: pointer; }
-.funnelList > button:first-child { border-top: 0; }
-.funnelList > button:hover { background: #f7faf8; }
-.stageIndex { color: #9aa5aa; font: 700 10px/1 monospace; }
-.stageName b, .stageValue b, .stageWeighted b { display: block; }
-.stageName small, .stageValue small, .stageWeighted small { display: block; margin-top: 3px; color: var(--muted); font-size: 8px; }
-.stageBar { height: 7px; overflow: hidden; border-radius: 99px; background: #e8edeb; }
-.stageBar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--teal), #45a897); }
-.stageValue, .stageWeighted { text-align: right; }
+.funnelFlow { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; padding: 14px; background: #f7f9f8; }
+.funnelFlow > button { min-width: 0; min-height: 230px; display: flex; align-items: stretch; flex-direction: column; position: relative; padding: 17px; color: inherit; border: 1px solid #d8e1e2; border-top: 5px solid; border-radius: 12px; font: inherit; text-align: left; cursor: pointer; transition: transform 160ms ease, box-shadow 160ms ease; }
+.funnelFlow > button:not(:last-child)::after { content: "›"; position: absolute; z-index: 2; right: -10px; top: 50%; color: #9eaaae; font-size: 24px; line-height: 1; transform: translate(50%, -50%); }
+.funnelFlow > button:hover { z-index: 3; transform: translateY(-2px); box-shadow: 0 12px 24px rgba(16,43,55,.1); }
+.funnelStageHead { display: grid; grid-template-columns: 28px 1fr 16px; align-items: center; gap: 9px; min-height: 40px; }
+.funnelStageHead > i { width: 28px; height: 28px; display: grid; place-items: center; color: #fff; border-radius: 8px; font: 800 9px/1 monospace; }
+.funnelStageHead > b { font-size: 12px; line-height: 1.25; }
+.funnelStageHead > svg { color: #7c898e; }
+.funnelFlow > button > strong { display: block; margin-top: 18px; font-size: 27px; letter-spacing: -.045em; }
+.funnelStageStats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 13px; }
+.funnelStageStats > span { padding: 7px 5px; color: var(--muted); border: 1px solid rgba(16,43,55,.07); border-radius: 7px; background: rgba(255,255,255,.62); font-size: 7px; text-align: center; }
+.funnelStageStats b { display: block; color: var(--ink); font-size: 10px; }
+.funnelMeter { height: 7px; margin-top: auto; overflow: hidden; border-radius: 99px; background: rgba(16,43,55,.08); }
+.funnelMeter i { display: block; height: 100%; border-radius: inherit; }
+.funnelWeighted { display: block; margin-top: 8px; color: var(--muted); font-size: 8px; }
+.funnelWeighted b { color: var(--ink); }
 
 .tabs { display: flex; gap: 6px; margin-bottom: 9px; }
 .tabs button { padding: 8px 13px; color: var(--muted); border: 1px solid var(--line); border-radius: 8px; background: #fff; font: inherit; font-size: 10px; font-weight: 800; cursor: pointer; }
 .tabs button[aria-selected="true"] { color: #fff; border-color: var(--navy); background: var(--navy); }
 .breakdownTable td:first-child { width: 220px; }
 .breakdownTable td:last-child small { color: var(--muted); font-size: 8px; }
+.breakdownVisual { display: grid; grid-template-columns: 190px 1fr; align-items: center; gap: 28px; padding: 22px 26px; border-bottom: 1px solid var(--line); background: linear-gradient(135deg, #f8fbfa, #fff); }
+.donut { width: 154px; aspect-ratio: 1; display: grid; place-items: center; margin-inline: auto; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(16,43,55,.06); }
+.donut > div { width: 88px; aspect-ratio: 1; display: grid; place-content: center; text-align: center; border-radius: 50%; background: #fff; box-shadow: 0 5px 18px rgba(16,43,55,.1); }
+.donut strong { display: block; font-size: 24px; line-height: 1; }
+.donut span { display: block; margin-top: 4px; color: var(--muted); font-size: 8px; text-transform: uppercase; }
+.donutLegend { display: grid; grid-template-columns: repeat(2, minmax(180px, 1fr)); gap: 8px 20px; }
+.donutLegend > div { display: grid; grid-template-columns: 9px minmax(80px, 1fr) auto 42px; align-items: center; gap: 8px; min-height: 31px; padding-bottom: 6px; border-bottom: 1px solid #edf0ef; font-size: 10px; }
+.donutLegend i { width: 8px; height: 8px; border-radius: 50%; }
+.donutLegend b { text-align: right; }
+.donutLegend small { color: var(--muted); text-align: right; }
 
-.nbGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-.nbCard { min-width: 0; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
-.nbCard > span { display: block; min-height: 28px; color: var(--muted); font-size: 10px; font-weight: 750; }
-.nbCard > strong { display: block; margin: 5px 0 15px; font-size: 23px; letter-spacing: -.035em; }
-.nbCard button, .hygieneCard button { display: flex; align-items: center; gap: 5px; padding: 0; color: var(--teal); border: 0; background: transparent; font: inherit; font-size: 9px; font-weight: 800; cursor: pointer; }
+.nbSplit { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.nbPanel { overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.nbPanel::before { content: ""; display: block; height: 5px; background: linear-gradient(90deg, var(--amber), var(--lime)); }
+.nbCurrent::before { background: linear-gradient(90deg, var(--teal), var(--blue)); }
+.nbPanelHead { min-height: 110px; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 20px; border-bottom: 1px solid var(--line); background: #fffcf6; }
+.nbCurrent .nbPanelHead { background: #f4faf9; }
+.nbPanelHead span { display: block; font-weight: 850; }
+.nbPanelHead small { display: block; max-width: 350px; margin-top: 5px; color: var(--muted); font-size: 9px; }
+.nbPanelHead strong { flex: 0 0 auto; font-size: 27px; letter-spacing: -.04em; }
+.nbMetrics { display: grid; grid-template-columns: repeat(3, 1fr); padding: 9px; }
+.nbMetrics .valueButton { min-height: 88px; align-items: flex-start; justify-content: center; flex-direction: column; padding: 11px; border-left: 1px solid #edf0ef; }
+.nbMetrics .valueButton:first-child { border-left: 0; }
+.nbMetrics .valueButton > span { color: var(--muted); font-size: 8px; font-weight: 800; text-transform: uppercase; }
+.nbMetrics .valueButton > b { font-size: 16px; }
+.nbMetrics .valueButton:nth-child(1) > b { color: var(--teal); }
+.nbAll .nbMetrics .valueButton:nth-child(3) > b { color: #a76c18; }
+.nbCurrent .nbMetrics .valueButton:nth-child(1) > b { color: var(--blue); }
+.hygieneCard button { display: flex; align-items: center; gap: 5px; padding: 0; color: var(--teal); border: 0; background: transparent; font: inherit; font-size: 9px; font-weight: 800; cursor: pointer; }
 
-.hygieneGrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.hygieneGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .hygieneCard { min-width: 0; padding: 17px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
 .hygieneIcon { width: 34px; height: 34px; display: grid; place-items: center; margin-bottom: 16px; color: var(--amber); border-radius: 9px; background: #fff5e7; }
 .hygieneCard > span { display: block; min-height: 32px; color: var(--muted); font-size: 10px; font-weight: 750; }
@@ -172,6 +234,8 @@
 .hygieneCard > small { display: block; min-height: 43px; color: var(--muted); font-size: 8px; }
 .hygieneCard button { margin-top: 12px; }
 .hygieneCard button:disabled { color: #a3aaad; cursor: default; }
+.hygieneClassification { border-color: #d9d2e8; background: linear-gradient(145deg, #faf8ff, #fff 60%); }
+.hygieneClassification .hygieneIcon { color: var(--violet); background: #f0ebfa; }
 
 .dialogBackdrop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 24px; background: rgba(8, 22, 27, .62); backdrop-filter: blur(5px); }
 .dialog { width: min(1240px, 100%); max-height: min(780px, calc(100vh - 48px)); display: flex; flex-direction: column; padding: 20px; overflow: hidden; border: 1px solid rgba(255,255,255,.35); border-radius: 18px; background: #fff; box-shadow: 0 28px 80px rgba(0,0,0,.3); }
@@ -183,22 +247,38 @@
 .dialog .tableWrap { max-height: 630px; border: 1px solid var(--line); border-radius: 10px; }
 .dialog .page table { min-width: 900px; }
 .stagePill { display: inline-block; padding: 3px 6px; color: #456069; border-radius: 5px; background: #edf2f1; font-size: 8px; font-weight: 750; white-space: nowrap; }
+.objectPill { display: inline-block; padding: 3px 6px; color: #385c72; border: 1px solid #d8e6ed; border-radius: 5px; background: #f0f7fa; font-size: 8px; font-weight: 800; white-space: nowrap; }
+.bulkEditor { min-width: 900px; display: flex; align-items: center; gap: 12px; position: sticky; left: 0; top: 0; z-index: 4; padding: 10px 12px; color: #42535b; border-bottom: 1px solid var(--line); background: #f7faf9; font-size: 9px; }
+.bulkEditor > label { display: flex; align-items: center; gap: 6px; font-weight: 800; }
+.bulkEditor > span { white-space: nowrap; }
+.bulkEditor > small { color: var(--muted); }
+.enumEditor { display: flex; align-items: center; gap: 6px; min-width: 190px; margin-top: 7px; }
+.bulkEditor .enumEditor { margin-top: 0; }
+.enumEditor select { width: min(250px, 100%); min-height: 30px; padding: 5px 7px; color: var(--ink); border: 1px solid #ccd8dc; border-radius: 7px; background: #fff; font: inherit; font-size: 9px; }
+.enumEditor select[multiple] { min-height: 58px; }
+.enumEditor button { flex: 0 0 auto; padding: 7px 9px; color: #fff; border: 0; border-radius: 7px; background: var(--teal); font: inherit; font-size: 8px; font-weight: 800; cursor: pointer; }
+.enumEditor button:disabled { opacity: .45; cursor: default; }
+.editorStatus { color: var(--muted); font-size: 8px; }
+.bulkEditor > .editorStatus { margin-left: auto; color: var(--teal); }
+.issueLabel { display: block; color: #6b557e; font-size: 8px; font-weight: 800; }
+.page input[type="checkbox"] { accent-color: var(--teal); }
 .carryover td { background: #fff9ed !important; }
 .empty { padding: 28px; color: var(--muted); text-align: center; font-size: 11px; }
 .page footer { padding: 42px 0 4px; color: var(--muted); font-size: 9px; text-align: center; }
 
 @media (hover: hover) {
-  .metricCard, .nbCard, .hygieneCard { transition: transform 160ms ease, box-shadow 160ms ease; }
-  .metricCard:hover, .nbCard:hover, .hygieneCard:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(16,43,55,.07); }
+  .metricCard, .nbPanel, .hygieneCard { transition: transform 160ms ease, box-shadow 160ms ease; }
+  .metricCard:hover, .nbPanel:hover, .hygieneCard:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(16,43,55,.07); }
 }
 
 @media (max-width: 1050px) {
   .heroMetrics { grid-template-columns: repeat(3, 1fr); }
   .metricPrimary { grid-column: span 2; }
   .overviewGrid { grid-template-columns: 1fr; }
-  .nbGrid, .hygieneGrid { grid-template-columns: repeat(2, 1fr); }
-  .funnelList > button { grid-template-columns: 30px minmax(145px, 1fr) minmax(130px, 1fr) 90px 20px; }
-  .stageWeighted { display: none; }
+  .periodGrid, .nbSplit { grid-template-columns: 1fr; }
+  .hygieneGrid { grid-template-columns: repeat(2, 1fr); }
+  .funnelFlow { grid-template-columns: repeat(2, 1fr); }
+  .funnelFlow > button:nth-child(2n)::after { display: none; }
 }
 
 @media (max-width: 700px) {
@@ -218,11 +298,20 @@
   .weeklyMetrics { grid-template-columns: 1fr; }
   .tabs { overflow-x: auto; }
   .tabs button { white-space: nowrap; }
-  .nbGrid, .hygieneGrid { grid-template-columns: 1fr; }
+  .periodMetrics { grid-template-columns: repeat(2, 1fr); }
+  .periodMetrics .valueButton:nth-child(3) { border-left: 0; border-top: 1px solid #edf0ef; }
+  .periodMetrics .valueButton:nth-child(4) { border-top: 1px solid #edf0ef; }
+  .nbSplit, .hygieneGrid { grid-template-columns: 1fr; }
+  .nbPanelHead { align-items: flex-start; flex-direction: column; }
+  .nbMetrics { grid-template-columns: 1fr; }
+  .nbMetrics .valueButton { min-height: 70px; border-top: 1px solid #edf0ef; border-left: 0; }
+  .nbMetrics .valueButton:first-child { border-top: 0; }
   .hygieneCard > span, .hygieneCard > small { min-height: 0; }
-  .funnelList > button { grid-template-columns: 25px minmax(130px, 1fr) 80px 16px; gap: 8px; padding: 12px 10px; }
-  .stageBar, .stageWeighted { display: none; }
-  .stageValue b { font-size: 10px; }
+  .funnelFlow { grid-template-columns: 1fr; padding: 9px; }
+  .funnelFlow > button { min-height: 210px; }
+  .funnelFlow > button::after { display: none; }
+  .breakdownVisual { grid-template-columns: 1fr; padding: 20px 14px; }
+  .donutLegend { grid-template-columns: 1fr; }
   .sectionNav { margin-inline: -2px; }
   .dialogBackdrop { padding: 8px; }
   .dialog { max-height: calc(100vh - 16px); padding: 14px; border-radius: 13px; }
@@ -234,6 +323,6 @@
 
 @media print {
   .page::before { display: none; }
-  .hero, .metricCard, .targetCard, .weeklyCard, .dataCard, .nbCard, .hygieneCard { box-shadow: none; }
+  .hero, .metricCard, .targetCard, .weeklyCard, .dataCard, .nbPanel, .hygieneCard { box-shadow: none; }
   .sectionNav, .refreshArea button, .dialogBackdrop { display: none; }
 }

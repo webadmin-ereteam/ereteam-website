@@ -82,6 +82,17 @@ export async function fetchHubSpotPropertyCatalog(objectType: string) {
   return result.results;
 }
 
+export async function updateHubSpotObjectProperties(
+  objectType: "deals" | "invoices" | "orders",
+  id: string,
+  properties: Record<string, string>,
+) {
+  return request<HubSpotObject>(
+    `/crm/v3/objects/${objectType}/${encodeURIComponent(id)}`,
+    { method: "PATCH", body: JSON.stringify({ properties }) },
+  );
+}
+
 export async function fetchHubSpotStages(objectType: "deals" | "orders") {
   const result = await request<{ results: Array<{
     label: string;
@@ -200,6 +211,7 @@ export function dealRecord(
     : undefined;
   return {
     id: row.id,
+    objectType: "Deal",
     name: row.properties.dealname || `Deal ${row.id}`,
     date: options.dateProperty
       ? row.properties[options.dateProperty]
@@ -217,6 +229,7 @@ export function dealRecord(
 export function invoiceRecord(row: HubSpotObject, ownerMap: Map<string, string>): SparkRecord {
   return {
     id: row.id,
+    objectType: "Invoice",
     name: [row.properties.hs_number, row.properties.invoice_name].filter(Boolean).join(" · ") || `Invoice ${row.id}`,
     date: row.properties.hs_invoice_date,
     amount: amount(row, "hs_amount_billed_in_company_currency"),
@@ -229,6 +242,7 @@ export function invoiceRecord(row: HubSpotObject, ownerMap: Map<string, string>)
 export function orderRecord(row: HubSpotObject, ownerMap: Map<string, string>): SparkRecord {
   return {
     id: row.id,
+    objectType: "Order",
     name: row.properties.hs_order_name || `Order ${row.id}`,
     date: row.properties.hs_processed_date,
     amount: amount(row, "hs_homecurrency_amount"),

@@ -1,6 +1,7 @@
 # Spark Revenue Dashboard
 
 Spark is an internal, password-protected revenue dashboard mounted at `/spark`.
+Its Turkish dashboard title is `Gelir Yönetim Merkezi`.
 It is intentionally separate from the Presales portal. Spark changes belong in
 this file; do not use `PRESALES.md` as Spark documentation.
 
@@ -10,16 +11,17 @@ this file; do not use `PRESALES.md` as Spark documentation.
 - `/spark/login` — shared internal login
 - `/api/cron/spark` — Vercel Cron endpoint
 - `/api/spark/refresh` — Spark-session-protected manual refresh with a ten-minute cooldown
+- `/api/spark/hygiene` — Spark-session-protected CRM enum catalog and allowlisted record updates
 - `/api/spark/chat` — Spark-session-protected, salt-okunur canlı HubSpot veri asistanı
 - `/api/spark/amplemarket/webhook` — legacy authenticated Amplemarket meeting receiver; not used by the dashboard
 
 ## Schedule and reporting window
 
-Vercel Cron calls the production endpoint every day at `10:00 UTC`, which is
-`13:00 Europe/Istanbul`. Each report covers the current Istanbul calendar day
+Vercel Cron calls the production endpoint every day at `06:00 UTC` and `11:00 UTC`,
+which are `09:00` and `14:00 Europe/Istanbul`. Each report covers the current Istanbul calendar day
 and the seven preceding calendar days through `generatedAt`. YTD and
 current-month values use the generation timestamp as their cutoff. On Vercel Hobby, the invocation can
-occur at any time within the scheduled hour. Environment-variable changes only
+occur at any time within each scheduled hour. Environment-variable changes only
 reach a new deployment, so redeploy after changing a secret.
 
 ## Sources
@@ -27,14 +29,19 @@ reach a new deployment, so redeploy after changing a secret.
 - HubSpot API: deals, invoices, orders, associations, owners and drill-down links
 - Vercel environment: reporting-year `Lisans + Servis` annual target
 
-The management report includes a 12-month operating view, active pipeline stage
-funnel, country/vendor/revenue-type/domain breakdowns, and an action-oriented
-pipeline-hygiene section. Every amount in these sections has a HubSpot record
+The management report includes guaranteed and weighted forecast target coverage,
+current-month and current-quarter summaries, a visual 12-month operating view,
+an active-pipeline stage funnel, country/vendor/revenue-type/domain composition
+charts, a current-year versus carry-over New Business split, and an action-oriented
+CRM-hygiene section. Every amount in these sections has a HubSpot record
 drill-down. Activity, email and calendar metrics are intentionally excluded because
 their integrations are not reliable enough to be management-report sources.
 
 The dashboard does not include an admin screen or historical archive. Data is
-cached and refreshed daily; source health is shown separately.
+cached without age-based revalidation and refreshed twice daily by cron; opening
+the report reuses the current snapshot instead of intentionally querying HubSpot.
+If the platform cache is cold or evicted, the cache remains read-through and the
+first request can repopulate it. Source health is shown separately.
 The header also shows the exact Istanbul update time. Authenticated users can
 request a quiet manual refresh; requests made within ten minutes of the latest
 generated report reuse the current snapshot instead of calling the sources.
@@ -221,8 +228,22 @@ The technical order-date property name is never rendered in the UI.
 - Revenue breakdowns use `country`, `vendor_name`, `revenue_type`, and
   `ereteam_domain`. Missing values remain visible as `Belirtilmemiş`. Vendor and
   revenue type are multi-select fields, so category totals may overlap.
-- Pipeline hygiene shows overdue, 90+ day, missing-close-date, missing-owner and
-  missing-amount active deals. A deal may appear in more than one action group.
+- CRM hygiene shows overdue, 90+ day, missing-close-date, missing-owner and
+  missing-amount active deals. Separate classification cards check reporting-year
+  invoices, reporting-year open orders, and reporting-year active deals for missing
+  `country`, `vendor_name`, `revenue_type`, or `ereteam_domain` values. Detail rows
+  identify whether the affected HubSpot record is an Invoice, Order, or Deal. A record
+  may appear in more than one action group.
+- CRM-hygiene detail dialogs can write only `country`, `vendor_name`, `revenue_type`,
+  and `ereteam_domain`. Values are validated against the live enum catalog before the
+  HubSpot update. Users can update one record or select up to 50 records for one bulk
+  update. Checkbox properties support multiple values, and mixed object selections use
+  only enum options common to every selected object type. Successful writes immediately
+  remove the corrected records from the current browser's hygiene card and dialog; the
+  shared dashboard snapshot is fully reconciled by the next manual or scheduled refresh.
+  The HubSpot private app therefore
+  requires `crm.objects.deals.write`, `crm.objects.invoices.write`, and
+  `crm.objects.orders.write` in addition to the existing read scopes.
 - Current-month open deals use `closedate` and exclude Closed Won and Closed Lost.
 - Monthly, breakdown, funnel, New Business and hygiene values expose record-count
   drill-downs in one shared modal; only one record detail modal is open at a time.
@@ -236,8 +257,9 @@ The receiver and stored `SparkAmplemarketEvent` records remain available for
 legacy integrations, but Spark no longer reads or reports Amplemarket data.
 
 The live dashboard uses a minimal management-report hierarchy: branded dark
-header, target/revenue/pipeline summary, compact weekly movement, 12-month table,
-stage funnel, revenue breakdowns, New Business, and pipeline hygiene. Record
+header, target/revenue/pipeline summary, compact weekly pipeline movement, month
+and quarter cards, visual 12-month composition, color-separated stage flow, revenue
+charts, split New Business cohorts, and CRM hygiene. Record
 details open in one shared modal rather than expanding the page. Million-scale
 compact values always show two decimal places.
 

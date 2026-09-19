@@ -223,6 +223,32 @@ export async function collectSparkData(now = new Date()): Promise<{ data: SparkD
       issues: [group.label],
     })),
   }));
+  const breakdownFields = [
+    ["country", "Ülke"],
+    ["vendor_name", "Vendor"],
+    ["revenue_type", "Revenue type"],
+    ["ereteam_domain", "Ereteam domain"],
+  ] as const;
+  const yearInvoices = finalizedInvoices.filter(isInvoiceThroughReport);
+  const yearOrders = openOrders.filter((order) => isReportingYear(order.properties.hs_processed_date, year));
+  for (const [property, label] of breakdownFields) {
+    const issue = `${label} eksik`;
+    const invoiceIssues = yearInvoices
+      .filter((row) => !row.properties[property]?.trim())
+      .map((row) => ({ ...invoiceRecord(row, ownerMap), issues: [issue] }));
+    const orderIssues = yearOrders
+      .filter((row) => !row.properties[property]?.trim())
+      .map((row) => ({ ...orderRecord(row, ownerMap), issues: [issue] }));
+    const dealIssues = yearActiveDeals
+      .filter((row) => !row.properties[property]?.trim())
+      .map((row) => toDealRecord(row, { dateProperty: "closedate", issues: [issue] }));
+    hygiene.push({
+      key: `missing-${property}`,
+      label: issue,
+      description: `${year} fatura, açık order ve aktif fırsat kayıtlarında eksik ${label.toLocaleLowerCase("tr-TR")} bilgisi`,
+      records: [...invoiceIssues, ...orderIssues, ...dealIssues],
+    });
+  }
 
   const data: SparkData = {
     generatedAt: now.toISOString(), reportDate: reportDateKey(now), periodStart: start.toISOString(), periodEnd: end.toISOString(),
