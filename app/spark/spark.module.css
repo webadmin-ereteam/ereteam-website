@@ -231,13 +231,13 @@
 .hygieneCard button { display: flex; align-items: center; gap: 5px; padding: 0; color: var(--teal); border: 0; background: transparent; font: inherit; font-size: 9px; font-weight: 800; cursor: pointer; }
 
 .hygieneGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.hygieneCard { min-width: 0; padding: 17px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
-.hygieneIcon { width: 34px; height: 34px; display: grid; place-items: center; margin-bottom: 16px; color: var(--amber); border-radius: 9px; background: #fff5e7; }
-.hygieneCard > span { display: block; min-height: 32px; color: var(--muted); font-size: 10px; font-weight: 750; }
-.hygieneCard > strong { display: block; font-size: 30px; line-height: 1; }
-.hygieneCard > p { margin: 5px 0; font-size: 11px; font-weight: 800; }
-.hygieneCard > small { display: block; min-height: 43px; color: var(--muted); font-size: 8px; }
-.hygieneCard button { margin-top: 12px; }
+.hygieneCard { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.hygieneIcon { width: 32px; height: 32px; display: grid; place-items: center; margin-bottom: 10px; color: var(--amber); border-radius: 9px; background: #fff5e7; }
+.hygieneCard > span { display: block; min-height: 25px; color: var(--muted); font-size: 10px; font-weight: 750; }
+.hygieneCard > strong { display: block; font-size: 27px; line-height: 1; }
+.hygieneCard > p { margin: 4px 0; font-size: 11px; font-weight: 800; }
+.hygieneCard > small { display: block; min-height: 32px; color: var(--muted); font-size: 8px; }
+.hygieneCard button { margin-top: 8px; }
 .hygieneCard button:disabled { color: #a3aaad; cursor: default; }
 .hygieneClassification { border-color: #d9d2e8; background: linear-gradient(145deg, #faf8ff, #fff 60%); }
 .hygieneClassification .hygieneIcon { color: var(--violet); background: #f0ebfa; }
