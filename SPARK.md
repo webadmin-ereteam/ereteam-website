@@ -227,13 +227,17 @@ The technical order-date property name is never rendered in the UI.
   the reporting year.
 - Revenue breakdowns use `country`, `vendor_name`, `revenue_type`, and
   `ereteam_domain`. Missing values remain visible as `Belirtilmemiş`. Vendor and
-  revenue type are multi-select fields, so category totals may overlap.
+  revenue type are multi-select fields, so category totals may overlap. The chart
+  legend amounts are invoice plus open-order totals and are explicitly labeled
+  `Fatura + açık order`; the label belongs above the legend values, not above the donut.
 - CRM hygiene shows overdue, 90+ day, missing-close-date, missing-owner and
   missing-amount active deals. Separate classification cards check reporting-year
   invoices, reporting-year open orders, and reporting-year active deals for missing
   `country`, `vendor_name`, `revenue_type`, or `ereteam_domain` values. Detail rows
   identify whether the affected HubSpot record is an Invoice, Order, or Deal. A record
-  may appear in more than one action group.
+  may appear in more than one action group. Deal-only operational cards label their
+  amount as `pipeline`; mixed Invoice/Order/Deal classification cards label it as
+  `toplam tutar` and must not describe the mixed amount as pipeline.
 - CRM-hygiene detail dialogs can write only `country`, `vendor_name`, `revenue_type`,
   and `ereteam_domain`. Values are validated against the live enum catalog before the
   HubSpot update. Users can update one record or select up to 50 records for one bulk
@@ -261,7 +265,10 @@ header, target/revenue/pipeline summary, compact weekly pipeline movement, month
 and quarter cards, visual 12-month composition, color-separated stage flow, revenue
 charts, split New Business cohorts, and CRM hygiene. Record
 details open in one shared modal rather than expanding the page. Million-scale
-compact values always show two decimal places.
+compact values always show two decimal places. Responsive behavior is verified at
+320px, 375px, 390px, and 768px widths for the dashboard, CRM detail editor, and chat;
+the page must not introduce root-level horizontal overflow, while wide data tables
+remain horizontally scrollable inside their own containers.
 
 ## Commands
 
