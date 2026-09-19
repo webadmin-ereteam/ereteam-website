@@ -14,6 +14,7 @@
   max-width: 1480px;
   margin: 0 auto;
   padding: 24px 32px 48px;
+  overflow-x: clip;
   color: var(--ink);
   font: 14px/1.45 Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -196,6 +197,8 @@
 .breakdownTable td:first-child { width: 220px; }
 .breakdownTable td:last-child small { color: var(--muted); font-size: 8px; }
 .breakdownVisual { display: grid; grid-template-columns: 190px 1fr; align-items: center; gap: 28px; padding: 22px 26px; border-bottom: 1px solid var(--line); background: linear-gradient(135deg, #f8fbfa, #fff); }
+.breakdownSummary { display: grid; justify-items: center; gap: 10px; }
+.breakdownSummary > span { color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
 .donut { width: 154px; aspect-ratio: 1; display: grid; place-items: center; margin-inline: auto; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(16,43,55,.06); }
 .donut > div { width: 88px; aspect-ratio: 1; display: grid; place-content: center; text-align: center; border-radius: 50%; background: #fff; box-shadow: 0 5px 18px rgba(16,43,55,.1); }
 .donut strong { display: block; font-size: 24px; line-height: 1; }
@@ -215,6 +218,9 @@
 .nbPanelHead span { display: block; font-weight: 850; }
 .nbPanelHead small { display: block; max-width: 350px; margin-top: 5px; color: var(--muted); font-size: 9px; }
 .nbPanelHead strong { flex: 0 0 auto; font-size: 27px; letter-spacing: -.04em; }
+.nbTotal { flex: 0 0 auto; text-align: right; }
+.nbTotal small { margin: 0 0 3px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.nbTotal strong { display: block; }
 .nbMetrics { display: grid; grid-template-columns: repeat(3, 1fr); padding: 9px; }
 .nbMetrics .valueButton { min-height: 88px; align-items: flex-start; justify-content: center; flex-direction: column; padding: 11px; border-left: 1px solid #edf0ef; }
 .nbMetrics .valueButton:first-child { border-left: 0; }
@@ -248,7 +254,7 @@
 .dialog .page table { min-width: 900px; }
 .stagePill { display: inline-block; padding: 3px 6px; color: #456069; border-radius: 5px; background: #edf2f1; font-size: 8px; font-weight: 750; white-space: nowrap; }
 .objectPill { display: inline-block; padding: 3px 6px; color: #385c72; border: 1px solid #d8e6ed; border-radius: 5px; background: #f0f7fa; font-size: 8px; font-weight: 800; white-space: nowrap; }
-.bulkEditor { min-width: 900px; display: flex; align-items: center; gap: 12px; position: sticky; left: 0; top: 0; z-index: 4; padding: 10px 12px; color: #42535b; border-bottom: 1px solid var(--line); background: #f7faf9; font-size: 9px; }
+.bulkEditor { width: 100%; min-width: 0; display: flex; align-items: center; gap: 12px; position: sticky; left: 0; top: 0; z-index: 4; padding: 10px 12px; color: #42535b; border-bottom: 1px solid var(--line); background: #f7faf9; font-size: 9px; }
 .bulkEditor > label { display: flex; align-items: center; gap: 6px; font-weight: 800; }
 .bulkEditor > span { white-space: nowrap; }
 .bulkEditor > small { color: var(--muted); }
@@ -303,6 +309,7 @@
   .periodMetrics .valueButton:nth-child(4) { border-top: 1px solid #edf0ef; }
   .nbSplit, .hygieneGrid { grid-template-columns: 1fr; }
   .nbPanelHead { align-items: flex-start; flex-direction: column; }
+  .nbTotal { text-align: left; }
   .nbMetrics { grid-template-columns: 1fr; }
   .nbMetrics .valueButton { min-height: 70px; border-top: 1px solid #edf0ef; border-left: 0; }
   .nbMetrics .valueButton:first-child { border-top: 0; }
@@ -315,6 +322,11 @@
   .sectionNav { margin-inline: -2px; }
   .dialogBackdrop { padding: 8px; }
   .dialog { max-height: calc(100vh - 16px); padding: 14px; border-radius: 13px; }
+  .bulkEditor { align-items: flex-start; flex-wrap: wrap; }
+  .bulkEditor > small { flex-basis: 100%; }
+  .bulkEditor .enumEditor { width: 100%; min-width: 0; flex: 1 0 100%; }
+  .bulkEditor .enumEditor select { flex: 1; }
+  .bulkEditor > .editorStatus { width: 100%; margin-left: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

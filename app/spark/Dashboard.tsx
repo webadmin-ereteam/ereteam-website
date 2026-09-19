@@ -287,8 +287,11 @@ function DonutChart({ entries, overlapping }: { entries: Array<{ label: string; 
 
   return (
     <div className={styles.breakdownVisual}>
-      <div className={styles.donut} style={{ background: gradient ? `conic-gradient(${gradient})` : "#e8edeb" }}>
-        <div><strong>{items.length}</strong><span>{overlapping ? "kategori" : "pay"}</span></div>
+      <div className={styles.breakdownSummary}>
+        <span>Fatura + açık order</span>
+        <div className={styles.donut} style={{ background: gradient ? `conic-gradient(${gradient})` : "#e8edeb" }}>
+          <div><strong>{items.length}</strong><span>{overlapping ? "kategori" : "pay"}</span></div>
+        </div>
       </div>
       <div className={styles.donutLegend}>
         {items.map((entry, index) => (
@@ -594,7 +597,7 @@ export default function Dashboard({ data }: { data: SparkData }) {
           <article className={`${styles.nbPanel} ${styles.nbAll}`}>
             <div className={styles.nbPanelHead}>
               <div><span>Tüm New Business portföyü</span><small>Önceki yıllarda ve bu yıl kazanılan deal&apos;lere bağlı {year} geliri</small></div>
-              <strong>{shortMoney(sum(data.newBusiness.invoices) + sum(data.newBusiness.orders))}</strong>
+              <div className={styles.nbTotal}><small>Fatura + açık order</small><strong>{shortMoney(sum(data.newBusiness.invoices) + sum(data.newBusiness.orders))}</strong></div>
             </div>
             <div className={styles.nbMetrics}>
               <OpenRecordsButton rows={data.newBusiness.invoices} label="Tüm New Business faturaları" onOpen={openRecords}><span>Fatura edilen</span><b>{shortMoney(sum(data.newBusiness.invoices))}</b><small>{data.newBusiness.invoices.length} kayıt</small></OpenRecordsButton>
@@ -605,7 +608,7 @@ export default function Dashboard({ data }: { data: SparkData }) {
           <article className={`${styles.nbPanel} ${styles.nbCurrent}`}>
             <div className={styles.nbPanelHead}>
               <div><span>{year} kazanımları</span><small>Yalnız bu yıl Closed Won olan New Business deal&apos;leri ve bağlı gelir</small></div>
-              <strong>{shortMoney(sum(data.newBusiness.sameYearInvoices) + sum(data.newBusiness.sameYearOrders))}</strong>
+              <div className={styles.nbTotal}><small>Fatura + açık order</small><strong>{shortMoney(sum(data.newBusiness.sameYearInvoices) + sum(data.newBusiness.sameYearOrders))}</strong></div>
             </div>
             <div className={styles.nbMetrics}>
               <OpenRecordsButton rows={data.newBusiness.sameYearDeals} label={`${year} kazanılan New Business fırsatları`} onOpen={openRecords}><span>Closed Won deal</span><b>{shortMoney(sum(data.newBusiness.sameYearDeals))}</b><small>{data.newBusiness.sameYearDeals.length} fırsat</small></OpenRecordsButton>
