@@ -8,7 +8,9 @@ import {
   ArrowUpRight,
   BarChart3,
   CircleDollarSign,
+  Download,
   Info,
+  List,
   RefreshCw,
   X,
 } from "lucide-react";
@@ -40,6 +42,17 @@ const formatDate = (value?: string, withTime = false) => value
       timeZone: "Europe/Istanbul",
     }).format(new Date(value))
   : "-";
+
+const dataFileDate = () => {
+  const parts = new Intl.DateTimeFormat("en", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "Europe/Istanbul",
+  }).formatToParts(new Date());
+  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value;
+  return `${value("year")}-${value("month")}-${value("day")}`;
+};
 
 const sum = (rows: SparkRecord[]) => rows.reduce((total, row) => total + row.amount, 0);
 const pct = (part: number, whole: number) => whole ? (part / whole) * 100 : 0;
@@ -262,6 +275,7 @@ function RecordDialog({
   onClose: () => void;
   onRecordsUpdated?: (rows: SparkRecord[], property: EditableProperty) => void;
 }) {
+  const [exporting, setExporting] = useState(false);
   const countries = [
     { key: "Turkiye", label: "TR" },
     { key: "USA", label: "ABD" },
@@ -269,6 +283,35 @@ function RecordDialog({
     const countryRows = rows.filter((row) => countryGroup(row.country) === country.key);
     return { ...country, count: countryRows.length, amount: sum(countryRows) };
   });
+  const exportExcel = async () => {
+    if (!rows.length || exporting) return;
+    setExporting(true);
+    try {
+      const XLSX = await import("xlsx");
+      const worksheet = XLSX.utils.json_to_sheet(rows.map((row) => ({
+        "Kayıt": row.name,
+        "Tür": row.objectType ?? "",
+        "Tarih": formatDate(row.date),
+        "Tutar (USD)": row.amount,
+        "Weighted (USD)": row.weightedAmount ?? "",
+        "Stage": row.stage ?? "",
+        "Owner": row.owner ?? "",
+        "Ülke": countryGroup(row.country) ?? "",
+        "Yaş (gün)": row.ageDays ?? "",
+        "Kontrol": row.issues?.join(", ") ?? "",
+        "HubSpot URL": row.url,
+      })));
+      worksheet["!cols"] = [
+        { wch: 42 }, { wch: 10 }, { wch: 14 }, { wch: 16 }, { wch: 18 },
+        { wch: 24 }, { wch: 24 }, { wch: 12 }, { wch: 10 }, { wch: 28 }, { wch: 48 },
+      ];
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Kayıtlar");
+      XLSX.writeFile(workbook, `spark-kayitlari-${dataFileDate()}.xlsx`, { compression: true });
+    } finally {
+      setExporting(false);
+    }
+  };
   return (
     <div className={styles.dialogBackdrop} role="presentation" onMouseDown={onClose}>
       <section className={styles.dialog} role="dialog" aria-modal="true" aria-label={title} onMouseDown={(event) => event.stopPropagation()}>
@@ -283,7 +326,10 @@ function RecordDialog({
               </div>
             ) : null}
           </div>
-          <button type="button" onClick={onClose} aria-label="Kapat"><X size={20} /></button>
+          <div className={styles.dialogHeadActions}>
+            <button className={styles.exportButton} type="button" disabled={!rows.length || exporting} onClick={exportExcel}><Download size={15} />{exporting ? "Hazırlanıyor" : "Excel indir"}</button>
+            <button type="button" onClick={onClose} aria-label="Kapat"><X size={20} /></button>
+          </div>
         </div>
         {rows.length ? <RecordTable rows={rows} onRecordsUpdated={onRecordsUpdated} /> : <div className={styles.empty}>Kayıt bulunmuyor.</div>}
       </section>
@@ -361,6 +407,9 @@ export default function Dashboard({ data }: { data: SparkData }) {
   ));
   const nbCarryoverInvoices = data.newBusiness.invoices.filter((row) => row.carryover);
   const nbCarryoverOrders = data.newBusiness.orders.filter((row) => row.carryover);
+  const funnelDeals = Array.from(new Map(data.stageFunnel
+    .flatMap((stage) => stage.records)
+    .map((row) => [recordKey(row), row])).values());
   const funnelMax = Math.max(...data.stageFunnel.map((stage) => sum(stage.records)), 1);
   const openRecords = (title: string, rows: SparkRecord[], showCountryBreakdown = false) => setDetail({
     title,
@@ -548,7 +597,12 @@ export default function Dashboard({ data }: { data: SparkData }) {
       <section id="funnel">
         <div className={styles.sectionHead}>
           <div><span>03</span><h2>Pipeline stage funnel</h2></div>
-          <p>Açık fırsatların stage bazında dağılımı</p>
+          <div className={styles.sectionActions}>
+            <p>Açık fırsatların stage bazında dağılımı</p>
+            <button className={styles.sectionAction} type="button" disabled={!funnelDeals.length} onClick={() => openRecords("Tüm aktif pipeline deal'ları", funnelDeals)}>
+              <List size={13} /> Tüm deal&apos;ları gör ({funnelDeals.length})
+            </button>
+          </div>
         </div>
         <article className={styles.dataCard}>
           {data.stageFunnel.length ? (

@@ -277,6 +277,11 @@ The technical order-date property name is never rendered in the UI.
 - Current-month open deals use `closedate` and exclude Closed Won and Closed Lost.
 - Monthly, breakdown, funnel, New Business and hygiene values expose record-count
   drill-downs in one shared modal; only one record detail modal is open at a time.
+  The stage-funnel header also provides one deduplicated list of all active deals
+  represented across the funnel stages.
+  Every record-detail modal can export its current rows to an Excel workbook with
+  record metadata and HubSpot URLs; the spreadsheet library loads only when export
+  is requested.
   Record-detail tables do not show a separate company column because company data is
   not reliably populated by HubSpot and the record names already contain the useful
   company context.
