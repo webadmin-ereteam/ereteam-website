@@ -35,9 +35,10 @@ function compactContext(history: HistoryItem[]) {
 }
 
 const suggestions = [
-  "Bu ay beklenen fatura toplamı nedir?",
+  "Türkiye faturaları ne kadar?",
   "Bu ay beklenen faturaların detaylarını göster",
-  "Açık sipariş tutarını owner bazında göster",
+  "Weighted pipeline ülke bazında",
+  "Forecast coverage yüzde kaç?",
 ];
 
 function formatCell(value: string, format: Column["format"]) {

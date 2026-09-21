@@ -69,7 +69,8 @@ rate-limited, the API returns an explicit `429` response telling the user to wai
 retry with one period and one metric. The assistant is
 read-only, never exposes tokens to the browser, rate
 limits requests, and only works with a valid `spark_session`. Calculations use the
-approved USD fields. Common Turkish periods (`bu/geçen ay`, `bu/geçen yıl`,
+approved USD fields. Common Turkish periods (`bu/geçen/gelecek ay`, named months,
+`bu çeyrek`, `bu/geçen yıl`,
 `ilk/ikinci/üçüncü/dördüncü çeyrek`, `Q1–Q4`, `yılın ilk/ikinci yarısı`, `H1/H2`,
 `YTD/yılbaşından bugüne`, `MTD/aybaşından bugüne`, `bu/geçen hafta`, `bugün`,
 `dün`, `son N gün` up to 365 days), record type,
@@ -78,8 +79,9 @@ HubSpot date/amount fields are enforced deterministically after planning. Invali
 or incomplete filters, properties, sorting and aggregations trigger model fallback
 instead of returning an over-broad total. Each answer exposes a compact interpretation
 of its object, period, measure and filters. Follow-ups also carry the previous validated
-query context—not record data—so short period changes and `bunların toplamı?` retain
-the intended scope. Active pipeline, Won/Lost, open expected orders
+query context—not record data—so short period, country and dimension changes retain
+the intended object, aggregate and composite/weighted metric. The most recent validated
+data context is retained even if an explanatory text turn intervenes. Active pipeline, Won/Lost, open expected orders
 and New Business-linked records use the same deterministic definitions as the dashboard.
 Every order query is restricted to open pipeline stages, so closed/cancelled orders
 are excluded even when the user does not explicitly say `açık`. Explicit
@@ -97,7 +99,10 @@ explicitly in the LLM query plan (`metricKind`), so natural paraphrases are not 
 to a fixed phrase list; deterministic code validates and executes the calculation.
 `Weighted pipeline`, `ağırlıklı pipeline` and `weighted forecast` sum the live
 `hs_projected_amount_in_home_currency` field for active deals; the chatbot does not
-recalculate HubSpot's projected amount.
+recalculate HubSpot's projected amount. Country, owner, stage, vendor, revenue type,
+domain and customer breakdown requests retain their validated `groupBy` dimension.
+Current-month active and weighted pipeline use the full close-date calendar month,
+matching the dashboard rather than stopping at today.
 Invoice queries first validate that the live catalog contains the custom `status`
 enum with `invoiced` and `cancelled` options. Only records whose custom status is
 exactly `cancelled` are excluded; blank, `invoiced`, and any future non-cancelled
@@ -105,9 +110,13 @@ value remain included. This rule is shared by the dashboard and assistant.
 Deal Open/Won/Lost and order Open filters use virtual state fields derived from
 HubSpot closed/won properties and live pipeline metadata. Stage labels are display
 values only and are never parsed for state decisions.
-Country intent uses the live `country` enum on deals, invoices and orders:
-`Türkiye`/`Turkey` map to `Turkiye`; `Amerika`/`ABD`/`USA`/`United States` map to
-`USA`. Country-only follow-ups retain the prior validated object and scope.
+Country intent uses the live `country` field on deals, invoices and orders.
+`Türkiye`/`Turkiye`/`Turkey`/`TR` map to one canonical Türkiye group;
+`Amerika`/`ABD`/`USA`/`US`/`United States` map to one canonical ABD group. The same
+canonicalization is applied to user text, live catalog option labels and values, returned
+HubSpot rows and grouped output, so object-specific enum spelling cannot produce a false
+zero. Turkish suffixes such as `Türkiyedeki` are recognized. Country-only follow-ups
+retain the prior validated object, measure and scope.
 Customer/company intent such as `Migros'a kestiğimiz faturalar`, `Migros firmasının
 siparişleri` or equivalent deal questions uses the virtual `_company_name` field on
 all three objects. It is sourced from invoice latest company name, deal name, or an
@@ -136,6 +145,10 @@ matched to the nearest unambiguous active owner name before records are filtered
 ambiguous low-confidence names are not guessed.
 Breakdowns retain missing classifications as `Belirtilmemiş`, so category totals do
 not silently omit records with sparse country, domain or business-type data.
+Annual target, remaining target, guaranteed coverage, forecast coverage and total
+annual forecast questions are answered deterministically from the persisted Spark
+dashboard snapshot. Currency conversion, activity/calendar counts and historical stage
+conversion questions return an explicit scope explanation instead of inventing data.
 
 All chatbot business vocabulary is maintained centrally in
 `lib/spark/chatKnowledge.ts`: HubSpot field contracts, enum values, Turkish/English
@@ -146,8 +159,9 @@ its regression cases are maintained in the same knowledge file.
 `lib/spark/hubspot.ts` is the single runtime source for invoice inclusion,
 deal-state and open-order classification. Do not duplicate these decisions in the
 dashboard or chatbot. The regression suite covers custom invoice status, blank
-status inclusion, metadata-based state decisions, multi-select revenue grouping,
-owner matching, date periods, intent guardrails and field selection.
+status inclusion, metadata-based state decisions, live country enum/row aliases,
+multi-select revenue grouping, owner matching, date periods, follow-up metric retention,
+intent guardrails and field selection.
 Metric questions can also return a deterministic multi-value breakdown through a
 validated `groupBy` property. For example, a Türkiye/USA country comparison returns
 both values and a short calculated difference sentence. Explanation, interpretation,

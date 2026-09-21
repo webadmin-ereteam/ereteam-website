@@ -9,6 +9,7 @@
 export type SparkObjectType = "deals" | "invoices" | "orders";
 export type SparkRevenueIntent = { kind: "exact"; value: string } | { kind: "license" } | { kind: "service" };
 export type SparkCompositeRevenueMetricKind = "guaranteed_revenue" | "expected_revenue";
+export type SparkDashboardMetricKind = "annual_target" | "remaining_target" | "guaranteed_coverage" | "forecast_coverage" | "annual_forecast";
 
 export function normalizeSparkChatText(value?: string | null) {
   return (value ?? "").trim().toLocaleLowerCase("tr-TR").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ı/g, "i");
@@ -68,13 +69,14 @@ export const SPARK_CHAT_KNOWLEDGE = {
     },
   },
   countries: [
-    { value: "Turkiye", pattern: /\b(turkiye|turkey)\b/ },
-    { value: "USA", pattern: /\b(amerika|abd|usa|united\s+states)\b/ },
+    { value: "Turkiye", pattern: /\b(turkiye(?:['’]?(?:de|den|nin|ye|yi|li|deki))?|turkey|tr)\b/ },
+    { value: "USA", pattern: /\b(amerika(?:['’]?(?:da|dan|nin|ya|yi|li|daki))?|abd|usa|us|united\s+states(?:\s+of\s+america)?)\b/ },
   ],
   breakdown: {
     triggerPattern: /\b(kirilim\w*|bazinda|ayri\s+(ayri|rakam)|karsilastir\w*|iki\s+rakam)\b/,
     dimensions: [
-      { property: "country", pattern: /\b(ulke|turkiye|turkey|amerika|abd|usa|united\s+states)\b/ },
+      { property: "country", pattern: /\b(ulke|turkiye|turkey|tr|amerika|abd|usa|us|united\s+states)\b/ },
+      { property: "_company_name", pattern: /\b(musteri|firma|sirket)\b/ },
       { property: "vendor_name", pattern: /\b(vendor|satici|uretici)\b/ },
       { property: "_revenue_group", pattern: /(?=.*\b(lisans|license|sns)\b)(?=.*\b(servis|danismanlik)\b)/ },
       { property: "revenue_type", pattern: /\b(revenue\s*type|gelir\s+tip|lisans|servis|danismanlik|sns|proje|project)\b/ },
@@ -85,7 +87,7 @@ export const SPARK_CHAT_KNOWLEDGE = {
     ],
     valueLabels: {
       Turkiye: "Türkiye",
-      USA: "USA",
+      USA: "ABD",
       newbusiness: "New Business",
       existingbusiness: "Existing Business",
       license: "Lisans",
@@ -172,7 +174,7 @@ export const SPARK_CHAT_KNOWLEDGE = {
     'Invoice kapsamı custom status alanında cancelled olmayan kayıtlardır. "Garanti gelir" aynı dönem için faturalanan gelir ile açık order toplamıdır. Tüm order sorgularında hs_processed_date + hs_homecurrency_amount + _is_open eq true kullan; kapalı/cancelled orderları getirme.',
     '"Weighted pipeline/ağırlıklı pipeline/weighted forecast" yalnızca aktif deallardaki hazır hs_projected_amount_in_home_currency alanının toplamıdır. Bu alan HubSpot tarafından deal tutarı ve kapanma olasılığıyla hesaplanır; chatbot yeniden hesaplama yapmaz.',
     "Fatura veya order için yeni iş/New Business sorusunda bağlı deal üzerinde dealtype eq newbusiness ve _is_won eq true filtresini associatedDealFilters ile uygula. Mevcut iş/Existing Business için bağlı deal üzerinde dealtype eq existingbusiness kullan.",
-    "country enumları Turkiye ve USA: Türkiye/Turkey -> Turkiye; Amerika/ABD/USA/United States -> USA.",
+    "country canlı enumu nesneye göre farklı yazılabilir: Türkiye/Turkiye/Turkey/TR -> Turkiye; Amerika/ABD/USA/US/United States -> USA. Filtre değerini canlı enum label/value ile eşleştir.",
     'Müşteri/firma sorularında tüm nesnelerde sanal _company_name alanını kullan. Önce HubSpot company ilişkisini, ilişki yoksa nesnenin kontrollü müşteri adı yedeğini kullan. "Migros\'a kestiğimiz faturalar" müşteri Migros filtresidir; vendor değildir.',
     'vendor_name yalnızca kullanıcı açıkça vendor, satıcı, üretici, partner veya iş ortağı dediğinde kullanılır. "Vendorı IBM" ve "partneri IBM" vendor filtresidir.',
     "vendor_name ve revenue_type HubSpot çoklu seçim alanlarıdır; Ereteam;IBM değeri IBM filtresine, License;Project değeri License filtresine eşleşir. Noktalı virgülle birleşen değeri tek enum gibi değerlendirme.",
@@ -183,6 +185,10 @@ export const SPARK_CHAT_KNOWLEDGE = {
     '"Yılın ilk yarısı" ve H1, 1 Ocak dahil–1 Temmuz hariç; "yılın ikinci yarısı" ve H2, 1 Temmuz dahil–sonraki 1 Ocak hariç aralığıdır.',
     "Çeyrek ifadelerinde ilk/1. çeyrek/Q1 Ocak–Mart, ikinci/Q2 Nisan–Haziran, üçüncü/Q3 Temmuz–Eylül, dördüncü/son/Q4 Ekim–Aralık takvim aralığıdır.",
     "Kırılım, bazında, karşılaştırma veya iki rakam istenirse groupBy alanına ilgili property adını yaz; kategoriyi tek bir filtreye indirgeme. Boş sınıflandırmaları uydurma ve kırılımda Belirtilmemiş olarak koru.",
+    "Müşteri/firma/şirket bazında kırılım için _company_name; owner bazında _owner_name; stage/aşama bazında _stage_label kullan.",
+    "Weighted pipeline ülke, owner, stage, vendor, revenue type veya domain bazında sorulursa groupBy değerini koru ve hs_projected_amount_in_home_currency alanını grupla.",
+    '"Kaç dolar/kaç USD/kaç milyon" tutar sorusudur; count değildir. "Kaç tane/kaç adet/kayıt sayısı" count sorusudur.',
+    "Bu ay aktif veya weighted pipeline, close date'i ay sonuna kadar olan açık fırsatları kapsar. Kesilen faturalar için bu ay bugüne kadar olan kayıtları kullan.",
     "Kullanıcının istediği hiçbir dönem, owner, stage, tür veya bağlantı filtresini sessizce atlama. Katalogda olmayan property uydurma.",
     "Kullanıcının açıkça istemediği ülke, vendor, müşteri, revenue type, domain veya iş tipi filtresini ekleme. Geçerli bir HubSpot property olması, kendiliğinden filtre uygulama izni değildir.",
     "Order sorgularındaki zorunlu _is_open filtresi dışında stage, pipeline, açık, won/kazanılan, lost/kaybedilen veya beklenen fatura açıkça söylenmedikçe dealstage, hs_is_closed, hs_is_closed_won, hs_pipeline_stage, _stage_label, _is_open, _is_closed ya da _is_won filtresi ekleme.",
@@ -193,6 +199,9 @@ export const SPARK_CHAT_KNOWLEDGE = {
     { question: "Bu ay gerçekleşen faturalarla açık siparişleri beraber düşünürsek toplam ne eder?", object: "invoices", plannerMetricKind: "expected_revenue", expectedMetricKind: "expected_revenue", expectedResponseType: "metric" },
     { question: "Bu ay beklenen faturaların detaylarını göster", object: "orders", expectedResponseType: "records", expectedFilterProperties: ["hs_processed_date", "_is_open"], expectedDateRange: ["2026-08-01", "2026-09-01"] },
     { question: "Türkiye faturaları ne kadar?", object: "invoices", expectedProperty: "country", expectedValues: ["Turkiye"] },
+    { question: "TR faturaları kaç dolar?", object: "invoices", expectedProperty: "country", expectedValues: ["Turkiye"], expectedResponseType: "metric", expectedAggregateProperty: "hs_amount_billed_in_company_currency" },
+    { question: "Türkiyedeki açık siparişleri göster", object: "orders", expectedProperty: "country", expectedValues: ["Turkiye"], expectedResponseType: "records", expectedFilterProperties: ["_is_open"] },
+    { question: "US pipeline ne kadar?", object: "deals", expectedProperty: "country", expectedValues: ["USA"], expectedResponseType: "metric", expectedFilterProperties: ["_is_open"] },
     { question: "IBM vendor aktif pipeline ne kadar?", object: "deals", expectedProperty: "vendor_name", expectedValues: ["IBM"] },
     { question: "Weighted pipeline değerimiz ne kadar?", object: "deals", plannerFilters: [{ property: "hs_is_closed_won", operator: "neq", value: "true" }, { property: "dealstage", operator: "not_contains", value: "lost" }], expectedResponseType: "metric", expectedAggregateProperty: "hs_projected_amount_in_home_currency", expectedFilterProperties: ["_is_open"], expectedForbiddenProperties: ["hs_is_closed_won", "dealstage", "_stage_label"] },
     { question: "Partneri IBM olan faturalar ne kadar?", object: "invoices", expectedProperty: "vendor_name", expectedValues: ["IBM"] },
@@ -212,6 +221,14 @@ export const SPARK_CHAT_KNOWLEDGE = {
     { question: "2026 ilkyarısının toplam danışmanlık faturası ne kadar?", object: "invoices", expectedProperty: "revenue_type", excludedValues: ["License", "SNS"], expectedResponseType: "metric", expectedFilterProperties: ["hs_invoice_date", "revenue_type"], expectedDateRange: ["2026-01-01", "2026-07-01"] },
     { question: "2026 3. çeyreğinde açık order toplamı nedir?", object: "orders", expectedResponseType: "metric", expectedFilterProperties: ["hs_processed_date", "_is_open"], expectedDateRange: ["2026-07-01", "2026-10-01"] },
     { question: "Bu ay açık siparişleri göster", object: "orders", expectedResponseType: "records", expectedFilterProperties: ["hs_processed_date", "_is_open"] },
+    { question: "Ağustos 2026 Türkiye faturalarının toplamı", object: "invoices", expectedResponseType: "metric", expectedProperty: "country", expectedValues: ["Turkiye"], expectedFilterProperties: ["hs_invoice_date"], expectedDateRange: ["2026-08-01", "2026-09-01"] },
+    { question: "Bu ay aktif pipeline ne kadar?", object: "deals", expectedResponseType: "metric", expectedFilterProperties: ["closedate", "_is_open"], expectedDateRange: ["2026-08-01", "2026-09-01"] },
+    { question: "Bu çeyrek aktif pipeline owner bazında", object: "deals", expectedResponseType: "metric", expectedGroupBy: "_owner_name", expectedFilterProperties: ["closedate", "_is_open"], expectedDateRange: ["2026-07-01", "2026-10-01"] },
+    { question: "Weighted pipeline ülke bazında", object: "deals", expectedResponseType: "metric", expectedGroupBy: "country", expectedAggregateProperty: "hs_projected_amount_in_home_currency", expectedFilterProperties: ["_is_open"] },
+    { question: "Müşteri bazında fatura toplamı", object: "invoices", expectedResponseType: "metric", expectedGroupBy: "_company_name" },
+    { question: "Kaç tane açık fırsat var?", object: "deals", expectedResponseType: "metric", expectedFilterProperties: ["_is_open"] },
+    { question: "Ortalama açık order tutarı", object: "orders", expectedResponseType: "metric", expectedFilterProperties: ["_is_open"] },
+    { question: "Gelecek ay açık order toplamı", object: "orders", expectedResponseType: "metric", expectedFilterProperties: ["hs_processed_date", "_is_open"], expectedDateRange: ["2026-09-01", "2026-10-01"] },
   ],
 } as const;
 
@@ -222,7 +239,15 @@ export function detectSparkCountry(text: string) {
 }
 
 export function detectSparkCountries(text: string) {
-  return SPARK_CHAT_KNOWLEDGE.countries.filter((entry) => entry.pattern.test(text)).map((entry) => entry.value);
+  const normalized = normalizeSparkChatText(text);
+  return SPARK_CHAT_KNOWLEDGE.countries.filter((entry) => entry.pattern.test(normalized)).map((entry) => entry.value);
+}
+
+export function canonicalSparkCountry(value?: string | null) {
+  const normalized = normalizeSparkChatText(value).replace(/[._-]+/g, " ").replace(/\s+/g, " ");
+  if (["turkiye", "turkey", "tr"].includes(normalized)) return "Turkiye";
+  if (["amerika", "abd", "usa", "us", "united states", "united states of america"].includes(normalized)) return "USA";
+  return null;
 }
 
 export function detectSparkGroupBy(text: string) {
@@ -254,6 +279,30 @@ export function detectSparkCompositeRevenueMetric(question: string): SparkCompos
   if (guaranteed.pattern.test(text) && guaranteed.amountPattern.test(text)) return "guaranteed_revenue";
   const expected = SPARK_CHAT_KNOWLEDGE.compositeMetrics.expectedRevenue;
   return expected.pattern.test(text) && expected.amountPattern.test(text) ? "expected_revenue" : null;
+}
+
+export function detectSparkDashboardMetric(question: string): SparkDashboardMetricKind | null {
+  const text = normalizeSparkChatText(question);
+  if (/\bhedefe\s+(?:ne\s+kadar\s+)?kalan\b|\bhedef\w*\s+ulasmak\w*\s+icin\s+(?:gereken|kalan)\b/.test(text)) return "remaining_target";
+  if (/\bgaranti(?:li)?\s+(?:revenue\s+)?coverage\b|\bgaranti(?:li)?\s+gelir\w*\s+hedef\w*\s+(?:oran|yuzde)/.test(text)) return "guaranteed_coverage";
+  if (/\bforecast\s+coverage\b|\bforecast\w*\s+hedef\w*\s+(?:oran|yuzde)/.test(text)) return "forecast_coverage";
+  if (/\b(?:toplam|yillik|bu\s+yil(?:ki)?)\s+forecast\b|\bforecast\s+(?:toplami|tutari|ne\s+kadar)\b/.test(text)) return "annual_forecast";
+  if (/\b(?:yillik|bu\s+yil(?:ki)?|revenue|ciro)\s+hedef\w*\b|\bhedefimiz\s+(?:ne|kac)/.test(text)) return "annual_target";
+  return null;
+}
+
+export function sparkUnsupportedQuestionAnswer(question: string) {
+  const text = normalizeSparkChatText(question);
+  if (/\b(tl|try|lira|eur|euro)\b/.test(text) && /\b(kur|cevir|karsilik|tutar|toplam|ne\s+kadar)\b/.test(text)) {
+    return "Spark yalnız doğrulanmış şirket para birimi USD alanlarını kullanır; kur dönüşümü veya TL/EUR toplamı üretmez.";
+  }
+  if (/\b(mail|e-?posta|email|toplanti|meeting|arama|call|aktivite|calendar|takvim)\b/.test(text)) {
+    return "Aktivite, e-posta, toplantı ve takvim entegrasyonları yönetim raporu için yeterince güvenilir olmadığı için Spark AI kapsamına dahil değildir.";
+  }
+  if (/\b(donusum|conversion)\s+(oran|rate)\b|\bstage\s+gecis\w*\b/.test(text)) {
+    return "Geçmiş stage hareketleri tutulmadığı için dönüşüm oranı veya stage geçiş analizi hesaplanamaz; yalnız mevcut canlı stage dağılımı sorgulanabilir.";
+  }
+  return null;
 }
 
 export function detectSparkRevenueIntent(text: string): SparkRevenueIntent | null {

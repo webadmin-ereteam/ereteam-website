@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { applySparkQueryGuardrails, normalizeSparkPlanProperties, resolveSparkDateRange, resolveSparkOwnerFilter, resolveSparkOwnerName, sparkChatComparableValue, sparkChatMatchesFilter, sparkQueryPlanJsonSchema } from "../lib/spark/chat";
-import { SPARK_CHAT_KNOWLEDGE, detectSparkCompanyName, detectSparkCompositeRevenueMetric, sparkRevenueGroup, type SparkObjectType } from "../lib/spark/chatKnowledge";
+import { applyLiveCatalogContracts, applySparkQueryGuardrails, normalizeSparkPlanProperties, resolveSparkDateRange, resolveSparkOwnerFilter, resolveSparkOwnerName, sparkChatComparableValue, sparkChatMatchesFilter, sparkQueryPlanJsonSchema } from "../lib/spark/chat";
+import { SPARK_CHAT_KNOWLEDGE, canonicalSparkCountry, detectSparkCompanyName, detectSparkCompositeRevenueMetric, detectSparkCountries, detectSparkDashboardMetric, sparkRevenueGroup, sparkUnsupportedQuestionAnswer, type SparkObjectType } from "../lib/spark/chatKnowledge";
 import { hubspotDealState, isHubSpotOpenOrder, isIncludedInvoice, validateInvoiceStatusProperty, type HubSpotObject, type StageMap } from "../lib/spark/hubspot";
 
 const amountProperties: Record<SparkObjectType, string> = {
@@ -59,6 +59,13 @@ assert.deepEqual(resolveSparkDateRange("MTD faturalar", new Date("2026-08-14T12:
 assert.deepEqual(resolveSparkDateRange("Bu hafta açılan fırsatlar", new Date("2026-08-14T12:00:00Z")), { start: "2026-08-10", endExclusive: "2026-08-15", label: "Bu hafta" });
 assert.deepEqual(resolveSparkDateRange("Geçen hafta kazanılan fırsatlar", new Date("2026-08-14T12:00:00Z")), { start: "2026-08-03", endExclusive: "2026-08-10", label: "Geçen hafta" });
 assert.deepEqual(resolveSparkDateRange("Son 90 gün", new Date("2026-08-14T12:00:00Z")), { start: "2026-05-17", endExclusive: "2026-08-15", label: "Son 90 gün" });
+assert.deepEqual(resolveSparkDateRange("Ağustos 2026 faturaları", new Date("2026-09-21T12:00:00Z")), { start: "2026-08-01", endExclusive: "2026-09-01", label: "agustos 2026" });
+assert.deepEqual(resolveSparkDateRange("Bu çeyrek pipeline", new Date("2026-08-14T12:00:00Z")), { start: "2026-07-01", endExclusive: "2026-10-01", label: "Bu çeyrek (Q3)" });
+assert.deepEqual(resolveSparkDateRange("Önümüzdeki ay order", new Date("2026-12-14T12:00:00Z")), { start: "2027-01-01", endExclusive: "2027-02-01", label: "Gelecek ay" });
+assert.equal(canonicalSparkCountry("Türkiye"), "Turkiye");
+assert.equal(canonicalSparkCountry("TR"), "Turkiye");
+assert.equal(canonicalSparkCountry("United States of America"), "USA");
+assert.deepEqual(detectSparkCountries("Türkiyedeki ve ABD'deki faturalar"), ["Turkiye", "USA"]);
 assert.equal(detectSparkCompanyName("Migrosa kestiğimiz faturalar"), "migros");
 assert.equal(detectSparkCompanyName("2026 yılında Coca Cola'ya kestiğimiz faturalar"), "coca cola");
 assert.equal(detectSparkCompanyName("Migros firmasına ait siparişler"), "migros");
@@ -66,6 +73,9 @@ assert.equal(detectSparkCompanyName("Partneri IBM olan faturalar"), null);
 assert.equal(sparkChatMatchesFilter({ vendor_name: "Ereteam;IBM" }, { property: "vendor_name", operator: "eq", value: "IBM" }), true);
 assert.equal(sparkChatMatchesFilter({ vendor_name: "IBMX" }, { property: "vendor_name", operator: "eq", value: "IBM" }), false);
 assert.equal(sparkChatMatchesFilter({ revenue_type: "License;Project" }, { property: "revenue_type", operator: "in", values: ["License", "SNS"] }), true);
+assert.equal(sparkChatMatchesFilter({ country: "Türkiye" }, { property: "country", operator: "eq", value: "Turkiye" }), true);
+assert.equal(sparkChatMatchesFilter({ country: "TR" }, { property: "country", operator: "in", values: ["Turkiye", "USA"] }), true);
+assert.equal(sparkChatMatchesFilter({ country: "United States" }, { property: "country", operator: "eq", value: "USA" }), true);
 assert.equal(sparkRevenueGroup("License;Project"), "license;service");
 assert.equal(sparkRevenueGroup("Project"), "service");
 assert.equal(sparkRevenueGroup(""), "");
@@ -95,6 +105,41 @@ assert.equal(detectSparkCompositeRevenueMetric("Bu ay ne kadar gelir bekliyoruz?
 assert.equal(detectSparkCompositeRevenueMetric("Bu ay beklenen faturaların detaylarını göster"), null);
 assert.equal(detectSparkCompositeRevenueMetric("Bu ay kestiğimiz faturalar ne kadar?"), null);
 assert.equal(detectSparkCompositeRevenueMetric("Garanti gelir nasıl hesaplanır?"), null);
+assert.equal(detectSparkDashboardMetric("Bu yılki revenue hedefimiz ne?"), "annual_target");
+assert.equal(detectSparkDashboardMetric("Hedefe ne kadar kalan var?"), "remaining_target");
+assert.equal(detectSparkDashboardMetric("Forecast coverage yüzde kaç?"), "forecast_coverage");
+assert.equal(detectSparkDashboardMetric("Bu yıl toplam forecast ne kadar?"), "annual_forecast");
+assert.match(sparkUnsupportedQuestionAnswer("Faturaların TL karşılığı ne kadar?") ?? "", /USD/);
+assert.match(sparkUnsupportedQuestionAnswer("Bu ay kaç toplantı yaptık?") ?? "", /kapsamına dahil değildir/);
+
+const countryPlan = applySparkQueryGuardrails({
+  responseType: "metric", title: "Türkiye faturaları", object: "invoices", metricKind: null, properties: [], filters: [], associatedDealFilters: [],
+  aggregate: { operation: "sum", property: "hs_amount_billed_in_company_currency" }, groupBy: null, answer: null, sort: null, limit: 50,
+}, "Türkiye faturaları ne kadar?", new Date("2026-08-09T12:00:00Z"), []);
+const resolvedCountryPlan = applyLiveCatalogContracts(countryPlan, "Türkiye faturaları ne kadar?", {
+  deals: [],
+  invoices: [{ name: "country", label: "Country", options: [{ label: "Türkiye", value: "TR" }, { label: "United States", value: "US" }] }],
+  orders: [],
+});
+assert.equal(resolvedCountryPlan.filters.find((filter) => filter.property === "country")?.value, "TR", "Türkiye filtresi canlı enum değerine çözülmeli");
+
+const weightedFollowup = applySparkQueryGuardrails({
+  responseType: "records", title: "Regresyon testi", object: "invoices", metricKind: null, properties: [], filters: [], associatedDealFilters: [],
+  aggregate: null, groupBy: null, answer: null, sort: null, limit: 50,
+}, "Türkiye?", new Date("2026-08-09T12:00:00Z"), [{
+  question: "Weighted pipeline ne kadar?",
+  result: {
+    kind: "metric", title: "Weighted pipeline", value: "$1", recordCount: 1,
+    queryContext: { object: "deals", filters: [{ property: "_is_open", operator: "eq", value: "true" }], associatedDealFilters: [], aggregate: { operation: "sum", property: "hs_projected_amount_in_home_currency" }, groupBy: null, metricKind: "weighted_pipeline" },
+  },
+}, {
+  question: "Bu nasıl hesaplanıyor?",
+  result: { kind: "text", title: "Açıklama", value: "HubSpot projected amount", recordCount: 0 },
+}]);
+assert.equal(weightedFollowup.object, "deals");
+assert.equal(weightedFollowup.metricKind, "weighted_pipeline");
+assert.equal(weightedFollowup.aggregate?.property, "hs_projected_amount_in_home_currency");
+assert.equal(weightedFollowup.filters.find((filter) => filter.property === "country")?.value, "Turkiye");
 
 for (const testCase of SPARK_CHAT_KNOWLEDGE.regressionCases) {
   const plan = applySparkQueryGuardrails({

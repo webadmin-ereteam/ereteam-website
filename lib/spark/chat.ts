@@ -17,10 +17,12 @@ import {
 import { generateChatResponse, LlmApiError } from "@/lib/services/llmService";
 import {
   SPARK_CHAT_KNOWLEDGE,
+  canonicalSparkCountry,
   detectSparkCountries,
   detectSparkCompanyName,
   detectSparkCompositeRevenueMetric,
   detectSparkCountry,
+  detectSparkDashboardMetric,
   detectSparkDealBusinessType,
   detectSparkDomain,
   detectSparkGroupBy,
@@ -33,6 +35,7 @@ import {
   sparkPlannerKnowledge,
   sparkRevenueGroup,
   sparkRevenueValues,
+  sparkUnsupportedQuestionAnswer,
   type SparkObjectType,
 } from "./chatKnowledge";
 
@@ -152,7 +155,7 @@ export type SparkChatContextItem = {
 export type SparkChatExecutionResult =
   | { kind: "metric"; title: string; value: number; formattedValue: string; recordCount: number; interpretation: string; queryContext: SparkChatQueryContext; queriedAt: string; source: "live_hubspot" }
   | { kind: "breakdown"; title: string; groupLabel: string; items: Array<{ key: string; label: string; value: number; formattedValue: string; recordCount: number }>; summary: string; recordCount: number; interpretation: string; queryContext: SparkChatQueryContext; queriedAt: string; source: "live_hubspot" }
-  | { kind: "text"; title: string; text: string; queriedAt: string; source: "planner_knowledge" }
+  | { kind: "text"; title: string; text: string; queriedAt: string; source: "planner_knowledge" | "dashboard_snapshot" }
   | { kind: "records"; title: string; objectLabel: string; totalRecords: number; shownRecords: number; interpretation: string; queryContext: SparkChatQueryContext; columns: Array<{ key: string; label: string; format: "currency" | "date" | "text" }>; records: Array<{ id: string; url: string; values: Record<string, string> }>; queriedAt: string; source: "live_hubspot" };
 type DateRange = { start: string; endExclusive: string; label: string };
 
@@ -190,6 +193,8 @@ export function resolveSparkDateRange(question: string, now = new Date()): DateR
   const explicitYear = text.match(/\b(20\d{2})\b/)?.[1];
   const quarter = SPARK_CHAT_KNOWLEDGE.quarters.find((period) => period.pattern.test(text));
   const halfYear = SPARK_CHAT_KNOWLEDGE.halfYears.find((period) => period.pattern.test(text));
+  const monthNames = ["ocak", "subat", "mart", "nisan", "mayis", "haziran", "temmuz", "agustos", "eylul", "ekim", "kasim", "aralik"];
+  const namedMonth = monthNames.findIndex((name) => new RegExp(`\\b${name}\\b`).test(text));
 
   if (quarter) {
     const selectedYear = explicitYear ? Number(explicitYear) : /\bgecen\s+yil/.test(text) ? year - 1 : year;
@@ -205,6 +210,13 @@ export function resolveSparkDateRange(question: string, now = new Date()): DateR
       ? isoDate(selectedYear + 1, 1, 1)
       : isoDate(selectedYear, halfYear.endExclusiveMonth, 1);
     return { start: isoDate(selectedYear, halfYear.startMonth, 1), endExclusive, label: `${selectedYear} ${halfYear.label}` };
+  }
+
+  if (namedMonth >= 0) {
+    const selectedYear = explicitYear ? Number(explicitYear) : year;
+    const selectedMonth = namedMonth + 1;
+    const endExclusive = selectedMonth === 12 ? isoDate(selectedYear + 1, 1, 1) : isoDate(selectedYear, selectedMonth + 1, 1);
+    return { start: isoDate(selectedYear, selectedMonth, 1), endExclusive, label: `${monthNames[namedMonth]} ${selectedYear}` };
   }
 
   if (/\b(ytd|year\s+to\s+date|yilbasindan\s+bugune)\b/.test(text)) {
@@ -232,6 +244,17 @@ export function resolveSparkDateRange(question: string, now = new Date()): DateR
 
   if (/\bgecen\s+ay\b/.test(text)) {
     return { start: isoDate(previousMonthYear, previousMonth, 1), endExclusive: isoDate(year, month, 1), label: "Geçen ay" };
+  }
+  if (/\b(?:gelecek|onumuzdeki)\s+ay\b/.test(text)) {
+    const nextMonthYear = month === 12 ? year + 1 : year;
+    const nextMonth = month === 12 ? 1 : month + 1;
+    const endExclusive = nextMonth === 12 ? isoDate(nextMonthYear + 1, 1, 1) : isoDate(nextMonthYear, nextMonth + 1, 1);
+    return { start: isoDate(nextMonthYear, nextMonth, 1), endExclusive, label: "Gelecek ay" };
+  }
+  if (/\bbu\s+ceyrek\b/.test(text)) {
+    const startMonth = Math.floor((month - 1) / 3) * 3 + 1;
+    const endMonth = startMonth + 3;
+    return { start: isoDate(year, startMonth, 1), endExclusive: endMonth === 13 ? isoDate(year + 1, 1, 1) : isoDate(year, endMonth, 1), label: `Bu çeyrek (Q${Math.floor((month - 1) / 3) + 1})` };
   }
   if (/\bbu\s+ay\s+(?:sonuna\s+kadar|tamami\w*|tum\w*)\b/.test(text)) {
     const endExclusive = month === 12 ? isoDate(year + 1, 1, 1) : isoDate(year, month + 1, 1);
@@ -285,29 +308,36 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
   const revenueIntent = detectSparkRevenueIntent(text);
   const domain = detectSparkDomain(text);
   const businessType = detectSparkDealBusinessType(text);
-  const weightedPipelineIntent = SPARK_CHAT_KNOWLEDGE.compositeMetrics.weightedPipeline.pattern.test(text) || plan.metricKind === "weighted_pipeline";
-  const stageIntent = /\b(pipeline|aktif|acik\s+(firsat|order|siparis)|open|won|lost|kazanilan|kaybedilen|beklenen\s+fatura)\b/.test(text);
+  const plannedWeightedPipeline = SPARK_CHAT_KNOWLEDGE.compositeMetrics.weightedPipeline.pattern.test(text) || plan.metricKind === "weighted_pipeline";
+  const stageIntent = /\b(pipeline|stage|asama|durum|aktif|kapali|acik\s+(deal|firsat|order|siparis)|open|won|lost|kazanilan|kaybedilen|beklenen\s+fatura)\b/.test(text);
   const possessiveOwner = text.match(/\b([a-z]{2,30})['’]?(?:nin|nun|in|un)\s+(?:deal\w*|firsat\w*|fatura\w*|order\w*|siparis\w*)\b/)?.[1];
   const companyIntent = SPARK_CHAT_KNOWLEDGE.companies.triggerPattern.test(text);
   const requestedGroupBy = detectSparkGroupBy(text);
-  const previous = context.at(-1)?.result.queryContext;
+  const previous = [...context].reverse().find((item) => item.result.queryContext)?.result.queryContext;
   const range = resolveSparkDateRange(question, now);
   const referencesPrevious = /\b(peki|bunlar|bunlarin|onlar|onlarin|ayni)\b/.test(text)
     || /^(toplami|tutari|kac(\s+tane(si)?)?|detaylari|listele|goster)[?!.]*$/.test(text)
     || Boolean(range || countries.length || revenueIntent || domain || businessType || requestedGroupBy || companyIntent || SPARK_CHAT_KNOWLEDGE.vendors.triggerPattern.test(text));
   const followsPrevious = Boolean(!explicit && previous && referencesPrevious);
+  const weightedPipelineIntent = plannedWeightedPipeline || Boolean(followsPrevious && previous?.metricKind === "weighted_pipeline");
   const object = weightedPipelineIntent ? "deals" : explicit ?? (followsPrevious ? previous!.object : plan.object);
   const vendor = detectSparkVendor(text, object);
   let companyName = detectSparkCompanyName(text);
   const collapsesBreakdown = /^(bunlarin\s+|onlarin\s+)?(toplami|tutari)[?!.]*$/.test(text);
   let groupBy = requestedGroupBy ?? (followsPrevious && !collapsesBreakdown ? previous?.groupBy ?? null : null);
   const asksAverage = /\bortalama\b/.test(text);
-  const asksCount = /\b(kac|sayi|adet)/.test(text) && !/\bne\s+kadar\b/.test(text);
-  const asksAmount = /\b(ne\s+kadar(?:i)?|tutar|toplam|ciro)/.test(text);
+  const amountUnitIntent = /\bkac\s+(?:dolar|usd|milyon|bin)\b/.test(text);
+  const asksCount = /\b(kac|sayi|adet)/.test(text) && !/\bne\s+kadar\b/.test(text) && !amountUnitIntent;
+  const asksAmount = /\b(ne\s+kadar(?:i)?|tutar|toplam|ciro)/.test(text) || amountUnitIntent;
   const asksRecords = /\b(hangi|liste|goster|detay|kayit)/.test(text) && !asksAmount && !asksCount && !asksAverage;
 
   let responseType = plan.responseType;
   let aggregate = plan.aggregate;
+  const filterOnlyFollowup = followsPrevious && !asksAverage && !asksCount && !asksAmount && !asksRecords && !requestedGroupBy;
+  if (filterOnlyFollowup && previous) {
+    responseType = previous.aggregate ? "metric" : "records";
+    aggregate = previous.aggregate;
+  }
   if (groupBy) {
     responseType = "metric";
     aggregate = asksCount
@@ -327,7 +357,6 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
   if (weightedPipelineIntent) {
     responseType = "metric";
     aggregate = { operation: "sum", property: SPARK_CHAT_KNOWLEDGE.compositeMetrics.weightedPipeline.property };
-    groupBy = null;
   }
 
   let filters = [...plan.filters];
@@ -389,6 +418,8 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
   if (groupBy === "dealtype" && !businessType) filters = filters.filter((filter) => filter.property !== "dealtype");
   const enforcedRange = object === "orders" && /\bbeklenen\s+fatura/.test(text) && /\bbu\s+ay\b/.test(text)
     ? resolveSparkDateRange("bu ay sonuna kadar", now)
+    : object === "deals" && /\bbu\s+ay\b/.test(text) && /\b(pipeline|aktif|acik\s+firsat|weighted|agirlikli)\b/.test(text)
+      ? resolveSparkDateRange("bu ay sonuna kadar", now)
     : range;
   if (enforcedRange) {
     const knownDateProperties = new Set(Object.values(dateProperties));
@@ -408,7 +439,7 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
     filters.push({ property: "_is_open", operator: "eq", value: "true" });
   }
   if (object === "deals") {
-    if (/\b(pipeline|aktif|acik\s+firsat)/.test(text)) {
+    if (/\b(pipeline|aktif|acik\s+(?:deal|firsat))/.test(text)) {
       filters = filters.filter((filter) => !["dealstage", "hs_is_closed", "hs_is_closed_won", "_stage_label", "_is_open", "_is_closed", "_is_won"].includes(filter.property));
       filters.push({ property: "_is_open", operator: "eq", value: "true" });
     } else if (/\b(kazanilan|closed\s+won|won)\b/.test(text)) {
@@ -488,8 +519,9 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
     && (plan.metricKind === "guaranteed_revenue" || plan.metricKind === "expected_revenue")
     ? plan.metricKind
     : null;
+  const inheritedMetricKind = filterOnlyFollowup ? previous?.metricKind ?? null : null;
   const metricKind = responseType === "metric"
-    ? weightedPipelineIntent ? "weighted_pipeline" : detectedCompositeMetric ?? plannerCompositeMetric
+    ? weightedPipelineIntent ? "weighted_pipeline" : detectedCompositeMetric ?? plannerCompositeMetric ?? inheritedMetricKind
     : null;
   const properties = object === plan.object ? plan.properties : [];
   const guarded = { ...plan, object, responseType, aggregate, groupBy, metricKind, properties, filters: uniqueFilters(filters), associatedDealFilters };
@@ -550,7 +582,7 @@ function liveEnumValues(catalog: HubSpotProperty[], propertyName: string) {
     .filter(Boolean) ?? [];
 }
 
-function applyLiveCatalogContracts(plan: QueryPlan, question: string, catalogs: Record<ObjectType, HubSpotProperty[]>): QueryPlan {
+export function applyLiveCatalogContracts(plan: QueryPlan, question: string, catalogs: Record<ObjectType, HubSpotProperty[]>): QueryPlan {
   const revenueIntent = detectSparkRevenueIntent(semanticText(question));
   const catalog = catalogs[plan.object];
   const liveRevenueValues = liveEnumValues(catalog, "revenue_type");
@@ -565,10 +597,14 @@ function applyLiveCatalogContracts(plan: QueryPlan, question: string, catalogs: 
   const resolveEnumFilter = (filter: QueryPlan["filters"][number], objectCatalog: HubSpotProperty[]) => {
     const property = objectCatalog.find((item) => item.name === filter.property);
     if (!property?.options?.length) return filter;
-    const resolve = (value: string) => property.options?.find((option) =>
-      normalizeSparkChatText(option.value) === normalizeSparkChatText(value)
-      || normalizeSparkChatText(option.label) === normalizeSparkChatText(value)
-    )?.value ?? value;
+    const resolve = (value: string) => property.options?.filter((option) => !option.hidden).find((option) => {
+      if (filter.property === "country") {
+        const expected = canonicalSparkCountry(value);
+        return Boolean(expected && (canonicalSparkCountry(option.value) === expected || canonicalSparkCountry(option.label) === expected));
+      }
+      return normalizeSparkChatText(option.value) === normalizeSparkChatText(value)
+        || normalizeSparkChatText(option.label) === normalizeSparkChatText(value);
+    })?.value ?? value;
     return {
       ...filter,
       value: filter.value == null ? filter.value : resolve(filter.value),
@@ -803,7 +839,9 @@ export function sparkChatMatchesFilter(record: Record<string, string>, filter: z
   const tokens = multiValue ? sparkMultiValueTokens(raw) : [raw];
   const tokenMatches = (value?: string | null) => normalized(value) === "" && raw.trim() === ""
     ? true
-    : tokens.some((token) => normalized(token) === normalized(value));
+    : filter.property === "country" && canonicalSparkCountry(value)
+      ? tokens.some((token) => canonicalSparkCountry(token) === canonicalSparkCountry(value))
+      : tokens.some((token) => normalized(token) === normalized(value));
   const left = sparkChatComparableValue(raw);
   const right = sparkChatComparableValue(filter.value ?? "");
   if (filter.operator === "is_empty") return raw.trim() === "";
@@ -850,6 +888,10 @@ function formatMetric(value: number, property?: string | null) {
   return isMoney
     ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
     : new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 2 }).format(value);
+}
+
+function formatPercent(value: number) {
+  return new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value);
 }
 
 function queryContext(plan: QueryPlan): SparkChatQueryContext {
@@ -912,6 +954,31 @@ function aggregateRows(rows: FlatRecord[], operation: "sum" | "count" | "average
 }
 
 export async function executeSparkChatQuery(question: string, apiKey: string, context: SparkChatContextItem[] = []): Promise<SparkChatExecutionResult> {
+  const unsupportedAnswer = sparkUnsupportedQuestionAnswer(question);
+  if (unsupportedAnswer) return {
+    kind: "text",
+    title: "Spark veri kapsamı",
+    text: unsupportedAnswer,
+    queriedAt: new Date().toISOString(),
+    source: "planner_knowledge",
+  };
+  const dashboardMetric = detectSparkDashboardMetric(question);
+  if (dashboardMetric) {
+    const { getSparkData } = await import("./cache");
+    const { data } = await stage("dashboard snapshot", getSparkData);
+    const year = data.reportDate.slice(0, 4);
+    const guaranteed = data.ytdInvoice + data.openOrders;
+    const forecast = guaranteed + data.yearWeightedPipeline;
+    const target = data.target;
+    const answers = {
+      annual_target: { title: `${year} yıllık hedef`, text: `Yıllık Lisans + Servis hedefi ${formatMetric(target, "amount")}.` },
+      remaining_target: { title: "Hedefe kalan", text: `Garanti gelire göre hedefe kalan tutar ${formatMetric(Math.max(target - guaranteed, 0), "amount")}. Garanti gelir ${formatMetric(guaranteed, "amount")}, hedef ${formatMetric(target, "amount")}.` },
+      guaranteed_coverage: { title: "Garanti revenue coverage", text: `Garanti revenue coverage %${formatPercent(target ? guaranteed / target * 100 : 0)}. Garanti gelir ${formatMetric(guaranteed, "amount")}, hedef ${formatMetric(target, "amount")}.` },
+      forecast_coverage: { title: "Forecast coverage", text: `Forecast coverage %${formatPercent(target ? forecast / target * 100 : 0)}. Forecast ${formatMetric(forecast, "amount")}, hedef ${formatMetric(target, "amount")}.` },
+      annual_forecast: { title: `${year} toplam forecast`, text: `Toplam forecast ${formatMetric(forecast, "amount")}: fatura ${formatMetric(data.ytdInvoice, "amount")} + açık order ${formatMetric(data.openOrders, "amount")} + weighted pipeline ${formatMetric(data.yearWeightedPipeline, "amount")}.` },
+    } satisfies Record<typeof dashboardMetric, { title: string; text: string }>;
+    return { kind: "text", ...answers[dashboardMetric], queriedAt: new Date().toISOString(), source: "dashboard_snapshot" };
+  }
   const detectedCompositeMetric = detectSparkCompositeRevenueMetric(question);
   const [dealCatalog, invoiceCatalog, orderCatalog] = await stage("catalog", () => Promise.all([
     fetchHubSpotPropertyCatalog("deals"), fetchHubSpotPropertyCatalog("invoices"), fetchHubSpotPropertyCatalog("orders"),
@@ -1106,18 +1173,20 @@ async function executePlannedSparkQuery(plan: QueryPlan, catalogs: Record<Object
     const property = resolvedPlan.aggregate?.property;
     if (resolvedPlan.groupBy) {
       const groupFilter = resolvedPlan.filters.find((filter) => filter.property === resolvedPlan.groupBy && ["eq", "in"].includes(filter.operator));
-      const requestedGroups = groupFilter?.operator === "in" ? groupFilter.values ?? [] : groupFilter?.value ? [groupFilter.value] : [];
+      const rawRequestedGroups = groupFilter?.operator === "in" ? groupFilter.values ?? [] : groupFilter?.value ? [groupFilter.value] : [];
+      const normalizeGroupValue = (value: string) => resolvedPlan.groupBy === "country" ? canonicalSparkCountry(value) ?? value : value;
+      const requestedGroups = rawRequestedGroups.map(normalizeGroupValue);
       const defaultGroups = resolvedPlan.groupBy === "_revenue_group" ? ["license", "service"] : [];
       const multiValueGroup = SPARK_CHAT_KNOWLEDGE.filterContracts.multiValueProperties.includes(resolvedPlan.groupBy as "vendor_name" | "revenue_type" | "_revenue_group");
       const discoveredGroups = filtered.flatMap((row) => {
         const values = multiValueGroup ? sparkMultiValueTokens(row[resolvedPlan.groupBy!]) : [row[resolvedPlan.groupBy!] ?? ""];
-        return values.length ? values : [""];
+        return values.length ? values.map(normalizeGroupValue) : [""];
       });
       const groupValues = requestedGroups.length ? requestedGroups : defaultGroups.length ? defaultGroups : Array.from(new Set(discoveredGroups));
       const items = groupValues.map((groupValue) => {
         const groupRows = filtered.filter((row) => sparkChatMatchesFilter(row, { property: resolvedPlan.groupBy!, operator: "eq", value: groupValue }));
         const metric = aggregateRows(groupRows, operation, property);
-        return { key: groupValue, label: sparkBreakdownValueLabel(groupValue), ...metric, formattedValue: formatMetric(metric.value, property) };
+        return { key: groupValue, label: sparkBreakdownValueLabel(normalizeGroupValue(groupValue)), ...metric, formattedValue: formatMetric(metric.value, property) };
       });
       const ranked = [...items].sort((a, b) => b.value - a.value);
       const difference = ranked.length >= 2 ? Math.abs(ranked[0].value - ranked[1].value) : 0;
