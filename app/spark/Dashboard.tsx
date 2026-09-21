@@ -43,6 +43,13 @@ const formatDate = (value?: string, withTime = false) => value
 
 const sum = (rows: SparkRecord[]) => rows.reduce((total, row) => total + row.amount, 0);
 const pct = (part: number, whole: number) => whole ? (part / whole) * 100 : 0;
+const countryGroup = (value?: string) => {
+  const normalized = value?.trim().toLocaleLowerCase("tr-TR");
+  if (["turkiye", "türkiye", "turkey", "tr"].includes(normalized ?? "")) return "Turkiye";
+  if (["usa", "us", "abd", "united states", "united states of america"].includes(normalized ?? "")) return "USA";
+  return value;
+};
+const recordKey = (row: SparkRecord) => `${row.objectType ?? ""}:${row.id}`;
 type EditableProperty = "country" | "vendor_name" | "revenue_type" | "ereteam_domain";
 type EditableCatalog = Record<NonNullable<SparkRecord["objectType"]>, Record<EditableProperty, {
   label: string;
@@ -259,7 +266,7 @@ function RecordDialog({
     { key: "Turkiye", label: "TR" },
     { key: "USA", label: "ABD" },
   ].map((country) => {
-    const countryRows = rows.filter((row) => row.country === country.key);
+    const countryRows = rows.filter((row) => countryGroup(row.country) === country.key);
     return { ...country, count: countryRows.length, amount: sum(countryRows) };
   });
   return (
@@ -348,10 +355,20 @@ export default function Dashboard({ data }: { data: SparkData }) {
   const quarterOrders = quarterMonths.flatMap((item) => item.orders);
   const quarterDeals = quarterMonths.flatMap((item) => item.deals);
   const quarterWeighted = quarterMonths.reduce((total, item) => total + item.weightedPipeline, 0);
+  const countryEntries = data.revenueBreakdowns.find((breakdown) => breakdown.key === "country")?.entries ?? [];
+  const countryByRecord = new Map(countryEntries.flatMap((entry) =>
+    [...entry.invoices, ...entry.orders, ...entry.deals].map((row) => [recordKey(row), countryGroup(entry.key)] as const),
+  ));
   const nbCarryoverInvoices = data.newBusiness.invoices.filter((row) => row.carryover);
   const nbCarryoverOrders = data.newBusiness.orders.filter((row) => row.carryover);
   const funnelMax = Math.max(...data.stageFunnel.map((stage) => sum(stage.records)), 1);
-  const openRecords = (title: string, rows: SparkRecord[], showCountryBreakdown = false) => setDetail({ title, rows, showCountryBreakdown });
+  const openRecords = (title: string, rows: SparkRecord[], showCountryBreakdown = false) => setDetail({
+    title,
+    rows: showCountryBreakdown
+      ? rows.map((row) => ({ ...row, country: countryGroup(row.country) ?? countryByRecord.get(recordKey(row)) }))
+      : rows,
+    showCountryBreakdown,
+  });
   const handleRecordsUpdated = (updatedRows: SparkRecord[], property: EditableProperty) => {
     const urls = new Set(updatedRows.map((row) => row.url));
     setHygiene((groups) => groups.map((group) => group.key === `missing-${property}`

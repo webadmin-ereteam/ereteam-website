@@ -229,8 +229,9 @@ The technical order-date property name is never rendered in the UI.
   distinguishable in drill-downs.
 - Monthly invoices/orders and weekly new/won/lost records have drill-down
   lists. Monthly invoice, open-order and pipeline detail dialogs show TR and ABD
-  amount/count splits alongside the overall total. Do not duplicate weekly deal
-  movement elsewhere on the page.
+  amount/count splits alongside the overall total. Older persisted snapshots that
+  predate the row-level country field resolve it by record ID from the existing country
+  revenue breakdown. Do not duplicate weekly deal movement elsewhere on the page.
 - Weekly new deals use `createdate` across all deals, regardless of their current
   open/won/lost state.
 - The 12-month operating table shows non-cancelled invoices through `generatedAt`, open orders, active
