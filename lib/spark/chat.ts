@@ -403,7 +403,7 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
       { property: dateProperty, operator: "lt", value: enforcedRange.endExclusive },
     );
   }
-  if (object === "orders" && (/\bbeklenen\s+fatura/.test(text) || /\b(open|acik|aktif)\s+(order|siparis)\w*/.test(text))) {
+  if (object === "orders") {
     filters = filters.filter((filter) => !["_stage_label", "hs_pipeline_stage", "_is_open"].includes(filter.property));
     filters.push({ property: "_is_open", operator: "eq", value: "true" });
   }

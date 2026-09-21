@@ -65,11 +65,13 @@ function OpenRecordsButton({
   rows,
   label,
   onOpen,
+  showCountryBreakdown = false,
   children,
 }: {
   rows: SparkRecord[];
   label: string;
-  onOpen: (title: string, rows: SparkRecord[]) => void;
+  onOpen: (title: string, rows: SparkRecord[], showCountryBreakdown?: boolean) => void;
+  showCountryBreakdown?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -77,7 +79,7 @@ function OpenRecordsButton({
       type="button"
       className={styles.valueButton}
       disabled={!rows.length}
-      onClick={() => onOpen(label, rows)}
+      onClick={() => onOpen(label, rows, showCountryBreakdown)}
       aria-label={`${label}: ${rows.length} kayıt`}
     >
       {children}
@@ -243,14 +245,23 @@ function RecordTable({
 function RecordDialog({
   title,
   rows,
+  showCountryBreakdown,
   onClose,
   onRecordsUpdated,
 }: {
   title: string;
   rows: SparkRecord[];
+  showCountryBreakdown?: boolean;
   onClose: () => void;
   onRecordsUpdated?: (rows: SparkRecord[], property: EditableProperty) => void;
 }) {
+  const countries = [
+    { key: "Turkiye", label: "TR" },
+    { key: "USA", label: "ABD" },
+  ].map((country) => {
+    const countryRows = rows.filter((row) => row.country === country.key);
+    return { ...country, count: countryRows.length, amount: sum(countryRows) };
+  });
   return (
     <div className={styles.dialogBackdrop} role="presentation" onMouseDown={onClose}>
       <section className={styles.dialog} role="dialog" aria-modal="true" aria-label={title} onMouseDown={(event) => event.stopPropagation()}>
@@ -259,6 +270,11 @@ function RecordDialog({
             <span>Kayıt detayı</span>
             <h2>{title}</h2>
             <p>{rows.length} kayıt · {exactMoney(sum(rows))}</p>
+            {showCountryBreakdown ? (
+              <div className={styles.dialogCountryBreakdown}>
+                {countries.map((country) => <div key={country.key}><span>{country.label}</span><b>{exactMoney(country.amount)}</b><small>{country.count} kayıt</small></div>)}
+              </div>
+            ) : null}
           </div>
           <button type="button" onClick={onClose} aria-label="Kapat"><X size={20} /></button>
         </div>
@@ -305,7 +321,7 @@ function DonutChart({ entries, overlapping }: { entries: Array<{ label: string; 
 
 export default function Dashboard({ data }: { data: SparkData }) {
   const router = useRouter();
-  const [detail, setDetail] = useState<{ title: string; rows: SparkRecord[] } | null>(null);
+  const [detail, setDetail] = useState<{ title: string; rows: SparkRecord[]; showCountryBreakdown?: boolean } | null>(null);
   const [breakdownKey, setBreakdownKey] = useState(data.revenueBreakdowns[0]?.key ?? "country");
   const [hygiene, setHygiene] = useState(data.hygiene);
   const [refreshing, setRefreshing] = useState(false);
@@ -335,7 +351,7 @@ export default function Dashboard({ data }: { data: SparkData }) {
   const nbCarryoverInvoices = data.newBusiness.invoices.filter((row) => row.carryover);
   const nbCarryoverOrders = data.newBusiness.orders.filter((row) => row.carryover);
   const funnelMax = Math.max(...data.stageFunnel.map((stage) => sum(stage.records)), 1);
-  const openRecords = (title: string, rows: SparkRecord[]) => setDetail({ title, rows });
+  const openRecords = (title: string, rows: SparkRecord[], showCountryBreakdown = false) => setDetail({ title, rows, showCountryBreakdown });
   const handleRecordsUpdated = (updatedRows: SparkRecord[], property: EditableProperty) => {
     const urls = new Set(updatedRows.map((row) => row.url));
     setHygiene((groups) => groups.map((group) => group.key === `missing-${property}`
@@ -457,18 +473,18 @@ export default function Dashboard({ data }: { data: SparkData }) {
           <article className={`${styles.periodCard} ${styles.periodMonth}`}>
             <div className={styles.periodTitle}><span>Bu ay</span><b>{currentMonthData?.label}</b></div>
             <div className={styles.periodMetrics}>
-              <OpenRecordsButton rows={monthInvoices} label="Bu ay faturalar" onOpen={openRecords}><span>Fatura</span><b>{shortMoney(sum(monthInvoices))}</b><small>{monthInvoices.length} kayıt</small></OpenRecordsButton>
-              <OpenRecordsButton rows={monthOrders} label="Bu ay açık orderlar" onOpen={openRecords}><span>Açık order</span><b>{shortMoney(sum(monthOrders))}</b><small>{monthOrders.length} kayıt</small></OpenRecordsButton>
-              <OpenRecordsButton rows={monthDeals} label="Bu ay kapanış planlı aktif fırsatlar" onOpen={openRecords}><span>Pipeline</span><b>{shortMoney(sum(monthDeals))}</b><small>{monthDeals.length} fırsat</small></OpenRecordsButton>
+              <OpenRecordsButton rows={monthInvoices} label="Bu ay faturalar" onOpen={openRecords} showCountryBreakdown><span>Fatura</span><b>{shortMoney(sum(monthInvoices))}</b><small>{monthInvoices.length} kayıt</small></OpenRecordsButton>
+              <OpenRecordsButton rows={monthOrders} label="Bu ay açık orderlar" onOpen={openRecords} showCountryBreakdown><span>Açık order</span><b>{shortMoney(sum(monthOrders))}</b><small>{monthOrders.length} kayıt</small></OpenRecordsButton>
+              <OpenRecordsButton rows={monthDeals} label="Bu ay kapanış planlı aktif fırsatlar" onOpen={openRecords} showCountryBreakdown><span>Pipeline</span><b>{shortMoney(sum(monthDeals))}</b><small>{monthDeals.length} fırsat</small></OpenRecordsButton>
               <OpenRecordsButton rows={monthDeals} label="Bu ay weighted pipeline" onOpen={openRecords}><span>Weighted</span><b>{shortMoney(currentMonthData?.weightedPipeline ?? 0)}</b><small>HubSpot projected</small></OpenRecordsButton>
             </div>
           </article>
           <article className={`${styles.periodCard} ${styles.periodQuarter}`}>
             <div className={styles.periodTitle}><span>Bu çeyrek</span><b>Q{currentQuarter}</b></div>
             <div className={styles.periodMetrics}>
-              <OpenRecordsButton rows={quarterInvoices} label={`Q${currentQuarter} faturaları`} onOpen={openRecords}><span>Fatura</span><b>{shortMoney(sum(quarterInvoices))}</b><small>{quarterInvoices.length} kayıt</small></OpenRecordsButton>
-              <OpenRecordsButton rows={quarterOrders} label={`Q${currentQuarter} açık orderları`} onOpen={openRecords}><span>Açık order</span><b>{shortMoney(sum(quarterOrders))}</b><small>{quarterOrders.length} kayıt</small></OpenRecordsButton>
-              <OpenRecordsButton rows={quarterDeals} label={`Q${currentQuarter} kapanış planlı aktif fırsatlar`} onOpen={openRecords}><span>Pipeline</span><b>{shortMoney(sum(quarterDeals))}</b><small>{quarterDeals.length} fırsat</small></OpenRecordsButton>
+              <OpenRecordsButton rows={quarterInvoices} label={`Q${currentQuarter} faturaları`} onOpen={openRecords} showCountryBreakdown><span>Fatura</span><b>{shortMoney(sum(quarterInvoices))}</b><small>{quarterInvoices.length} kayıt</small></OpenRecordsButton>
+              <OpenRecordsButton rows={quarterOrders} label={`Q${currentQuarter} açık orderları`} onOpen={openRecords} showCountryBreakdown><span>Açık order</span><b>{shortMoney(sum(quarterOrders))}</b><small>{quarterOrders.length} kayıt</small></OpenRecordsButton>
+              <OpenRecordsButton rows={quarterDeals} label={`Q${currentQuarter} kapanış planlı aktif fırsatlar`} onOpen={openRecords} showCountryBreakdown><span>Pipeline</span><b>{shortMoney(sum(quarterDeals))}</b><small>{quarterDeals.length} fırsat</small></OpenRecordsButton>
               <OpenRecordsButton rows={quarterDeals} label={`Q${currentQuarter} weighted pipeline`} onOpen={openRecords}><span>Weighted</span><b>{shortMoney(quarterWeighted)}</b><small>HubSpot projected</small></OpenRecordsButton>
             </div>
           </article>
@@ -497,9 +513,9 @@ export default function Dashboard({ data }: { data: SparkData }) {
                           <span><b>{shortMoney(invoiceAmount + orderAmount)}</b> garanti · {shortMoney(forecastAmount)} forecast</span>
                         </div>
                       </td>
-                      <td><OpenRecordsButton rows={item.invoices} label={`${item.label} faturaları`} onOpen={openRecords}><b>{shortMoney(invoiceAmount)}</b><small>{item.invoices.length} kayıt</small></OpenRecordsButton></td>
-                      <td><OpenRecordsButton rows={item.orders} label={`${item.label} açık orderları`} onOpen={openRecords}><b>{shortMoney(orderAmount)}</b><small>{item.orders.length} kayıt</small></OpenRecordsButton></td>
-                      <td><OpenRecordsButton rows={item.deals} label={`${item.label} kapanış tarihli aktif fırsatlar`} onOpen={openRecords}><b>{shortMoney(sum(item.deals))}</b><small>{item.deals.length} kayıt</small></OpenRecordsButton></td>
+                      <td><OpenRecordsButton rows={item.invoices} label={`${item.label} faturaları`} onOpen={openRecords} showCountryBreakdown><b>{shortMoney(invoiceAmount)}</b><small>{item.invoices.length} kayıt</small></OpenRecordsButton></td>
+                      <td><OpenRecordsButton rows={item.orders} label={`${item.label} açık orderları`} onOpen={openRecords} showCountryBreakdown><b>{shortMoney(orderAmount)}</b><small>{item.orders.length} kayıt</small></OpenRecordsButton></td>
+                      <td><OpenRecordsButton rows={item.deals} label={`${item.label} kapanış tarihli aktif fırsatlar`} onOpen={openRecords} showCountryBreakdown><b>{shortMoney(sum(item.deals))}</b><small>{item.deals.length} kayıt</small></OpenRecordsButton></td>
                       <td><OpenRecordsButton rows={item.deals} label={`${item.label} weighted pipeline kayıtları`} onOpen={openRecords}><b>{shortMoney(item.weightedPipeline)}</b><small>HubSpot projected</small></OpenRecordsButton></td>
                       <td><span className={styles.countCell}>{item.deals.length}</span></td>
                     </tr>
@@ -636,7 +652,7 @@ export default function Dashboard({ data }: { data: SparkData }) {
       </section>
 
       <footer>Ereteam · Spark Gelir Yönetim Merkezi · {formatDate(data.generatedAt)}</footer>
-      {detail ? <RecordDialog title={detail.title} rows={detail.rows} onClose={() => setDetail(null)} onRecordsUpdated={handleRecordsUpdated} /> : null}
+      {detail ? <RecordDialog title={detail.title} rows={detail.rows} showCountryBreakdown={detail.showCountryBreakdown} onClose={() => setDetail(null)} onRecordsUpdated={handleRecordsUpdated} /> : null}
       <SparkChatWidget />
     </main>
   );

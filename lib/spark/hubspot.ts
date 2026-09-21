@@ -166,6 +166,8 @@ export function hubspotDealState(row: HubSpotObject, stages: StageMap): "open" |
 
 export function isHubSpotOpenOrder(row: HubSpotObject, stages: StageMap) {
   const stage = stages.get(row.properties.hs_pipeline_stage || "");
+  const cancellationMarkers = new Set(["cancelled", "canceled", "iptal"]);
+  if (cancellationMarkers.has(lower(row.properties.hs_pipeline_stage)) || cancellationMarkers.has(lower(stage?.label))) return false;
   return stage?.isClosed === false || (stage?.isClosed == null && lower(stage?.label) === "open");
 }
 
@@ -218,6 +220,7 @@ export function dealRecord(
       : row.properties.closedate || row.properties.createdate,
     amount: amount(row, "amount_in_home_currency"),
     owner: ownerMap.get(row.properties.hubspot_owner_id || ""),
+    country: row.properties.country,
     stage: options.stage,
     weightedAmount: amount(row, "hs_projected_amount_in_home_currency"),
     ageDays,
@@ -235,6 +238,7 @@ export function invoiceRecord(row: HubSpotObject, ownerMap: Map<string, string>)
     amount: amount(row, "hs_amount_billed_in_company_currency"),
     owner: ownerMap.get(row.properties.hubspot_owner_id || ""),
     company: row.properties.hs_invoice_latest_company_name,
+    country: row.properties.country,
     url: `https://app.hubspot.com/contacts/${PORTAL_ID}/objects/0-53?filters=%5B%7B%22property%22%3A%22hs_object_id%22%2C%22operator%22%3A%22EQ%22%2C%22value%22%3A%22${row.id}%22%7D%5D&utm_source=spark_dashboard&utm_medium=web&utm_campaign=revenue_growth`,
   };
 }
@@ -247,6 +251,7 @@ export function orderRecord(row: HubSpotObject, ownerMap: Map<string, string>): 
     date: row.properties.hs_processed_date,
     amount: amount(row, "hs_homecurrency_amount"),
     owner: ownerMap.get(row.properties.hubspot_owner_id || ""),
+    country: row.properties.country,
     url: `https://app.hubspot.com/contacts/${PORTAL_ID}/record/0-123/${row.id}?utm_source=spark_dashboard&utm_medium=web&utm_campaign=revenue_growth`,
   };
 }

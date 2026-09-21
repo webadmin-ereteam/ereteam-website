@@ -79,6 +79,7 @@ const stageMap: StageMap = new Map([
   ["active-tr-label", { label: "Görüşme", probability: 0.5, isClosed: false, displayOrder: 0, pipelineLabel: "Sales" }],
   ["won-tr-label", { label: "Kazanıldı", probability: 1, isClosed: true, displayOrder: 1, pipelineLabel: "Sales" }],
   ["lost-tr-label", { label: "Kapandı", probability: 0, isClosed: true, displayOrder: 2, pipelineLabel: "Sales" }],
+  ["cancelled", { label: "Cancelled", probability: 0, isClosed: false, displayOrder: 3, pipelineLabel: "Sales" }],
 ]);
 const object = (dealstage: string, extra: Record<string, string> = {}): HubSpotObject => ({ id: dealstage, properties: { dealstage, ...extra } });
 assert.equal(hubspotDealState(object("active-tr-label"), stageMap), "open");
@@ -86,6 +87,7 @@ assert.equal(hubspotDealState(object("won-tr-label"), stageMap), "won");
 assert.equal(hubspotDealState(object("lost-tr-label"), stageMap), "lost");
 assert.equal(hubspotDealState(object("active-tr-label", { hs_is_closed_won: "true" }), stageMap), "won");
 assert.equal(isHubSpotOpenOrder({ id: "order", properties: { hs_pipeline_stage: "active-tr-label" } }, stageMap), true);
+assert.equal(isHubSpotOpenOrder({ id: "cancelled-order", properties: { hs_pipeline_stage: "cancelled" } }, stageMap), false);
 assert.equal(SPARK_CHAT_KNOWLEDGE.compositeMetrics.guaranteedRevenue.pattern.test("2026 toplam garanti gelirim"), true);
 assert.equal(detectSparkCompositeRevenueMetric("Bu ay beklenen fatura toplamı nedir?"), "expected_revenue");
 assert.equal(detectSparkCompositeRevenueMetric("Bu ay beklenen faturaların toplamı nedir?"), "expected_revenue");

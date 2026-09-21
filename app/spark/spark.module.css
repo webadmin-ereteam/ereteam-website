@@ -248,6 +248,11 @@
 .dialogHead span { color: var(--teal); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .dialogHead h2 { margin: 3px 0 2px; font-size: 19px; }
 .dialogHead p { margin: 0; color: var(--muted); font-size: 10px; }
+.dialogCountryBreakdown { display: flex; gap: 8px; margin-top: 10px; }
+.dialogCountryBreakdown > div { min-width: 150px; display: grid; grid-template-columns: auto 1fr; align-items: baseline; gap: 2px 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: #f7faf9; }
+.dialogCountryBreakdown span { color: var(--teal); font-size: 9px; font-weight: 850; letter-spacing: .06em; }
+.dialogCountryBreakdown b { color: var(--ink); font-size: 12px; text-align: right; }
+.dialogCountryBreakdown small { grid-column: 1 / -1; color: var(--muted); font-size: 8px; }
 .dialogHead > button { width: 34px; height: 34px; display: grid; flex: 0 0 auto; place-items: center; color: var(--ink); border: 1px solid var(--line); border-radius: 9px; background: #fff; cursor: pointer; }
 .dialog .tableWrap { max-height: 630px; border: 1px solid var(--line); border-radius: 10px; }
 .dialog .page table { min-width: 900px; }
@@ -321,6 +326,8 @@
   .sectionNav { margin-inline: -2px; }
   .dialogBackdrop { padding: 8px; }
   .dialog { max-height: calc(100vh - 16px); padding: 14px; border-radius: 13px; }
+  .dialogCountryBreakdown { flex-wrap: wrap; }
+  .dialogCountryBreakdown > div { min-width: 130px; flex: 1; }
   .bulkEditor { align-items: flex-start; flex-wrap: wrap; }
   .bulkEditor > small { flex-basis: 100%; }
   .bulkEditor .enumEditor { width: 100%; min-width: 0; flex: 1 0 100%; }

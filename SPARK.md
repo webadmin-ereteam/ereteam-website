@@ -81,6 +81,10 @@ of its object, period, measure and filters. Follow-ups also carry the previous v
 query context—not record data—so short period changes and `bunların toplamı?` retain
 the intended scope. Active pipeline, Won/Lost, open expected orders
 and New Business-linked records use the same deterministic definitions as the dashboard.
+Every order query is restricted to open pipeline stages, so closed/cancelled orders
+are excluded even when the user does not explicitly say `açık`. Explicit
+`Cancelled`/`Canceled`/`İptal` stage markers are excluded even if their HubSpot
+pipeline metadata is accidentally configured as open.
 `Garanti gelir` is a deterministic composite metric: invoiced revenue plus open
 orders in the same requested period. The answer shows both components and their total.
 `Beklenen fatura/gelir toplamı` uses the same period-based composite calculation:
@@ -194,6 +198,8 @@ header. `SPARK_CRON_SECRET` is legacy and can be removed.
 - Weighted pipeline: sum `hs_projected_amount_in_home_currency` over active deals
 - Deal state: `hs_is_closed`, `hs_is_closed_won`, and pipeline stage metadata;
   labels are display-only and are never parsed to decide Open/Won/Lost state
+- Order state: pipeline stage metadata; explicit `Cancelled`/`Canceled`/`İptal`
+  stage markers are always excluded
 - Country: `country` with enum values `Turkiye` and `USA` on deals, invoices and orders
 - Vendor: `vendor_name` on deals, invoices and orders
 - Customer/company: virtual `_company_name`; direct HubSpot company association first, then invoice latest company name, deal name, or an order's associated deal names
@@ -222,7 +228,9 @@ The technical order-date property name is never rendered in the UI.
   Business deals closed in the reporting year. Carry-over rows are visually
   distinguishable in drill-downs.
 - Monthly invoices/orders and weekly new/won/lost records have drill-down
-  lists. Do not duplicate weekly deal movement elsewhere on the page.
+  lists. Monthly invoice, open-order and pipeline detail dialogs show TR and ABD
+  amount/count splits alongside the overall total. Do not duplicate weekly deal
+  movement elsewhere on the page.
 - Weekly new deals use `createdate` across all deals, regardless of their current
   open/won/lost state.
 - The 12-month operating table shows non-cancelled invoices through `generatedAt`, open orders, active

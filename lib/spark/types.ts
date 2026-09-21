@@ -6,6 +6,7 @@ export type SparkRecord = {
   amount: number;
   owner?: string;
   company?: string;
+  country?: string;
   url: string;
   carryover?: boolean;
   stage?: string;
