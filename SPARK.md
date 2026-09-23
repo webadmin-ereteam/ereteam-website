@@ -19,8 +19,8 @@ this file; do not use `PRESALES.md` as Spark documentation.
 
 Vercel Cron calls the production endpoint every day at `06:00 UTC` and `11:00 UTC`,
 which are `09:00` and `14:00 Europe/Istanbul`. Each report covers the current Istanbul calendar day
-and the seven preceding calendar days through `generatedAt`. YTD and
-current-month values use the generation timestamp as their cutoff. On Vercel Hobby, the invocation can
+and the seven preceding calendar days through `generatedAt`. Annual dashboard populations use
+the complete reporting-year date range; weekly movement uses the generation timestamp as its cutoff. On Vercel Hobby, the invocation can
 occur at any time within each scheduled hour. Environment-variable changes only
 reach a new deployment, so redeploy after changing a secret.
 
@@ -178,7 +178,7 @@ Turkish half-year aliases also accept case suffixes and compact spelling, includ
 
 The former manually entered weekly focus/priorities section is intentionally
 excluded. The executive summary is generated only from current numerical
-metrics: target coverage, YTD invoicing, open orders, pipeline and the rolling
+metrics: target coverage, reporting-year invoicing, open orders, pipeline and the rolling
 seven-day deal movement.
 
 ## Environment variables
@@ -229,7 +229,7 @@ The technical order-date property name is never rendered in the UI.
 
 ## Reporting rules
 
-- Target coverage is invoices through `generatedAt` plus reporting-year open orders, divided by
+- Target coverage is reporting-year non-cancelled invoices plus reporting-year open orders, divided by
   the annual `Lisans + Servis` target. Changing either target variable requires
   a redeploy before it affects Spark.
 - Forecast coverage is reporting-year invoices plus reporting-year open orders
@@ -246,9 +246,10 @@ The technical order-date property name is never rendered in the UI.
   amount/count splits alongside the overall total. Older persisted snapshots that
   predate the row-level country field resolve it by record ID from the existing country
   revenue breakdown. Do not duplicate weekly deal movement elsewhere on the page.
-- Weekly new deals use `createdate` across all deals, regardless of their current
-  open/won/lost state.
-- The 12-month operating table shows non-cancelled invoices through `generatedAt`, open orders, active
+- Weekly new deals are currently Open, have `closedate` in the reporting year,
+  and have `createdate` in the rolling seven-day window. Weekly Won/Lost records
+  use their explicit state and a reporting-year `closedate` in that same window.
+- The 12-month operating table shows all reporting-year non-cancelled invoices, reporting-year open orders, active
   close-date pipeline and HubSpot projected weighted pipeline for every month in
   the reporting year.
 - Revenue breakdowns use `country`, `vendor_name`, `revenue_type`, and
@@ -257,7 +258,9 @@ The technical order-date property name is never rendered in the UI.
   legend amounts are invoice plus open-order totals and are explicitly labeled
   `Fatura + açık order`; the label belongs above the legend values, not above the donut.
 - CRM hygiene shows overdue, 90+ day, missing-close-date, missing-owner and
-  missing-amount active deals. Separate classification cards check reporting-year
+  missing-amount active deals. Operational deal checks use reporting-year Open deals,
+  except the missing-close-date check, which necessarily inspects Open deals without
+  a date and is the only explicit reporting-year date exception. Separate classification cards check reporting-year
   invoices, reporting-year open orders, and reporting-year active deals for missing
   `country`, `vendor_name`, `revenue_type`, or `ereteam_domain` values. Detail rows
   identify whether the affected HubSpot record is an Invoice, Order, or Deal. A record
@@ -278,10 +281,13 @@ The technical order-date property name is never rendered in the UI.
 - Monthly, breakdown, funnel, New Business and hygiene values expose record-count
   drill-downs in one shared modal; only one record detail modal is open at a time.
   The stage-funnel header also provides one deduplicated list of all active deals
-  represented across the funnel stages.
+  represented across the reporting-year funnel stages. The monthly-operation header
+  provides equivalent complete reporting-year lists for non-cancelled invoices and
+  Open orders.
   Every record-detail modal can export its current rows to an Excel workbook with
-  record metadata and HubSpot URLs; the spreadsheet library loads only when export
-  is requested.
+  record metadata and HubSpot URLs. Text, object-type, stage, owner, and country
+  filters apply to the displayed count, amount, table, and Excel export. The
+  spreadsheet library loads only when export is requested.
   Record-detail tables do not show a separate company column because company data is
   not reliably populated by HubSpot and the record names already contain the useful
   company context.

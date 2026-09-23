@@ -262,6 +262,11 @@
 .dialogHeadActions button { min-width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 8px; color: var(--ink); border: 1px solid var(--line); border-radius: 9px; background: #fff; font: inherit; font-size: 9px; font-weight: 800; cursor: pointer; }
 .dialogHeadActions button:disabled { opacity: .5; cursor: wait; }
 .dialogHeadActions .exportButton { color: var(--teal); border-color: #b9dcd5; background: #eff9f7; }
+.recordFilters { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 9px; padding: 9px; border: 1px solid var(--line); border-radius: 10px; background: #f7faf9; }
+.recordFilters input, .recordFilters select { min-height: 34px; padding: 6px 9px; color: var(--ink); border: 1px solid #ccd8dc; border-radius: 8px; background: #fff; font: inherit; font-size: 9px; }
+.recordFilters input { min-width: 210px; flex: 1; }
+.recordFilters select { max-width: 190px; }
+.recordFilters input:focus, .recordFilters select:focus { border-color: var(--teal); outline: 2px solid rgba(8,127,113,.1); }
 .dialog .tableWrap { max-height: 630px; border: 1px solid var(--line); border-radius: 10px; }
 .dialog .page table { min-width: 900px; }
 .stagePill { display: inline-block; padding: 3px 6px; color: #456069; border-radius: 5px; background: #edf2f1; font-size: 8px; font-weight: 750; white-space: nowrap; }
@@ -337,6 +342,7 @@
   .dialog { max-height: calc(100vh - 16px); padding: 14px; border-radius: 13px; }
   .dialogCountryBreakdown { flex-wrap: wrap; }
   .dialogCountryBreakdown > div { min-width: 130px; flex: 1; }
+  .recordFilters input, .recordFilters select { width: 100%; max-width: none; }
   .bulkEditor { align-items: flex-start; flex-wrap: wrap; }
   .bulkEditor > small { flex-basis: 100%; }
   .bulkEditor .enumEditor { width: 100%; min-width: 0; flex: 1 0 100%; }

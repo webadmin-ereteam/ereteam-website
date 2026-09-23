@@ -172,7 +172,7 @@ export function isHubSpotOpenOrder(row: HubSpotObject, stages: StageMap) {
 }
 
 export function isIncludedInvoice(row: HubSpotObject) {
-  return lower(row.properties.status) !== "cancelled";
+  return row.properties.status !== "cancelled";
 }
 
 export function validateInvoiceStatusProperty(catalog: HubSpotProperty[]) {

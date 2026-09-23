@@ -276,19 +276,44 @@ function RecordDialog({
   onRecordsUpdated?: (rows: SparkRecord[], property: EditableProperty) => void;
 }) {
   const [exporting, setExporting] = useState(false);
+  const [query, setQuery] = useState("");
+  const [objectType, setObjectType] = useState("");
+  const [stage, setStage] = useState("");
+  const [owner, setOwner] = useState("");
+  const [country, setCountry] = useState("");
+  const optionValues = (values: Array<string | undefined>) => Array.from(new Set(values.filter((value): value is string => Boolean(value)))).sort((left, right) => left.localeCompare(right, "tr-TR"));
+  const objectTypes = optionValues(rows.map((row) => row.objectType));
+  const stages = optionValues(rows.map((row) => row.stage));
+  const owners = optionValues(rows.map((row) => row.owner || "Belirtilmemiş"));
+  const countryOptions = optionValues(rows.map((row) => countryGroup(row.country) || "Belirtilmemiş"));
+  const normalizedQuery = query.trim().toLocaleLowerCase("tr-TR");
+  const filteredRows = rows.filter((row) => {
+    const rowCountry = countryGroup(row.country) || "Belirtilmemiş";
+    const rowOwner = row.owner || "Belirtilmemiş";
+    const matchesQuery = !normalizedQuery || [row.name, row.objectType, row.stage, rowOwner, rowCountry, row.issues?.join(" "), formatDate(row.date)]
+      .filter(Boolean)
+      .join(" ")
+      .toLocaleLowerCase("tr-TR")
+      .includes(normalizedQuery);
+    return matchesQuery
+      && (!objectType || row.objectType === objectType)
+      && (!stage || row.stage === stage)
+      && (!owner || rowOwner === owner)
+      && (!country || rowCountry === country);
+  });
   const countries = [
     { key: "Turkiye", label: "TR" },
     { key: "USA", label: "ABD" },
   ].map((country) => {
-    const countryRows = rows.filter((row) => countryGroup(row.country) === country.key);
+    const countryRows = filteredRows.filter((row) => countryGroup(row.country) === country.key);
     return { ...country, count: countryRows.length, amount: sum(countryRows) };
   });
   const exportExcel = async () => {
-    if (!rows.length || exporting) return;
+    if (!filteredRows.length || exporting) return;
     setExporting(true);
     try {
       const XLSX = await import("xlsx");
-      const worksheet = XLSX.utils.json_to_sheet(rows.map((row) => ({
+      const worksheet = XLSX.utils.json_to_sheet(filteredRows.map((row) => ({
         "Kayıt": row.name,
         "Tür": row.objectType ?? "",
         "Tarih": formatDate(row.date),
@@ -319,7 +344,7 @@ function RecordDialog({
           <div>
             <span>Kayıt detayı</span>
             <h2>{title}</h2>
-            <p>{rows.length} kayıt · {exactMoney(sum(rows))}</p>
+            <p>{filteredRows.length === rows.length ? `${rows.length} kayıt` : `${filteredRows.length} / ${rows.length} kayıt`} · {exactMoney(sum(filteredRows))}</p>
             {showCountryBreakdown ? (
               <div className={styles.dialogCountryBreakdown}>
                 {countries.map((country) => <div key={country.key}><span>{country.label}</span><b>{exactMoney(country.amount)}</b><small>{country.count} kayıt</small></div>)}
@@ -327,11 +352,20 @@ function RecordDialog({
             ) : null}
           </div>
           <div className={styles.dialogHeadActions}>
-            <button className={styles.exportButton} type="button" disabled={!rows.length || exporting} onClick={exportExcel}><Download size={15} />{exporting ? "Hazırlanıyor" : "Excel indir"}</button>
+            <button className={styles.exportButton} type="button" disabled={!filteredRows.length || exporting} onClick={exportExcel}><Download size={15} />{exporting ? "Hazırlanıyor" : "Excel indir"}</button>
             <button type="button" onClick={onClose} aria-label="Kapat"><X size={20} /></button>
           </div>
         </div>
-        {rows.length ? <RecordTable rows={rows} onRecordsUpdated={onRecordsUpdated} /> : <div className={styles.empty}>Kayıt bulunmuyor.</div>}
+        {rows.length > 1 ? (
+          <div className={styles.recordFilters}>
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Kayıt ara" aria-label="Kayıtlarda ara" />
+            {objectTypes.length > 1 ? <select value={objectType} onChange={(event) => setObjectType(event.target.value)} aria-label="Kayıt türü"><option value="">Tüm türler</option>{objectTypes.map((value) => <option key={value} value={value}>{value}</option>)}</select> : null}
+            {stages.length ? <select value={stage} onChange={(event) => setStage(event.target.value)} aria-label="Stage"><option value="">Tüm stage&apos;ler</option>{stages.map((value) => <option key={value} value={value}>{value}</option>)}</select> : null}
+            {owners.length ? <select value={owner} onChange={(event) => setOwner(event.target.value)} aria-label="Owner"><option value="">Tüm owner&apos;lar</option>{owners.map((value) => <option key={value} value={value}>{value}</option>)}</select> : null}
+            {countryOptions.length ? <select value={country} onChange={(event) => setCountry(event.target.value)} aria-label="Ülke"><option value="">Tüm ülkeler</option>{countryOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select> : null}
+          </div>
+        ) : null}
+        {filteredRows.length ? <RecordTable rows={filteredRows} onRecordsUpdated={onRecordsUpdated} /> : <div className={styles.empty}>{rows.length ? "Filtrelerle eşleşen kayıt bulunmuyor." : "Kayıt bulunmuyor."}</div>}
       </section>
     </div>
   );
@@ -401,6 +435,8 @@ export default function Dashboard({ data }: { data: SparkData }) {
   const quarterOrders = quarterMonths.flatMap((item) => item.orders);
   const quarterDeals = quarterMonths.flatMap((item) => item.deals);
   const quarterWeighted = quarterMonths.reduce((total, item) => total + item.weightedPipeline, 0);
+  const yearInvoices = data.monthlyPerformance.flatMap((item) => item.invoices);
+  const yearOrders = data.monthlyPerformance.flatMap((item) => item.orders);
   const countryEntries = data.revenueBreakdowns.find((breakdown) => breakdown.key === "country")?.entries ?? [];
   const countryByRecord = new Map(countryEntries.flatMap((entry) =>
     [...entry.invoices, ...entry.orders, ...entry.deals].map((row) => [recordKey(row), countryGroup(entry.key)] as const),
@@ -488,7 +524,7 @@ export default function Dashboard({ data }: { data: SparkData }) {
             <div className={styles.progress}><i style={{ width: `${Math.min(pct(guaranteedCoverage, data.target), 100)}%` }} /></div>
           </article>
           <article className={styles.metricCard}>
-            <span>YTD fatura</span><strong>{shortMoney(data.ytdInvoice)}</strong><p>Open + Paid invoice</p>
+            <span>{year} faturaları</span><strong>{shortMoney(data.ytdInvoice)}</strong><p>Cancelled hariç tüm invoice</p>
           </article>
           <article className={styles.metricCard}>
             <span>Açık order</span><strong>{shortMoney(data.openOrders)}</strong><p>{year} faturalanma planı</p>
@@ -527,13 +563,17 @@ export default function Dashboard({ data }: { data: SparkData }) {
             </div>
           </article>
         </div>
-        <InfoNote>Weighted forecast doğrudan HubSpot <code>Projected amount in company currency</code> alanından gelir. Custom <code>status</code> alanı Cancelled olan faturalar tüm hesaplardan çıkarılır; boş ve Invoiced değerleri dahil edilir.</InfoNote>
+        <InfoNote>Weighted forecast doğrudan HubSpot <code>Projected amount in company currency</code> alanından gelir. Custom <code>status</code> alanının internal değeri tam olarak <code>cancelled</code> olan faturalar tüm hesaplardan çıkarılır; diğer değerler dahil edilir.</InfoNote>
       </section>
 
       <section id="months">
         <div className={styles.sectionHead}>
           <div><span>02</span><h2>Aylık operasyon görünümü</h2></div>
-          <p>{year} · 12 aylık revenue ve pipeline planı</p>
+          <div className={styles.sectionActions}>
+            <p>{year} · 12 aylık revenue ve pipeline planı</p>
+            <button className={styles.sectionAction} type="button" disabled={!yearInvoices.length} onClick={() => openRecords(`${year} tüm invoice kayıtları`, yearInvoices, true)}><List size={13} /> Tüm invoice&apos;ları gör ({yearInvoices.length})</button>
+            <button className={styles.sectionAction} type="button" disabled={!yearOrders.length} onClick={() => openRecords(`${year} tüm açık order kayıtları`, yearOrders, true)}><List size={13} /> Tüm açık order&apos;ları gör ({yearOrders.length})</button>
+          </div>
         </div>
         <div className={styles.periodGrid}>
           <article className={`${styles.periodCard} ${styles.periodMonth}`}>
