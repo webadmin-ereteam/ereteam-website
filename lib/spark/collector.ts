@@ -214,6 +214,15 @@ export async function collectSparkData(now = new Date()): Promise<{ data: SparkD
       issues: [group.label],
     })),
   }));
+  const unpaidInvoices = yearInvoices
+    .filter((row) => row.properties.hs_invoice_status !== "paid")
+    .map((row) => ({ ...invoiceRecord(row, ownerMap), issues: ["Invoice status Paid değil"] }));
+  hygiene.push({
+    key: "invoice-status-not-paid",
+    label: "Invoice status Paid değil",
+    description: `${year} invoice kayıtlarında Invoice status alanı Paid olmayan kayıtlar`,
+    records: unpaidInvoices,
+  });
   const breakdownFields = [
     ["country", "Ülke"],
     ["vendor_name", "Vendor"],

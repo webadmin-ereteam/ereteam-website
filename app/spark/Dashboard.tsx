@@ -63,7 +63,7 @@ const countryGroup = (value?: string) => {
   return value;
 };
 const recordKey = (row: SparkRecord) => `${row.objectType ?? ""}:${row.id}`;
-type EditableProperty = "country" | "vendor_name" | "revenue_type" | "ereteam_domain";
+type EditableProperty = "country" | "vendor_name" | "revenue_type" | "ereteam_domain" | "hs_invoice_status";
 type EditableCatalog = Record<NonNullable<SparkRecord["objectType"]>, Record<EditableProperty, {
   label: string;
   multiple: boolean;
@@ -74,6 +74,7 @@ const issueProperties: Record<string, EditableProperty> = {
   "Vendor eksik": "vendor_name",
   "Revenue type eksik": "revenue_type",
   "Ereteam domain eksik": "ereteam_domain",
+  "Invoice status Paid değil": "hs_invoice_status",
 };
 const editablePropertyFor = (row: SparkRecord) => row.issues?.map((issue) => issueProperties[issue]).find(Boolean);
 
@@ -150,13 +151,14 @@ function RecordTable({
   const showIssue = rows.some((row) => row.issues?.length);
   const editableRows = rows.filter((row) => row.objectType && editablePropertyFor(row));
   const property = editableRows.length ? editablePropertyFor(editableRows[0]) : undefined;
+  const directPaidFix = property === "hs_invoice_status";
   const [catalogs, setCatalogs] = useState<EditableCatalog | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState("");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    if (!property) return;
+    if (!property || directPaidFix) return;
     const controller = new AbortController();
     fetch("/api/spark/hygiene", { signal: controller.signal })
       .then(async (response) => {
@@ -168,7 +170,7 @@ function RecordTable({
         if (error instanceof Error && error.name !== "AbortError") setMessage(error.message);
       });
     return () => controller.abort();
-  }, [property]);
+  }, [property, directPaidFix]);
 
   useEffect(() => {
     setSelected((current) => new Set(Array.from(current).filter((url) => rows.some((row) => row.url === url))));
@@ -215,9 +217,12 @@ function RecordTable({
     <div className={styles.tableWrap}>
       {property ? (
         <div className={styles.bulkEditor}>
-          <label><input type="checkbox" checked={editableRows.length > 0 && selected.size === editableRows.length} onChange={(event) => setSelected(event.target.checked ? new Set(editableRows.map((row) => row.url)) : new Set())} /> Tümünü seç</label>
-          <span>{selectedRows.length} kayıt seçili</span>
-          {selectedRows.length ? <EnumEditor catalog={bulkCatalog} saving={saving === "bulk"} onSave={(values) => save(selectedRows, values, "bulk")} /> : <small>Toplu güncellemek için kayıt seçin.</small>}
+          <label><input type="checkbox" checked={editableRows.length > 0 && selected.size === Math.min(editableRows.length, 50)} onChange={(event) => setSelected(event.target.checked ? new Set(editableRows.slice(0, 50).map((row) => row.url)) : new Set())} /> {editableRows.length > 50 ? "İlk 50'yi seç" : "Tümünü seç"}</label>
+          <span>{selectedRows.length} / 50 kayıt seçili</span>
+          {selectedRows.length ? (directPaidFix
+            ? <div className={styles.enumEditor}><button type="button" disabled={saving === "bulk"} onClick={() => save(selectedRows, ["paid"], "bulk")}>{saving === "bulk" ? "Kaydediliyor" : "Seçilenleri Paid yap"}</button></div>
+            : <EnumEditor catalog={bulkCatalog} saving={saving === "bulk"} onSave={(values) => save(selectedRows, values, "bulk")} />
+          ) : <small>Toplu güncellemek için kayıt seçin.</small>}
           {message ? <b className={styles.editorStatus}>{message}</b> : null}
         </div>
       ) : null}
@@ -239,7 +244,7 @@ function RecordTable({
         <tbody>
           {rows.map((row) => (
             <tr key={row.url} className={row.carryover ? styles.carryover : ""}>
-              {property ? <td><input type="checkbox" checked={selected.has(row.url)} onChange={(event) => setSelected((current) => { const next = new Set(current); if (event.target.checked) next.add(row.url); else next.delete(row.url); return next; })} aria-label={`${row.name} kaydını seç`} /></td> : null}
+              {property ? <td><input type="checkbox" checked={selected.has(row.url)} disabled={!selected.has(row.url) && selected.size >= 50} onChange={(event) => setSelected((current) => { const next = new Set(current); if (event.target.checked && next.size < 50) next.add(row.url); else if (!event.target.checked) next.delete(row.url); return next; })} aria-label={`${row.name} kaydını seç`} /></td> : null}
               <td><a href={row.url} target="_blank" rel="noreferrer">{row.name}<ArrowUpRight size={12} /></a></td>
               {showObjectType ? <td><span className={styles.objectPill}>{row.objectType || "-"}</span></td> : null}
               {showStage ? <td><span className={styles.stagePill}>{row.stage || "-"}</span></td> : null}
@@ -251,7 +256,10 @@ function RecordTable({
               {showIssue ? (
                 <td>
                   <span className={styles.issueLabel}>{row.issues?.join(", ") || "-"}</span>
-                  {property && row.objectType ? <EnumEditor catalog={catalogs?.[row.objectType][property]} saving={saving === row.url} onSave={(values) => save([row], values, row.url)} /> : null}
+                  {property && row.objectType ? (directPaidFix
+                    ? <div className={styles.enumEditor}><button type="button" disabled={saving === row.url} onClick={() => save([row], ["paid"], row.url)}>{saving === row.url ? "Kaydediliyor" : "Paid yap"}</button></div>
+                    : <EnumEditor catalog={catalogs?.[row.objectType][property]} saving={saving === row.url} onSave={(values) => save([row], values, row.url)} />
+                  ) : null}
                 </td>
               ) : null}
             </tr>
@@ -456,7 +464,8 @@ export default function Dashboard({ data }: { data: SparkData }) {
   });
   const handleRecordsUpdated = (updatedRows: SparkRecord[], property: EditableProperty) => {
     const urls = new Set(updatedRows.map((row) => row.url));
-    setHygiene((groups) => groups.map((group) => group.key === `missing-${property}`
+    const groupKey = property === "hs_invoice_status" ? "invoice-status-not-paid" : `missing-${property}`;
+    setHygiene((groups) => groups.map((group) => group.key === groupKey
       ? { ...group, records: group.records.filter((row) => !urls.has(row.url)) }
       : group));
     setDetail((current) => current ? { ...current, rows: current.rows.filter((row) => !urls.has(row.url)) } : null);
@@ -748,16 +757,19 @@ export default function Dashboard({ data }: { data: SparkData }) {
           <p>Fatura, order ve deal kayıtlarında operasyon ve sınıflandırma kontrolleri</p>
         </div>
         <div className={styles.hygieneGrid}>
-          {hygiene.map((group, index) => (
-            <article className={`${styles.hygieneCard} ${group.key.startsWith("missing-") ? styles.hygieneClassification : ""}`} key={group.key}>
+          {hygiene.map((group, index) => {
+            const classification = group.key.startsWith("missing-") || group.key === "invoice-status-not-paid";
+            return (
+            <article className={`${styles.hygieneCard} ${classification ? styles.hygieneClassification : ""}`} key={group.key}>
               <div className={styles.hygieneIcon}>{index < 2 ? <AlertTriangle size={18} /> : index === 4 ? <CircleDollarSign size={18} /> : <BarChart3 size={18} />}</div>
               <span>{group.label}</span>
               <strong>{group.records.length}</strong>
-              <p>{shortMoney(sum(group.records))} {group.key.startsWith("missing-") ? "toplam tutar" : "pipeline"}</p>
+              <p>{shortMoney(sum(group.records))} {classification ? "toplam tutar" : "pipeline"}</p>
               <small>{group.description}</small>
               <button type="button" disabled={!group.records.length} onClick={() => openRecords(group.label, group.records)}>Kayıtları incele <ArrowUpRight size={13} /></button>
             </article>
-          ))}
+            );
+          })}
         </div>
         <InfoNote>CRM hygiene göstergeleri performans puanı değildir. Operasyon kontrolleri aktif pipeline&apos;ı; sınıflandırma kontrolleri ise {year} faturalarını, açık orderları ve yıl kapanış planındaki aktif deal&apos;leri kapsar. Aynı kayıt birden fazla grupta yer alabilir.</InfoNote>
       </section>

@@ -84,6 +84,8 @@ assert.equal(isIncludedInvoice({ id: "2", properties: { status: "invoiced" } }),
 assert.equal(isIncludedInvoice({ id: "3", properties: {} }), true);
 assert.equal(isIncludedInvoice({ id: "4", properties: { status: "Cancelled" } }), true);
 assert.equal(isIncludedInvoice({ id: "5", properties: { status: " cancelled " } }), true);
+assert.equal(isIncludedInvoice({ id: "6", properties: { status: "invoiced", hs_invoice_status: "open" } }), true);
+assert.equal(isIncludedInvoice({ id: "7", properties: { status: "cancelled", hs_invoice_status: "paid" } }), false);
 assert.equal(validateInvoiceStatusProperty([{ name: "status", label: "Status", options: [{ label: "Invoiced", value: "invoiced" }, { label: "Cancelled", value: "cancelled" }] }]).name, "status");
 assert.throws(() => validateInvoiceStatusProperty([{ name: "hs_invoice_status", label: "Invoice status", options: [] }]), /custom status sözleşmesi/);
 

@@ -93,6 +93,22 @@ export async function updateHubSpotObjectProperties(
   );
 }
 
+export async function updateHubSpotObjectPropertiesBatch(
+  objectType: "deals" | "invoices" | "orders",
+  records: Array<{ id: string; properties: Record<string, string> }>,
+) {
+  const results: HubSpotObject[] = [];
+  // HubSpot's Invoice batch endpoint returns intermittent 500s for larger payloads.
+  for (let index = 0; index < records.length; index += 10) {
+    const result = await request<{ results: HubSpotObject[] }>(
+      `/crm/v3/objects/${objectType}/batch/update`,
+      { method: "POST", body: JSON.stringify({ inputs: records.slice(index, index + 10) }) },
+    );
+    results.push(...result.results);
+  }
+  return results;
+}
+
 export async function fetchHubSpotStages(objectType: "deals" | "orders") {
   const result = await request<{ results: Array<{
     label: string;
@@ -187,7 +203,7 @@ export function validateInvoiceStatusProperty(catalog: HubSpotProperty[]) {
 export async function fetchHubSpotData() {
   const [deals, invoices, orders, dealStages, orderStages, ownerMap, invoiceCatalog] = await Promise.all([
     fetchHubSpotObjects("deals", ["dealname", "dealstage", "createdate", "closedate", "amount_in_home_currency", "hs_projected_amount_in_home_currency", "hs_is_closed", "hs_is_closed_won", "dealtype", "country", "vendor_name", "revenue_type", "ereteam_domain", "hubspot_owner_id"]),
-    fetchHubSpotObjects("invoices", ["hs_number", "invoice_name", "hs_invoice_latest_company_name", "hs_invoice_date", "hs_amount_billed_in_company_currency", "status", "country", "vendor_name", "revenue_type", "ereteam_domain", "hubspot_owner_id"]),
+    fetchHubSpotObjects("invoices", ["hs_number", "invoice_name", "hs_invoice_latest_company_name", "hs_invoice_date", "hs_amount_billed_in_company_currency", "status", "hs_invoice_status", "country", "vendor_name", "revenue_type", "ereteam_domain", "hubspot_owner_id"]),
     fetchHubSpotObjects("orders", ["hs_order_name", "hs_pipeline_stage", "hs_processed_date", "hs_homecurrency_amount", "country", "vendor_name", "revenue_type", "ereteam_domain", "hubspot_owner_id"]),
     fetchHubSpotStages("deals"),
     fetchHubSpotStages("orders"),

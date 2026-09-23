@@ -204,7 +204,9 @@ header. `SPARK_CRON_SECRET` is legacy and can be removed.
 - Invoice amount/date: `hs_amount_billed_in_company_currency`, `hs_invoice_date`
 - Invoice status: custom enum `status`, with contract values `invoiced` and
   `cancelled`. Exclude only exact `cancelled`; include blank, `invoiced`, and any
-  other non-cancelled value. Do not use standard `hs_invoice_status`.
+  other non-cancelled value. Standard `hs_invoice_status` never filters invoices
+  or changes financial metrics; it is monitored only as a CRM-hygiene field and
+  every invoice is expected to have exact internal value `paid`.
 - Order amount/date: `hs_homecurrency_amount`, `hs_processed_date` (internal only)
 - Deal amount: `amount_in_home_currency`
 - Guaranteed revenue: period invoices + period open orders
@@ -271,21 +273,26 @@ The technical order-date property name is never rendered in the UI.
   except the missing-close-date check, which necessarily inspects Open deals without
   a date and is the only explicit reporting-year date exception. Separate classification cards check reporting-year
   invoices, reporting-year open orders, and reporting-year active deals for missing
-  `country`, `vendor_name`, `revenue_type`, or `ereteam_domain` values. Detail rows
+  `country`, `vendor_name`, `revenue_type`, or `ereteam_domain` values. A separate
+  reporting-year Invoice card tracks records whose `hs_invoice_status` is not exact
+  `paid`; this hygiene check must never alter the canonical Invoice population. Detail rows
   identify whether the affected HubSpot record is an Invoice, Order, or Deal. A record
   may appear in more than one action group. Deal-only operational cards label their
   amount as `pipeline`; mixed Invoice/Order/Deal classification cards label it as
   `toplam tutar` and must not describe the mixed amount as pipeline.
 - CRM-hygiene detail dialogs can write only `country`, `vendor_name`, `revenue_type`,
-  and `ereteam_domain`. Values are validated against the live enum catalog before the
+  `ereteam_domain`, and Invoice-only `hs_invoice_status = paid`. Values are validated against the live enum catalog before the
   HubSpot update. Users can update one record or select up to 50 records for one bulk
-  update. Checkbox properties support multiple values, and mixed object selections use
+  update. Non-Paid Invoice rows expose direct `Paid yap` and `Seçilenleri Paid yap`
+  actions rather than a general status selector. Checkbox properties support multiple values, and mixed object selections use
   only enum options common to every selected object type. Successful writes immediately
   remove the corrected records from the current browser's hygiene card and dialog; the
   shared dashboard snapshot is fully reconciled by the next manual or scheduled refresh.
   The HubSpot private app therefore
   requires `crm.objects.deals.write`, `crm.objects.invoices.write`, and
   `crm.objects.orders.write` in addition to the existing read scopes.
+- On 2026-09-23, all 1,830 existing HubSpot Invoice records were normalized to
+  `hs_invoice_status = paid`; the hygiene card continuously catches future drift.
 - Current-month open deals use `closedate` and exclude Closed Won and Closed Lost.
 - Monthly, breakdown, funnel, New Business and hygiene values expose record-count
   drill-downs in one shared modal; only one record detail modal is open at a time.
