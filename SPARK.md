@@ -229,6 +229,15 @@ The technical order-date property name is never rendered in the UI.
 
 ## Reporting rules
 
+- Dashboard populations are canonical and must be reused by every headline metric,
+  monthly/quarterly view, stage funnel, breakdown, hygiene classification, all-record
+  list and drill-down: invoices require reporting-year `hs_invoice_date` and exclude
+  only the exact internal `status = cancelled`; orders require reporting-year
+  `hs_processed_date` and Open stage metadata; pipeline deals require reporting-year
+  `closedate` and Open state, excluding Won and Lost. Explicit Won/Lost and Closed Won
+  New Business sections may use their named closed state. The missing-close-date CRM
+  hygiene card is the sole date-scope exception because those Open deals have no date
+  to test. Do not recreate looser local variants of these populations.
 - Target coverage is reporting-year non-cancelled invoices plus reporting-year open orders, divided by
   the annual `Lisans + Servis` target. Changing either target variable requires
   a redeploy before it affects Spark.
