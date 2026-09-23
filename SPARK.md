@@ -311,6 +311,49 @@ The technical order-date property name is never rendered in the UI.
   items, Business Development or automatically invented action priorities.
 - The executive summary is numeric and source-derived.
 
+## Legacy Invoice exchange-rate recovery
+
+- HubSpot's standard Invoice `hs_exchange_rate` is a read-only system value.
+  Direct CRM PATCH and both CREATE/UPDATE imports reject it with
+  `READ_ONLY_VALUE`; never delete records merely to map that field in an import.
+- The legacy migration populated the system value indirectly: set the portal's
+  live currency conversion rate, create the Invoice as Draft with its line item
+  and associations, finalize it as Open, then set it to Paid. A Paid Invoice
+  retains the rate captured at creation when the live portal rate later changes.
+- For a repair, first match source rows deterministically by normalized Invoice
+  name, `hs_invoice_date`, `hs_currency`, and `hs_subtotal`. Restrict the source
+  population to the requested historical date range and do not use
+  `hs_exchange_rate` as a reporting-population filter.
+- Before any write, back up every source Invoice property, company/deal/contact
+  association, line item and the full currency-rate history. Keep a per-source
+  checkpoint containing replacement Invoice and line-item IDs.
+- For each affected non-USD Invoice, temporarily set the portal currency rate to
+  the desired final `hs_exchange_rate`, wait for HubSpot's rate cache, create a
+  Draft replacement, recreate its line items and exact associations, then move it
+  through Open to Paid. Verify rate (six-decimal tolerance), date, currency,
+  subtotal, status, name, line items and associations before archiving the source
+  Invoice and its old migration line item.
+- HubSpot currency propagation is eventually consistent. If a replacement sees
+  the previous rate, archive only that unverified replacement and its new line
+  item, keep the source, wait 10 then 20 seconds, and retry without reposting the
+  same rate. Retry transient `408`, `429` and `5xx` responses. Always restore each
+  currency's original live rate in a `finally` path.
+- After a rebuild, verify that every checkpoint is complete, every replacement
+  matches its source row, all source IDs are inactive, no untracked replacement
+  remains, all relationships match, and the portal rates equal their initial
+  values. Inspect `hs_exchange_rate` and `hs_invoice_status` property history for
+  every protected reporting-year Invoice and require zero migration-time changes.
+- On 2026-09-23 this procedure rebuilt 504 pre-2026 Invoices (55 EUR, 446 TRY,
+  3 GBP), while 1,180 already-correct historical Invoices remained untouched.
+  Four unmatched spreadsheet rows were excluded. Final verification found 1,830
+  active Paid Invoices, 504 valid replacements with 504 line items and all original
+  company/deal associations, no orphan replacements, and zero migration-time
+  changes across all 145 Invoices dated 2026 or later. Portal rates were restored
+  to GBP `1.336`, EUR `1.146`, and TRY `0.0205`.
+- The recovery requires Invoice and line-item read/write plus
+  `settings.currencies.read` and `settings.currencies.write`. `crm.import` is useful
+  only to prove the read-only import failure and is not part of the rebuild.
+
 ## Legacy Amplemarket webhook
 
 The receiver and stored `SparkAmplemarketEvent` records remain available for
