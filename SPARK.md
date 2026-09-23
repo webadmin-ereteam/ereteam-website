@@ -343,10 +343,12 @@ The technical order-date property name is never rendered in the UI.
   remains, all relationships match, and the portal rates equal their initial
   values. Inspect `hs_exchange_rate` and `hs_invoice_status` property history for
   every protected reporting-year Invoice and require zero migration-time changes.
-- On 2026-09-23 this procedure rebuilt 504 pre-2026 Invoices (55 EUR, 446 TRY,
+- On 2026-09-23 this procedure rebuilt 505 pre-2026 Invoices (55 EUR, 447 TRY,
   3 GBP), while 1,180 already-correct historical Invoices remained untouched.
-  Four unmatched spreadsheet rows were excluded. Final verification found 1,830
-  active Paid Invoices, 504 valid replacements with 504 line items and all original
+  Three spreadsheet rows with no HubSpot record were excluded. One additional
+  Gilead row was matched safely by date, currency and subtotal despite its Excel
+  name ending in `1/2` and HubSpot `invoice_name` ending in `1/3`. Final verification found 1,830
+  active Paid Invoices, 505 valid replacements with 505 line items and all original
   company/deal associations, no orphan replacements, and zero migration-time
   changes across all 145 Invoices dated 2026 or later. Portal rates were restored
   to GBP `1.336`, EUR `1.146`, and TRY `0.0205`.
