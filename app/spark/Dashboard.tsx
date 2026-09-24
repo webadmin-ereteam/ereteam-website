@@ -2,15 +2,18 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import {
   AlertTriangle,
   ArrowUpRight,
   BarChart3,
   CircleDollarSign,
   Download,
+  Eye,
+  EyeOff,
   Info,
   List,
+  Monitor,
   RefreshCw,
   X,
 } from "lucide-react";
@@ -63,6 +66,26 @@ const countryGroup = (value?: string) => {
   return value;
 };
 const recordKey = (row: SparkRecord) => `${row.objectType ?? ""}:${row.id}`;
+type PrivacyMode = "normal" | "hidden" | "presentation";
+const PrivacyContext = createContext<PrivacyMode>("normal");
+const presentationMultiplier = 8;
+const privateMoney = (value: number, mode: PrivacyMode) => mode === "normal"
+  ? shortMoney(value)
+  : mode === "hidden" ? "••••" : shortMoney(value * presentationMultiplier);
+const privateCount = (value: number, mode: PrivacyMode) => mode === "normal"
+  ? String(value)
+  : mode === "hidden" ? "••••" : new Intl.NumberFormat("tr-TR").format(value * presentationMultiplier);
+const privatePercent = (value: number, mode: PrivacyMode) => mode === "hidden" ? "••••" : `%${value.toFixed(1)}`;
+const normalizeHygiene = (groups: SparkData["hygiene"]) => {
+  const visibleGroups = groups.filter((group) => group.key !== "old");
+  if (visibleGroups.some((group) => group.key === "invoice-status-not-paid")) return visibleGroups;
+  return [...visibleGroups, {
+    key: "invoice-status-not-paid",
+    label: "Invoice status Paid değil",
+    description: "Bu kontrolün sonucu için Spark verisini yenileyin.",
+    records: [],
+  }];
+};
 type EditableProperty = "country" | "vendor_name" | "revenue_type" | "ereteam_domain" | "hs_invoice_status";
 type EditableCatalog = Record<NonNullable<SparkRecord["objectType"]>, Record<EditableProperty, {
   label: string;
@@ -95,16 +118,18 @@ function OpenRecordsButton({
   showCountryBreakdown?: boolean;
   children: React.ReactNode;
 }) {
+  const privacyMode = useContext(PrivacyContext);
+  const privateView = privacyMode !== "normal";
   return (
     <button
       type="button"
       className={styles.valueButton}
-      disabled={!rows.length}
+      disabled={!rows.length || privateView}
       onClick={() => onOpen(label, rows, showCountryBreakdown)}
-      aria-label={`${label}: ${rows.length} kayıt`}
+      aria-label={privateView ? "Gizlilik modunda kayıt detayları kapalı" : `${label}: ${rows.length} kayıt`}
     >
       {children}
-      {rows.length ? <ArrowUpRight size={13} aria-hidden /> : null}
+      {rows.length && !privateView ? <ArrowUpRight size={13} aria-hidden /> : null}
     </button>
   );
 }
@@ -382,6 +407,7 @@ function RecordDialog({
 const chartColors = ["#087f71", "#4f7cac", "#d99532", "#845ec2", "#2c9fb3", "#c85272"];
 
 function DonutChart({ entries, overlapping }: { entries: Array<{ label: string; value: number }>; overlapping: boolean }) {
+  const privacyMode = useContext(PrivacyContext);
   const ranked = entries.filter((entry) => entry.value > 0).sort((left, right) => right.value - left.value);
   const visible = ranked.slice(0, 5);
   const other = ranked.slice(5).reduce((total, entry) => total + entry.value, 0);
@@ -397,16 +423,16 @@ function DonutChart({ entries, overlapping }: { entries: Array<{ label: string; 
   return (
     <div className={styles.breakdownVisual}>
       <div className={styles.donut} style={{ background: gradient ? `conic-gradient(${gradient})` : "#e8edeb" }}>
-        <div><strong>{items.length}</strong><span>{overlapping ? "kategori" : "pay"}</span></div>
+        <div><strong>{privacyMode === "presentation" ? "Demo" : privateCount(items.length, privacyMode)}</strong><span>{overlapping ? "kategori" : "pay"}</span></div>
       </div>
       <div className={styles.donutLegend}>
         <span className={styles.breakdownLegendTitle}>Fatura + açık order</span>
         {items.map((entry, index) => (
           <div key={entry.label}>
             <i style={{ background: chartColors[index % chartColors.length] }} />
-            <span>{entry.label}</span>
-            <b>{shortMoney(entry.value)}</b>
-            {!overlapping ? <small>%{pct(entry.value, total).toFixed(1)}</small> : null}
+            <span>{privacyMode === "presentation" ? `Kategori ${index + 1}` : entry.label}</span>
+            <b>{privateMoney(entry.value, privacyMode)}</b>
+            {!overlapping ? <small>{privatePercent(pct(entry.value, total), privacyMode)}</small> : null}
           </div>
         ))}
       </div>
@@ -418,9 +444,11 @@ export default function Dashboard({ data }: { data: SparkData }) {
   const router = useRouter();
   const [detail, setDetail] = useState<{ title: string; rows: SparkRecord[]; showCountryBreakdown?: boolean } | null>(null);
   const [breakdownKey, setBreakdownKey] = useState(data.revenueBreakdowns[0]?.key ?? "country");
-  const [hygiene, setHygiene] = useState(data.hygiene);
+  const [hygiene, setHygiene] = useState(() => normalizeHygiene(data.hygiene));
   const [refreshing, setRefreshing] = useState(false);
   const [refreshMessage, setRefreshMessage] = useState("");
+  const [privacyMode, setPrivacyMode] = useState<PrivacyMode>("normal");
+  const invoiceStatusCheckPending = !data.hygiene.some((group) => group.key === "invoice-status-not-paid");
   const year = Number(data.reportDate.slice(0, 4));
   const currentMonth = Number(data.reportDate.slice(5, 7));
   const guaranteedCoverage = data.ytdInvoice + data.openOrders;
@@ -462,6 +490,11 @@ export default function Dashboard({ data }: { data: SparkData }) {
       : rows,
     showCountryBreakdown,
   });
+  const changePrivacyMode = (mode: PrivacyMode) => {
+    setDetail(null);
+    setPrivacyMode(mode);
+  };
+  useEffect(() => setHygiene(normalizeHygiene(data.hygiene)), [data.hygiene]);
   const handleRecordsUpdated = (updatedRows: SparkRecord[], property: EditableProperty) => {
     const urls = new Set(updatedRows.map((row) => row.url));
     const groupKey = property === "hs_invoice_status" ? "invoice-status-not-paid" : `missing-${property}`;
@@ -481,8 +514,8 @@ export default function Dashboard({ data }: { data: SparkData }) {
       if (!response.ok) throw new Error(result.error || "Yenileme başarısız.");
       setRefreshMessage(result.refreshed ? "Güncellendi" : result.message || "Zaten güncel");
       router.refresh();
-    } catch {
-      setRefreshMessage("Şu anda yenilenemedi");
+    } catch (error) {
+      setRefreshMessage(error instanceof Error ? error.message : "Şu anda yenilenemedi");
     } finally {
       setRefreshing(false);
     }
@@ -491,7 +524,8 @@ export default function Dashboard({ data }: { data: SparkData }) {
   const breakdownRows = (entry: SparkBreakdownEntry, kind: "invoices" | "orders" | "deals") => entry[kind];
 
   return (
-    <main className={styles.page}>
+    <PrivacyContext.Provider value={privacyMode}>
+      <main className={styles.page} data-privacy={privacyMode}>
       <header className={styles.hero}>
         <div className={styles.brandLockup}>
           <div className={styles.logoBox}><Image src="/logos/ereteam-logo.png" alt="Ereteam" width={132} height={76} priority /></div>
@@ -503,13 +537,30 @@ export default function Dashboard({ data }: { data: SparkData }) {
         </div>
         <div className={styles.refreshArea}>
           <span>Son güncelleme {formatDate(data.generatedAt, true)}</span>
-          <button type="button" onClick={refreshDashboard} disabled={refreshing}>
+          <div className={styles.privacyControls} aria-label="Gizlilik kontrolleri">
+            <button type="button" aria-pressed={privacyMode === "hidden"} onClick={() => changePrivacyMode(privacyMode === "hidden" ? "normal" : "hidden")}>
+              {privacyMode === "hidden" ? <Eye size={14} /> : <EyeOff size={14} />}
+              {privacyMode === "hidden" ? "Sayıları göster" : "Hızlı gizle"}
+            </button>
+            <button type="button" aria-pressed={privacyMode === "presentation"} onClick={() => changePrivacyMode(privacyMode === "presentation" ? "normal" : "presentation")}>
+              <Monitor size={14} />
+              {privacyMode === "presentation" ? "Sunumu kapat" : "Sunum modu"}
+            </button>
+          </div>
+          <button type="button" onClick={refreshDashboard} disabled={refreshing || privacyMode !== "normal"}>
             <RefreshCw size={14} className={refreshing ? styles.spinning : ""} />
             {refreshing ? "Yenileniyor" : "Veriyi yenile"}
           </button>
           {refreshMessage ? <small aria-live="polite">{refreshMessage}</small> : null}
         </div>
       </header>
+
+      {privacyMode !== "normal" ? (
+        <div className={styles.privacyBanner} role="status">
+          {privacyMode === "presentation" ? <Monitor size={16} /> : <EyeOff size={16} />}
+          <div><b>{privacyMode === "presentation" ? "Sunum modu açık" : "Rakamlar gizli"}</b><span>{privacyMode === "presentation" ? "Tutarlar ve adetler temsili veriyle gösteriliyor; kategori adları ve gerçek kayıt detayları kapalı." : "Tüm tutar ve adetler geçici olarak maskelendi."}</span></div>
+        </div>
+      ) : null}
 
       <nav className={styles.sectionNav} aria-label="Rapor bölümleri">
         <a href="#overview">Özet</a>
@@ -528,29 +579,29 @@ export default function Dashboard({ data }: { data: SparkData }) {
         <div className={styles.heroMetrics}>
           <article className={`${styles.metricCard} ${styles.metricPrimary}`}>
             <span>Garanti revenue coverage</span>
-            <strong>%{pct(guaranteedCoverage, data.target).toFixed(1)}</strong>
-            <p>{shortMoney(guaranteedCoverage)} / {shortMoney(data.target)}</p>
+            <strong>{privatePercent(pct(guaranteedCoverage, data.target), privacyMode)}</strong>
+            <p>{privateMoney(guaranteedCoverage, privacyMode)} / {privateMoney(data.target, privacyMode)}</p>
             <div className={styles.progress}><i style={{ width: `${Math.min(pct(guaranteedCoverage, data.target), 100)}%` }} /></div>
           </article>
           <article className={styles.metricCard}>
-            <span>{year} faturaları</span><strong>{shortMoney(data.ytdInvoice)}</strong><p>Cancelled hariç tüm invoice</p>
+            <span>{year} faturaları</span><strong>{privateMoney(data.ytdInvoice, privacyMode)}</strong><p>Cancelled hariç tüm invoice</p>
           </article>
           <article className={styles.metricCard}>
-            <span>Açık order</span><strong>{shortMoney(data.openOrders)}</strong><p>{year} faturalanma planı</p>
+            <span>Açık order</span><strong>{privateMoney(data.openOrders, privacyMode)}</strong><p>{year} faturalanma planı</p>
           </article>
           <article className={`${styles.metricCard} ${styles.metricForecast}`}>
-            <span>Forecast coverage</span><strong>%{pct(forecastCoverage, data.target).toFixed(1)}</strong><p>{shortMoney(forecastCoverage)} · weighted dahil</p>
+            <span>Forecast coverage</span><strong>{privatePercent(pct(forecastCoverage, data.target), privacyMode)}</strong><p>{privateMoney(forecastCoverage, privacyMode)} · weighted dahil</p>
           </article>
           <article className={styles.metricCard}>
-            <span>Aktif pipeline</span><strong>{shortMoney(data.pipeline)}</strong><p>{data.activeDeals} opportunity</p>
+            <span>Aktif pipeline</span><strong>{privateMoney(data.pipeline, privacyMode)}</strong><p>{privateCount(data.activeDeals, privacyMode)} opportunity</p>
           </article>
         </div>
 
         <div className={styles.overviewGrid}>
           <article className={styles.targetCard}>
             <div className={styles.targetTop}>
-              <div><span>Hedefe kalan</span><strong>{shortMoney(remaining)}</strong></div>
-              <div className={styles.coverageBadge}>Forecast ile %{pct(forecastCoverage, data.target).toFixed(1)}</div>
+              <div><span>Hedefe kalan</span><strong>{privateMoney(remaining, privacyMode)}</strong></div>
+              <div className={styles.coverageBadge}>Forecast ile {privatePercent(pct(forecastCoverage, data.target), privacyMode)}</div>
             </div>
             <div className={styles.targetScale}>
               <i className={styles.invoiceSegment} style={{ width: `${Math.min(pct(data.ytdInvoice, data.target), 100)}%` }} />
@@ -558,17 +609,17 @@ export default function Dashboard({ data }: { data: SparkData }) {
               <i className={styles.forecastSegment} style={{ width: `${Math.min(pct(data.yearWeightedPipeline, data.target), Math.max(100 - pct(guaranteedCoverage, data.target), 0))}%` }} />
             </div>
             <div className={styles.legendRow}>
-              <span><i className={styles.dotInvoice} />Fatura {shortMoney(data.ytdInvoice)}</span>
-              <span><i className={styles.dotOrder} />Order {shortMoney(data.openOrders)}</span>
-              <span><i className={styles.dotForecast} />Weighted {shortMoney(data.yearWeightedPipeline)}</span>
+              <span><i className={styles.dotInvoice} />Fatura {privateMoney(data.ytdInvoice, privacyMode)}</span>
+              <span><i className={styles.dotOrder} />Order {privateMoney(data.openOrders, privacyMode)}</span>
+              <span><i className={styles.dotForecast} />Weighted {privateMoney(data.yearWeightedPipeline, privacyMode)}</span>
             </div>
           </article>
           <article className={styles.weeklyCard}>
             <div className={styles.cardTitle}><span>Son 7 gün · Pipeline hareketi</span><small>{formatDate(data.periodStart)} – {formatDate(data.periodEnd)}</small></div>
             <div className={styles.weeklyMetrics}>
-              <OpenRecordsButton rows={data.weeklyNewDeals} label="Bu hafta açılan fırsatlar" onOpen={openRecords}><span>Yeni pipeline</span><b>{shortMoney(data.weeklyNewPipeline)}</b><small>{data.weeklyNewDeals.length} fırsat</small></OpenRecordsButton>
-              <OpenRecordsButton rows={data.weeklyWon} label="Bu hafta kazanılan fırsatlar" onOpen={openRecords}><span>Won pipeline</span><b>{shortMoney(won)}</b><small>{data.weeklyWon.length} fırsat</small></OpenRecordsButton>
-              <OpenRecordsButton rows={data.weeklyLost} label="Bu hafta kaybedilen fırsatlar" onOpen={openRecords}><span>Lost pipeline</span><b>{shortMoney(lost)}</b><small>{data.weeklyLost.length} fırsat</small></OpenRecordsButton>
+              <OpenRecordsButton rows={data.weeklyNewDeals} label="Bu hafta açılan fırsatlar" onOpen={openRecords}><span>Yeni pipeline</span><b>{privateMoney(data.weeklyNewPipeline, privacyMode)}</b><small>{privateCount(data.weeklyNewDeals.length, privacyMode)} fırsat</small></OpenRecordsButton>
+              <OpenRecordsButton rows={data.weeklyWon} label="Bu hafta kazanılan fırsatlar" onOpen={openRecords}><span>Won pipeline</span><b>{privateMoney(won, privacyMode)}</b><small>{privateCount(data.weeklyWon.length, privacyMode)} fırsat</small></OpenRecordsButton>
+              <OpenRecordsButton rows={data.weeklyLost} label="Bu hafta kaybedilen fırsatlar" onOpen={openRecords}><span>Lost pipeline</span><b>{privateMoney(lost, privacyMode)}</b><small>{privateCount(data.weeklyLost.length, privacyMode)} fırsat</small></OpenRecordsButton>
             </div>
           </article>
         </div>
@@ -580,27 +631,27 @@ export default function Dashboard({ data }: { data: SparkData }) {
           <div><span>02</span><h2>Aylık operasyon görünümü</h2></div>
           <div className={styles.sectionActions}>
             <p>{year} · 12 aylık revenue ve pipeline planı</p>
-            <button className={styles.sectionAction} type="button" disabled={!yearInvoices.length} onClick={() => openRecords(`${year} tüm invoice kayıtları`, yearInvoices, true)}><List size={13} /> Tüm invoice&apos;ları gör ({yearInvoices.length})</button>
-            <button className={styles.sectionAction} type="button" disabled={!yearOrders.length} onClick={() => openRecords(`${year} tüm açık order kayıtları`, yearOrders, true)}><List size={13} /> Tüm açık order&apos;ları gör ({yearOrders.length})</button>
+            <button className={styles.sectionAction} type="button" disabled={!yearInvoices.length || privacyMode !== "normal"} onClick={() => openRecords(`${year} tüm invoice kayıtları`, yearInvoices, true)}><List size={13} /> Tüm invoice&apos;ları gör ({privateCount(yearInvoices.length, privacyMode)})</button>
+            <button className={styles.sectionAction} type="button" disabled={!yearOrders.length || privacyMode !== "normal"} onClick={() => openRecords(`${year} tüm açık order kayıtları`, yearOrders, true)}><List size={13} /> Tüm açık order&apos;ları gör ({privateCount(yearOrders.length, privacyMode)})</button>
           </div>
         </div>
         <div className={styles.periodGrid}>
           <article className={`${styles.periodCard} ${styles.periodMonth}`}>
             <div className={styles.periodTitle}><span>Bu ay</span><b>{currentMonthData?.label}</b></div>
             <div className={styles.periodMetrics}>
-              <OpenRecordsButton rows={monthInvoices} label="Bu ay faturalar" onOpen={openRecords} showCountryBreakdown><span>Fatura</span><b>{shortMoney(sum(monthInvoices))}</b><small>{monthInvoices.length} kayıt</small></OpenRecordsButton>
-              <OpenRecordsButton rows={monthOrders} label="Bu ay açık orderlar" onOpen={openRecords} showCountryBreakdown><span>Açık order</span><b>{shortMoney(sum(monthOrders))}</b><small>{monthOrders.length} kayıt</small></OpenRecordsButton>
-              <OpenRecordsButton rows={monthDeals} label="Bu ay kapanış planlı aktif fırsatlar" onOpen={openRecords} showCountryBreakdown><span>Pipeline</span><b>{shortMoney(sum(monthDeals))}</b><small>{monthDeals.length} fırsat</small></OpenRecordsButton>
-              <OpenRecordsButton rows={monthDeals} label="Bu ay weighted pipeline" onOpen={openRecords}><span>Weighted</span><b>{shortMoney(currentMonthData?.weightedPipeline ?? 0)}</b><small>HubSpot projected</small></OpenRecordsButton>
+              <OpenRecordsButton rows={monthInvoices} label="Bu ay faturalar" onOpen={openRecords} showCountryBreakdown><span>Fatura</span><b>{privateMoney(sum(monthInvoices), privacyMode)}</b><small>{privateCount(monthInvoices.length, privacyMode)} kayıt</small></OpenRecordsButton>
+              <OpenRecordsButton rows={monthOrders} label="Bu ay açık orderlar" onOpen={openRecords} showCountryBreakdown><span>Açık order</span><b>{privateMoney(sum(monthOrders), privacyMode)}</b><small>{privateCount(monthOrders.length, privacyMode)} kayıt</small></OpenRecordsButton>
+              <OpenRecordsButton rows={monthDeals} label="Bu ay kapanış planlı aktif fırsatlar" onOpen={openRecords} showCountryBreakdown><span>Pipeline</span><b>{privateMoney(sum(monthDeals), privacyMode)}</b><small>{privateCount(monthDeals.length, privacyMode)} fırsat</small></OpenRecordsButton>
+              <OpenRecordsButton rows={monthDeals} label="Bu ay weighted pipeline" onOpen={openRecords}><span>Weighted</span><b>{privateMoney(currentMonthData?.weightedPipeline ?? 0, privacyMode)}</b><small>HubSpot projected</small></OpenRecordsButton>
             </div>
           </article>
           <article className={`${styles.periodCard} ${styles.periodQuarter}`}>
             <div className={styles.periodTitle}><span>Bu çeyrek</span><b>Q{currentQuarter}</b></div>
             <div className={styles.periodMetrics}>
-              <OpenRecordsButton rows={quarterInvoices} label={`Q${currentQuarter} faturaları`} onOpen={openRecords} showCountryBreakdown><span>Fatura</span><b>{shortMoney(sum(quarterInvoices))}</b><small>{quarterInvoices.length} kayıt</small></OpenRecordsButton>
-              <OpenRecordsButton rows={quarterOrders} label={`Q${currentQuarter} açık orderları`} onOpen={openRecords} showCountryBreakdown><span>Açık order</span><b>{shortMoney(sum(quarterOrders))}</b><small>{quarterOrders.length} kayıt</small></OpenRecordsButton>
-              <OpenRecordsButton rows={quarterDeals} label={`Q${currentQuarter} kapanış planlı aktif fırsatlar`} onOpen={openRecords} showCountryBreakdown><span>Pipeline</span><b>{shortMoney(sum(quarterDeals))}</b><small>{quarterDeals.length} fırsat</small></OpenRecordsButton>
-              <OpenRecordsButton rows={quarterDeals} label={`Q${currentQuarter} weighted pipeline`} onOpen={openRecords}><span>Weighted</span><b>{shortMoney(quarterWeighted)}</b><small>HubSpot projected</small></OpenRecordsButton>
+              <OpenRecordsButton rows={quarterInvoices} label={`Q${currentQuarter} faturaları`} onOpen={openRecords} showCountryBreakdown><span>Fatura</span><b>{privateMoney(sum(quarterInvoices), privacyMode)}</b><small>{privateCount(quarterInvoices.length, privacyMode)} kayıt</small></OpenRecordsButton>
+              <OpenRecordsButton rows={quarterOrders} label={`Q${currentQuarter} açık orderları`} onOpen={openRecords} showCountryBreakdown><span>Açık order</span><b>{privateMoney(sum(quarterOrders), privacyMode)}</b><small>{privateCount(quarterOrders.length, privacyMode)} kayıt</small></OpenRecordsButton>
+              <OpenRecordsButton rows={quarterDeals} label={`Q${currentQuarter} kapanış planlı aktif fırsatlar`} onOpen={openRecords} showCountryBreakdown><span>Pipeline</span><b>{privateMoney(sum(quarterDeals), privacyMode)}</b><small>{privateCount(quarterDeals.length, privacyMode)} fırsat</small></OpenRecordsButton>
+              <OpenRecordsButton rows={quarterDeals} label={`Q${currentQuarter} weighted pipeline`} onOpen={openRecords}><span>Weighted</span><b>{privateMoney(quarterWeighted, privacyMode)}</b><small>HubSpot projected</small></OpenRecordsButton>
             </div>
           </article>
         </div>
@@ -625,14 +676,14 @@ export default function Dashboard({ data }: { data: SparkData }) {
                       <td>
                         <div className={styles.monthComposition} aria-label={`${item.label} revenue kompozisyonu`}>
                           <div><i className={styles.invoiceSegment} style={{ width: `${pct(invoiceAmount, forecastAmount)}%` }} /><i className={styles.orderSegment} style={{ width: `${pct(orderAmount, forecastAmount)}%` }} /><i className={styles.forecastSegment} style={{ width: `${pct(item.weightedPipeline, forecastAmount)}%` }} /></div>
-                          <span><b>{shortMoney(invoiceAmount + orderAmount)}</b> garanti · {shortMoney(forecastAmount)} forecast</span>
+                          <span><b>{privateMoney(invoiceAmount + orderAmount, privacyMode)}</b> garanti · {privateMoney(forecastAmount, privacyMode)} forecast</span>
                         </div>
                       </td>
-                      <td><OpenRecordsButton rows={item.invoices} label={`${item.label} faturaları`} onOpen={openRecords} showCountryBreakdown><b>{shortMoney(invoiceAmount)}</b><small>{item.invoices.length} kayıt</small></OpenRecordsButton></td>
-                      <td><OpenRecordsButton rows={item.orders} label={`${item.label} açık orderları`} onOpen={openRecords} showCountryBreakdown><b>{shortMoney(orderAmount)}</b><small>{item.orders.length} kayıt</small></OpenRecordsButton></td>
-                      <td><OpenRecordsButton rows={item.deals} label={`${item.label} kapanış tarihli aktif fırsatlar`} onOpen={openRecords} showCountryBreakdown><b>{shortMoney(sum(item.deals))}</b><small>{item.deals.length} kayıt</small></OpenRecordsButton></td>
-                      <td><OpenRecordsButton rows={item.deals} label={`${item.label} weighted pipeline kayıtları`} onOpen={openRecords}><b>{shortMoney(item.weightedPipeline)}</b><small>HubSpot projected</small></OpenRecordsButton></td>
-                      <td><span className={styles.countCell}>{item.deals.length}</span></td>
+                      <td><OpenRecordsButton rows={item.invoices} label={`${item.label} faturaları`} onOpen={openRecords} showCountryBreakdown><b>{privateMoney(invoiceAmount, privacyMode)}</b><small>{privateCount(item.invoices.length, privacyMode)} kayıt</small></OpenRecordsButton></td>
+                      <td><OpenRecordsButton rows={item.orders} label={`${item.label} açık orderları`} onOpen={openRecords} showCountryBreakdown><b>{privateMoney(orderAmount, privacyMode)}</b><small>{privateCount(item.orders.length, privacyMode)} kayıt</small></OpenRecordsButton></td>
+                      <td><OpenRecordsButton rows={item.deals} label={`${item.label} kapanış tarihli aktif fırsatlar`} onOpen={openRecords} showCountryBreakdown><b>{privateMoney(sum(item.deals), privacyMode)}</b><small>{privateCount(item.deals.length, privacyMode)} kayıt</small></OpenRecordsButton></td>
+                      <td><OpenRecordsButton rows={item.deals} label={`${item.label} weighted pipeline kayıtları`} onOpen={openRecords}><b>{privateMoney(item.weightedPipeline, privacyMode)}</b><small>HubSpot projected</small></OpenRecordsButton></td>
+                      <td><span className={styles.countCell}>{privateCount(item.deals.length, privacyMode)}</span></td>
                     </tr>
                   );
                 })}
@@ -648,8 +699,8 @@ export default function Dashboard({ data }: { data: SparkData }) {
           <div><span>03</span><h2>Pipeline stage funnel</h2></div>
           <div className={styles.sectionActions}>
             <p>Açık fırsatların stage bazında dağılımı</p>
-            <button className={styles.sectionAction} type="button" disabled={!funnelDeals.length} onClick={() => openRecords("Tüm aktif pipeline deal'ları", funnelDeals)}>
-              <List size={13} /> Tüm deal&apos;ları gör ({funnelDeals.length})
+            <button className={styles.sectionAction} type="button" disabled={!funnelDeals.length || privacyMode !== "normal"} onClick={() => openRecords("Tüm aktif pipeline deal'ları", funnelDeals)}>
+              <List size={13} /> Tüm deal&apos;ları gör ({privateCount(funnelDeals.length, privacyMode)})
             </button>
           </div>
         </div>
@@ -664,13 +715,14 @@ export default function Dashboard({ data }: { data: SparkData }) {
                     type="button"
                     key={stage.id}
                     style={{ borderTopColor: color, background: `linear-gradient(145deg, ${color}14, #fff 58%)` }}
+                    disabled={privacyMode !== "normal"}
                     onClick={() => openRecords(`${stage.label} fırsatları`, stage.records)}
                   >
-                    <span className={styles.funnelStageHead}><i style={{ background: color }}>{String(index + 1).padStart(2, "0")}</i><b>{stage.label}</b><ArrowUpRight size={15} /></span>
-                    <strong>{shortMoney(stageAmount)}</strong>
-                    <span className={styles.funnelStageStats}><span><b>{stage.records.length}</b> fırsat</span><span><b>%{(stage.probability * 100).toFixed(0)}</b> olasılık</span><span><b>{stage.averageAgeDays.toFixed(0)}</b> gün</span></span>
+                    <span className={styles.funnelStageHead}><i style={{ background: color }}>{String(index + 1).padStart(2, "0")}</i><b>{stage.label}</b>{privacyMode === "normal" ? <ArrowUpRight size={15} /> : null}</span>
+                    <strong>{privateMoney(stageAmount, privacyMode)}</strong>
+                    <span className={styles.funnelStageStats}><span><b>{privateCount(stage.records.length, privacyMode)}</b> fırsat</span><span><b>{privacyMode === "hidden" ? "••••" : `%${(stage.probability * 100).toFixed(0)}`}</b> olasılık</span><span><b>{privacyMode === "hidden" ? "••••" : stage.averageAgeDays.toFixed(0)}</b> gün</span></span>
                     <span className={styles.funnelMeter}><i style={{ width: `${Math.max((stageAmount / funnelMax) * 100, 2)}%`, background: color }} /></span>
-                    <span className={styles.funnelWeighted}><b>{shortMoney(stage.weightedPipeline)}</b> weighted pipeline</span>
+                    <span className={styles.funnelWeighted}><b>{privateMoney(stage.weightedPipeline, privacyMode)}</b> weighted pipeline</span>
                   </button>
                 );
               })}
@@ -702,12 +754,12 @@ export default function Dashboard({ data }: { data: SparkData }) {
                       const realized = sum(entry.invoices) + sum(entry.orders);
                       return (
                         <tr key={entry.key}>
-                          <td><b>{entry.label}</b></td>
-                          <td><OpenRecordsButton rows={breakdownRows(entry, "invoices")} label={`${entry.label} faturaları`} onOpen={openRecords}>{shortMoney(sum(entry.invoices))}</OpenRecordsButton></td>
-                          <td><OpenRecordsButton rows={breakdownRows(entry, "orders")} label={`${entry.label} açık orderları`} onOpen={openRecords}>{shortMoney(sum(entry.orders))}</OpenRecordsButton></td>
-                          <td><OpenRecordsButton rows={breakdownRows(entry, "deals")} label={`${entry.label} aktif fırsatları`} onOpen={openRecords}>{shortMoney(sum(entry.deals))}</OpenRecordsButton></td>
-                          <td><OpenRecordsButton rows={breakdownRows(entry, "deals")} label={`${entry.label} weighted fırsatları`} onOpen={openRecords}>{shortMoney(entry.weightedPipeline)}</OpenRecordsButton></td>
-                          <td><b>{shortMoney(realized)}</b><small> fatura + order</small></td>
+                          <td><b>{privacyMode === "presentation" ? `Kategori ${selectedBreakdown.entries.indexOf(entry) + 1}` : entry.label}</b></td>
+                          <td><OpenRecordsButton rows={breakdownRows(entry, "invoices")} label={`${entry.label} faturaları`} onOpen={openRecords}>{privateMoney(sum(entry.invoices), privacyMode)}</OpenRecordsButton></td>
+                          <td><OpenRecordsButton rows={breakdownRows(entry, "orders")} label={`${entry.label} açık orderları`} onOpen={openRecords}>{privateMoney(sum(entry.orders), privacyMode)}</OpenRecordsButton></td>
+                          <td><OpenRecordsButton rows={breakdownRows(entry, "deals")} label={`${entry.label} aktif fırsatları`} onOpen={openRecords}>{privateMoney(sum(entry.deals), privacyMode)}</OpenRecordsButton></td>
+                          <td><OpenRecordsButton rows={breakdownRows(entry, "deals")} label={`${entry.label} weighted fırsatları`} onOpen={openRecords}>{privateMoney(entry.weightedPipeline, privacyMode)}</OpenRecordsButton></td>
+                          <td><b>{privateMoney(realized, privacyMode)}</b><small> fatura + order</small></td>
                         </tr>
                       );
                     })}
@@ -729,23 +781,23 @@ export default function Dashboard({ data }: { data: SparkData }) {
           <article className={`${styles.nbPanel} ${styles.nbAll}`}>
             <div className={styles.nbPanelHead}>
               <div><span>Tüm New Business portföyü</span><small>Önceki yıllarda ve bu yıl kazanılan deal&apos;lere bağlı {year} geliri</small></div>
-              <div className={styles.nbTotal}><small>Fatura + açık order</small><strong>{shortMoney(sum(data.newBusiness.invoices) + sum(data.newBusiness.orders))}</strong></div>
+              <div className={styles.nbTotal}><small>Fatura + açık order</small><strong>{privateMoney(sum(data.newBusiness.invoices) + sum(data.newBusiness.orders), privacyMode)}</strong></div>
             </div>
             <div className={styles.nbMetrics}>
-              <OpenRecordsButton rows={data.newBusiness.invoices} label="Tüm New Business faturaları" onOpen={openRecords}><span>Fatura edilen</span><b>{shortMoney(sum(data.newBusiness.invoices))}</b><small>{data.newBusiness.invoices.length} kayıt</small></OpenRecordsButton>
-              <OpenRecordsButton rows={data.newBusiness.orders} label="Tüm New Business açık orderları" onOpen={openRecords}><span>Açık order</span><b>{shortMoney(sum(data.newBusiness.orders))}</b><small>{data.newBusiness.orders.length} kayıt</small></OpenRecordsButton>
-              <OpenRecordsButton rows={[...nbCarryoverInvoices, ...nbCarryoverOrders]} label="Önceki yıl kazanımlarından taşınan New Business geliri" onOpen={openRecords}><span>Geçmiş yıl kazanımları</span><b>{shortMoney(sum(nbCarryoverInvoices) + sum(nbCarryoverOrders))}</b><small>{nbCarryoverInvoices.length + nbCarryoverOrders.length} kayıt</small></OpenRecordsButton>
+              <OpenRecordsButton rows={data.newBusiness.invoices} label="Tüm New Business faturaları" onOpen={openRecords}><span>Fatura edilen</span><b>{privateMoney(sum(data.newBusiness.invoices), privacyMode)}</b><small>{privateCount(data.newBusiness.invoices.length, privacyMode)} kayıt</small></OpenRecordsButton>
+              <OpenRecordsButton rows={data.newBusiness.orders} label="Tüm New Business açık orderları" onOpen={openRecords}><span>Açık order</span><b>{privateMoney(sum(data.newBusiness.orders), privacyMode)}</b><small>{privateCount(data.newBusiness.orders.length, privacyMode)} kayıt</small></OpenRecordsButton>
+              <OpenRecordsButton rows={[...nbCarryoverInvoices, ...nbCarryoverOrders]} label="Önceki yıl kazanımlarından taşınan New Business geliri" onOpen={openRecords}><span>Geçmiş yıl kazanımları</span><b>{privateMoney(sum(nbCarryoverInvoices) + sum(nbCarryoverOrders), privacyMode)}</b><small>{privateCount(nbCarryoverInvoices.length + nbCarryoverOrders.length, privacyMode)} kayıt</small></OpenRecordsButton>
             </div>
           </article>
           <article className={`${styles.nbPanel} ${styles.nbCurrent}`}>
             <div className={styles.nbPanelHead}>
               <div><span>{year} kazanımları</span><small>Yalnız bu yıl Closed Won olan New Business deal&apos;leri ve bağlı gelir</small></div>
-              <div className={styles.nbTotal}><small>Fatura + açık order</small><strong>{shortMoney(sum(data.newBusiness.sameYearInvoices) + sum(data.newBusiness.sameYearOrders))}</strong></div>
+              <div className={styles.nbTotal}><small>Fatura + açık order</small><strong>{privateMoney(sum(data.newBusiness.sameYearInvoices) + sum(data.newBusiness.sameYearOrders), privacyMode)}</strong></div>
             </div>
             <div className={styles.nbMetrics}>
-              <OpenRecordsButton rows={data.newBusiness.sameYearDeals} label={`${year} kazanılan New Business fırsatları`} onOpen={openRecords}><span>Closed Won deal</span><b>{shortMoney(sum(data.newBusiness.sameYearDeals))}</b><small>{data.newBusiness.sameYearDeals.length} fırsat</small></OpenRecordsButton>
-              <OpenRecordsButton rows={data.newBusiness.sameYearInvoices} label={`${year} kazanımlarına bağlı faturalar`} onOpen={openRecords}><span>Fatura edilen</span><b>{shortMoney(sum(data.newBusiness.sameYearInvoices))}</b><small>{data.newBusiness.sameYearInvoices.length} kayıt</small></OpenRecordsButton>
-              <OpenRecordsButton rows={data.newBusiness.sameYearOrders} label={`${year} kazanımlarına bağlı açık orderlar`} onOpen={openRecords}><span>Açık order</span><b>{shortMoney(sum(data.newBusiness.sameYearOrders))}</b><small>{data.newBusiness.sameYearOrders.length} kayıt</small></OpenRecordsButton>
+              <OpenRecordsButton rows={data.newBusiness.sameYearDeals} label={`${year} kazanılan New Business fırsatları`} onOpen={openRecords}><span>Closed Won deal</span><b>{privateMoney(sum(data.newBusiness.sameYearDeals), privacyMode)}</b><small>{privateCount(data.newBusiness.sameYearDeals.length, privacyMode)} fırsat</small></OpenRecordsButton>
+              <OpenRecordsButton rows={data.newBusiness.sameYearInvoices} label={`${year} kazanımlarına bağlı faturalar`} onOpen={openRecords}><span>Fatura edilen</span><b>{privateMoney(sum(data.newBusiness.sameYearInvoices), privacyMode)}</b><small>{privateCount(data.newBusiness.sameYearInvoices.length, privacyMode)} kayıt</small></OpenRecordsButton>
+              <OpenRecordsButton rows={data.newBusiness.sameYearOrders} label={`${year} kazanımlarına bağlı açık orderlar`} onOpen={openRecords}><span>Açık order</span><b>{privateMoney(sum(data.newBusiness.sameYearOrders), privacyMode)}</b><small>{privateCount(data.newBusiness.sameYearOrders.length, privacyMode)} kayıt</small></OpenRecordsButton>
             </div>
           </article>
         </div>
@@ -763,10 +815,10 @@ export default function Dashboard({ data }: { data: SparkData }) {
             <article className={`${styles.hygieneCard} ${classification ? styles.hygieneClassification : ""}`} key={group.key}>
               <div className={styles.hygieneIcon}>{index < 2 ? <AlertTriangle size={18} /> : index === 4 ? <CircleDollarSign size={18} /> : <BarChart3 size={18} />}</div>
               <span>{group.label}</span>
-              <strong>{group.records.length}</strong>
-              <p>{shortMoney(sum(group.records))} {classification ? "toplam tutar" : "pipeline"}</p>
+              <strong>{invoiceStatusCheckPending && group.key === "invoice-status-not-paid" ? "—" : privateCount(group.records.length, privacyMode)}</strong>
+              <p>{invoiceStatusCheckPending && group.key === "invoice-status-not-paid" ? "Veri yenilemesi gerekli" : <>{privateMoney(sum(group.records), privacyMode)} {classification ? "toplam tutar" : "pipeline"}</>}</p>
               <small>{group.description}</small>
-              <button type="button" disabled={!group.records.length} onClick={() => openRecords(group.label, group.records)}>Kayıtları incele <ArrowUpRight size={13} /></button>
+              <button type="button" disabled={!group.records.length || privacyMode !== "normal"} onClick={() => openRecords(group.label, group.records)}>Kayıtları incele {privacyMode === "normal" ? <ArrowUpRight size={13} /> : null}</button>
             </article>
             );
           })}
@@ -775,8 +827,9 @@ export default function Dashboard({ data }: { data: SparkData }) {
       </section>
 
       <footer>Ereteam · Spark Gelir Yönetim Merkezi · {formatDate(data.generatedAt)}</footer>
-      {detail ? <RecordDialog title={detail.title} rows={detail.rows} showCountryBreakdown={detail.showCountryBreakdown} onClose={() => setDetail(null)} onRecordsUpdated={handleRecordsUpdated} /> : null}
-      <SparkChatWidget />
-    </main>
+        {detail && privacyMode === "normal" ? <RecordDialog title={detail.title} rows={detail.rows} showCountryBreakdown={detail.showCountryBreakdown} onClose={() => setDetail(null)} onRecordsUpdated={handleRecordsUpdated} /> : null}
+        {privacyMode === "normal" ? <SparkChatWidget /> : null}
+      </main>
+    </PrivacyContext.Provider>
   );
 }

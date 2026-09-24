@@ -48,6 +48,14 @@ snapshot, never to HubSpot. Source health is stored with the snapshot and shown 
 The header also shows the exact Istanbul update time. Authenticated users can
 request a quiet manual refresh; requests made within ten minutes of the latest
 generated report reuse the current snapshot instead of calling the sources.
+The header provides two temporary privacy views. Quick hide masks every amount,
+percentage, and business record count. Presentation mode renders monetary values
+and record counts with a fixed 8x demo multiplier, anonymizes breakdown category
+labels, and disables record drill-downs, Excel export, manual refresh, and the live
+data assistant while preserving internally consistent percentages and chart shapes.
+Both privacy states show a prominent red status banner and neither mode persists
+across a page reload. The fixed multiplier affects presentation only; normal-mode
+figures and all persisted source data remain unchanged.
 
 The dashboard includes a password-protected Revenue Data Assistant. Groq is used
 only to translate the natural-language question into a constrained query plan.
@@ -268,7 +276,7 @@ The technical order-date property name is never rendered in the UI.
   revenue type are multi-select fields, so category totals may overlap. The chart
   legend amounts are invoice plus open-order totals and are explicitly labeled
   `Fatura + açık order`; the label belongs above the legend values, not above the donut.
-- CRM hygiene shows overdue, 90+ day, missing-close-date, missing-owner and
+- CRM hygiene shows overdue, missing-close-date, missing-owner and
   missing-amount active deals. Operational deal checks use reporting-year Open deals,
   except the missing-close-date check, which necessarily inspects Open deals without
   a date and is the only explicit reporting-year date exception. Separate classification cards check reporting-year
@@ -279,7 +287,10 @@ The technical order-date property name is never rendered in the UI.
   identify whether the affected HubSpot record is an Invoice, Order, or Deal. A record
   may appear in more than one action group. Deal-only operational cards label their
   amount as `pipeline`; mixed Invoice/Order/Deal classification cards label it as
-  `toplam tutar` and must not describe the mixed amount as pipeline.
+  `toplam tutar` and must not describe the mixed amount as pipeline. Persisted snapshots
+  created before the Invoice-status check show its card as awaiting a data refresh rather
+  than implying a zero result. Manual-refresh failures surface the server error message
+  in the header so missing source configuration is diagnosable.
 - CRM-hygiene detail dialogs can write only `country`, `vendor_name`, `revenue_type`,
   `ereteam_domain`, and Invoice-only `hs_invoice_status = paid`. Values are validated against the live enum catalog before the
   HubSpot update. Users can update one record or select up to 50 records for one bulk

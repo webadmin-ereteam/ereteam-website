@@ -67,6 +67,13 @@
 .refreshArea button { display: flex; align-items: center; gap: 7px; border: 1px solid rgba(255,255,255,.2); padding: 8px 12px; color: #fff; background: rgba(255,255,255,.07); border-radius: 8px; font: inherit; font-weight: 750; cursor: pointer; }
 .refreshArea button:hover { background: rgba(255,255,255,.13); }
 .refreshArea button:disabled { opacity: .55; cursor: wait; }
+.privacyControls { display: flex; justify-content: flex-end; gap: 6px; }
+.privacyControls button[aria-pressed="true"] { color: #102b37; border-color: #80c8bc; background: #b9e3dc; }
+.privacyBanner { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 11px 14px; color: #9f2727; border: 1px solid #e79a9a; border-radius: 11px; background: #fff0f0; box-shadow: 0 5px 16px rgba(159,39,39,.08); }
+.privacyBanner > svg { flex: 0 0 auto; }
+.privacyBanner > div { display: grid; gap: 1px; }
+.privacyBanner b { font-size: 11px; }
+.privacyBanner span { color: #8b4242; font-size: 9px; }
 .spinning { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -182,6 +189,8 @@
 .funnelFlow > button { min-width: 0; min-height: 230px; display: flex; align-items: stretch; flex-direction: column; position: relative; padding: 17px; color: inherit; border: 1px solid #d8e1e2; border-top: 5px solid; border-radius: 12px; font: inherit; text-align: left; cursor: pointer; transition: transform 160ms ease, box-shadow 160ms ease; }
 .funnelFlow > button:not(:last-child)::after { content: "›"; position: absolute; z-index: 2; right: -10px; top: 50%; color: #9eaaae; font-size: 24px; line-height: 1; transform: translate(50%, -50%); }
 .funnelFlow > button:hover { z-index: 3; transform: translateY(-2px); box-shadow: 0 12px 24px rgba(16,43,55,.1); }
+.funnelFlow > button:disabled { cursor: default; }
+.funnelFlow > button:disabled:hover { transform: none; box-shadow: none; }
 .funnelStageHead { display: grid; grid-template-columns: 28px 1fr 16px; align-items: center; gap: 9px; min-height: 40px; }
 .funnelStageHead > i { width: 28px; height: 28px; display: grid; place-items: center; color: #fff; border-radius: 8px; font: 800 9px/1 monospace; }
 .funnelStageHead > b { font-size: 12px; line-height: 1.25; }
@@ -313,6 +322,7 @@
   .brandLockup h1 { font-size: 25px; }
   .brandLockup p { font-size: 9px; }
   .refreshArea { justify-items: start; }
+  .privacyControls { justify-content: flex-start; flex-wrap: wrap; }
   .sectionHead { align-items: flex-start; flex-direction: column; gap: 5px; }
   .sectionActions { width: 100%; justify-content: space-between; }
   .heroMetrics { grid-template-columns: repeat(2, 1fr); }
@@ -357,5 +367,5 @@
 @media print {
   .page::before { display: none; }
   .hero, .metricCard, .targetCard, .weeklyCard, .dataCard, .nbPanel, .hygieneCard { box-shadow: none; }
-  .sectionNav, .refreshArea button, .dialogBackdrop { display: none; }
+  .sectionNav, .privacyControls, .refreshArea > button, .privacyBanner, .dialogBackdrop { display: none; }
 }

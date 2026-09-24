@@ -195,13 +195,8 @@ export async function collectSparkData(now = new Date()): Promise<{ data: SparkD
   const missingCloseDate = openDeals.filter((deal) => !deal.properties.closedate);
   const missingOwner = yearOpenDeals.filter((deal) => !deal.properties.hubspot_owner_id);
   const missingAmount = yearOpenDeals.filter((deal) => hubspotHelpers.amount(deal, "amount_in_home_currency") <= 0);
-  const oldDeals = yearOpenDeals.filter((deal) => {
-    const createdAt = new Date(deal.properties.createdate || "").getTime();
-    return Number.isFinite(createdAt) && (now.getTime() - createdAt) / 86_400_000 >= 90;
-  });
   const hygiene = [
     { key: "overdue", label: "Close date'i geçmiş", description: "Kapanış tarihi bugünden önce olan aktif fırsatlar", rows: overdueDeals },
-    { key: "old", label: "90+ gündür açık", description: "En az 90 gündür açık olan fırsatlar", rows: oldDeals },
     { key: "noCloseDate", label: "Close date eksik", description: "Planlanan kapanış tarihi bulunmayan aktif fırsatlar", rows: missingCloseDate },
     { key: "noOwner", label: "Owner eksik", description: "Sorumlu atanmamış aktif fırsatlar", rows: missingOwner },
     { key: "noAmount", label: "Tutar eksik", description: "Tutarı boş veya sıfır olan aktif fırsatlar", rows: missingAmount },
