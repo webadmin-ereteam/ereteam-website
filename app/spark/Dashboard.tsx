@@ -13,7 +13,6 @@ import {
   EyeOff,
   Info,
   List,
-  Monitor,
   RefreshCw,
   X,
 } from "lucide-react";
@@ -66,16 +65,11 @@ const countryGroup = (value?: string) => {
   return value;
 };
 const recordKey = (row: SparkRecord) => `${row.objectType ?? ""}:${row.id}`;
-type PrivacyMode = "normal" | "hidden" | "presentation";
+type PrivacyMode = "normal" | "hidden";
 const PrivacyContext = createContext<PrivacyMode>("normal");
-const presentationMultiplier = 8;
-const privateMoney = (value: number, mode: PrivacyMode) => mode === "normal"
-  ? shortMoney(value)
-  : mode === "hidden" ? "••••" : shortMoney(value * presentationMultiplier);
-const privateCount = (value: number, mode: PrivacyMode) => mode === "normal"
-  ? String(value)
-  : mode === "hidden" ? "••••" : new Intl.NumberFormat("tr-TR").format(value * presentationMultiplier);
-const privatePercent = (value: number, mode: PrivacyMode) => mode === "hidden" ? "••••" : `%${value.toFixed(1)}`;
+const privateMoney = (value: number, mode: PrivacyMode) => mode === "normal" ? shortMoney(value) : "••••";
+const privateCount = (value: number, mode: PrivacyMode) => mode === "normal" ? String(value) : "••••";
+const privatePercent = (value: number, mode: PrivacyMode) => mode === "normal" ? `%${value.toFixed(1)}` : "••••";
 const normalizeHygiene = (groups: SparkData["hygiene"]) => {
   const visibleGroups = groups.filter((group) => group.key !== "old");
   if (visibleGroups.some((group) => group.key === "invoice-status-not-paid")) return visibleGroups;
@@ -423,14 +417,14 @@ function DonutChart({ entries, overlapping }: { entries: Array<{ label: string; 
   return (
     <div className={styles.breakdownVisual}>
       <div className={styles.donut} style={{ background: gradient ? `conic-gradient(${gradient})` : "#e8edeb" }}>
-        <div><strong>{privacyMode === "presentation" ? "Demo" : privateCount(items.length, privacyMode)}</strong><span>{overlapping ? "kategori" : "pay"}</span></div>
+        <div><strong>{privateCount(items.length, privacyMode)}</strong><span>{overlapping ? "kategori" : "pay"}</span></div>
       </div>
       <div className={styles.donutLegend}>
         <span className={styles.breakdownLegendTitle}>Fatura + açık order</span>
         {items.map((entry, index) => (
           <div key={entry.label}>
             <i style={{ background: chartColors[index % chartColors.length] }} />
-            <span>{privacyMode === "presentation" ? `Kategori ${index + 1}` : entry.label}</span>
+            <span>{entry.label}</span>
             <b>{privateMoney(entry.value, privacyMode)}</b>
             {!overlapping ? <small>{privatePercent(pct(entry.value, total), privacyMode)}</small> : null}
           </div>
@@ -540,11 +534,7 @@ export default function Dashboard({ data }: { data: SparkData }) {
           <div className={styles.privacyControls} aria-label="Gizlilik kontrolleri">
             <button type="button" aria-pressed={privacyMode === "hidden"} onClick={() => changePrivacyMode(privacyMode === "hidden" ? "normal" : "hidden")}>
               {privacyMode === "hidden" ? <Eye size={14} /> : <EyeOff size={14} />}
-              {privacyMode === "hidden" ? "Sayıları göster" : "Hızlı gizle"}
-            </button>
-            <button type="button" aria-pressed={privacyMode === "presentation"} onClick={() => changePrivacyMode(privacyMode === "presentation" ? "normal" : "presentation")}>
-              <Monitor size={14} />
-              {privacyMode === "presentation" ? "Sunumu kapat" : "Sunum modu"}
+              {privacyMode === "hidden" ? "Değerleri göster" : "Değerleri gizle"}
             </button>
           </div>
           <button type="button" onClick={refreshDashboard} disabled={refreshing || privacyMode !== "normal"}>
@@ -557,8 +547,8 @@ export default function Dashboard({ data }: { data: SparkData }) {
 
       {privacyMode !== "normal" ? (
         <div className={styles.privacyBanner} role="status">
-          {privacyMode === "presentation" ? <Monitor size={16} /> : <EyeOff size={16} />}
-          <div><b>{privacyMode === "presentation" ? "Sunum modu açık" : "Rakamlar gizli"}</b><span>{privacyMode === "presentation" ? "Tutarlar ve adetler temsili veriyle gösteriliyor; kategori adları ve gerçek kayıt detayları kapalı." : "Tüm tutar ve adetler geçici olarak maskelendi."}</span></div>
+          <EyeOff size={16} />
+          <div><b>Değerler gizli</b><span>Tüm tutar, yüzde ve kayıt adetleri geçici olarak maskelendi.</span></div>
         </div>
       ) : null}
 
@@ -754,7 +744,7 @@ export default function Dashboard({ data }: { data: SparkData }) {
                       const realized = sum(entry.invoices) + sum(entry.orders);
                       return (
                         <tr key={entry.key}>
-                          <td><b>{privacyMode === "presentation" ? `Kategori ${selectedBreakdown.entries.indexOf(entry) + 1}` : entry.label}</b></td>
+                          <td><b>{entry.label}</b></td>
                           <td><OpenRecordsButton rows={breakdownRows(entry, "invoices")} label={`${entry.label} faturaları`} onOpen={openRecords}>{privateMoney(sum(entry.invoices), privacyMode)}</OpenRecordsButton></td>
                           <td><OpenRecordsButton rows={breakdownRows(entry, "orders")} label={`${entry.label} açık orderları`} onOpen={openRecords}>{privateMoney(sum(entry.orders), privacyMode)}</OpenRecordsButton></td>
                           <td><OpenRecordsButton rows={breakdownRows(entry, "deals")} label={`${entry.label} aktif fırsatları`} onOpen={openRecords}>{privateMoney(sum(entry.deals), privacyMode)}</OpenRecordsButton></td>

@@ -48,14 +48,12 @@ snapshot, never to HubSpot. Source health is stored with the snapshot and shown 
 The header also shows the exact Istanbul update time. Authenticated users can
 request a quiet manual refresh; requests made within ten minutes of the latest
 generated report reuse the current snapshot instead of calling the sources.
-The header provides two temporary privacy views. Quick hide masks every amount,
-percentage, and business record count. Presentation mode renders monetary values
-and record counts with a fixed 8x demo multiplier, anonymizes breakdown category
-labels, and disables record drill-downs, Excel export, manual refresh, and the live
-data assistant while preserving internally consistent percentages and chart shapes.
-Both privacy states show a prominent red status banner and neither mode persists
-across a page reload. The fixed multiplier affects presentation only; normal-mode
-figures and all persisted source data remain unchanged.
+The header provides a temporary privacy view that masks every amount, percentage,
+and business record count. While values are hidden, record drill-downs, Excel export,
+manual refresh, and the live data assistant are disabled. A prominent red status
+banner makes the active state clear. The setting does not persist across a page reload,
+and it changes presentation only; normal-mode figures and persisted source data remain
+unchanged.
 
 The dashboard includes a password-protected Revenue Data Assistant. Groq is used
 only to translate the natural-language question into a constrained query plan.
