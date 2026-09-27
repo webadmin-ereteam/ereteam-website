@@ -379,6 +379,9 @@ compact values always show two decimal places. Responsive behavior is verified a
 320px, 375px, 390px, and 768px widths for the dashboard, CRM detail editor, and chat;
 the page must not introduce root-level horizontal overflow, while wide data tables
 remain horizontally scrollable inside their own containers.
+The report supports light and dark themes on desktop and mobile across the dashboard,
+detail dialogs, and data assistant. The explicit browser choice is persisted locally;
+without a saved choice, Spark follows the operating-system color preference.
 
 ## Commands
 

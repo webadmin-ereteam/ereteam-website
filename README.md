@@ -4,6 +4,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 - Spark revenue dashboard: read `SPARK.md` before making changes.
 - Presales portal: read `PRESALES.md` before making changes.
+- Marketing-site AI assistant: read `WEBSITE_AI.md` before making changes.
 - Keep Spark and Presales documentation, authentication and feature changes
   separate. Preserve unrelated worktree changes.
 

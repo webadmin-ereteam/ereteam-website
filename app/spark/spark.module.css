@@ -11,12 +11,29 @@
   --red: #c85252;
   --blue: #4f7cac;
   --violet: #845ec2;
+  color-scheme: light;
   max-width: 1480px;
   margin: 0 auto;
   padding: 24px 32px 48px;
   overflow-x: clip;
   color: var(--ink);
   font: 14px/1.45 Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.page[data-spark-theme="dark"] {
+  --ink: #e7eef0;
+  --muted: #9caeb5;
+  --line: #33474e;
+  --paper: #17272d;
+  --canvas: #0d181d;
+  --navy: #0b2029;
+  --teal: #35b6a5;
+  --lime: #bddb48;
+  --amber: #e2a650;
+  --red: #e17575;
+  --blue: #76a4d1;
+  --violet: #a98add;
+  color-scheme: dark;
 }
 
 .page::before {
@@ -298,6 +315,67 @@
 .empty { padding: 28px; color: var(--muted); text-align: center; font-size: 11px; }
 .page footer { padding: 42px 0 4px; color: var(--muted); font-size: 9px; text-align: center; }
 
+.page[data-spark-theme="dark"] .sectionNav { background: rgba(23,39,45,.82); }
+.page[data-spark-theme="dark"] .sectionNav a:hover { background: #22363d; }
+.page[data-spark-theme="dark"] .privacyBanner { color: #ffb5b5; border-color: #753f43; background: #351f23; box-shadow: none; }
+.page[data-spark-theme="dark"] .privacyBanner span { color: #d99191; }
+.page[data-spark-theme="dark"] .sectionAction { color: #79d5c9; border-color: #35645f; background: #183b39; }
+.page[data-spark-theme="dark"] .sectionAction:hover { border-color: var(--teal); background: #204844; }
+.page[data-spark-theme="dark"] .sectionAction:disabled { color: #73848a; border-color: var(--line); background: #1a292e; }
+.page[data-spark-theme="dark"] .metricForecast { border-color: #675539; background: linear-gradient(145deg, #30291e, var(--paper)); }
+.page[data-spark-theme="dark"] .metricForecast > strong { color: #e2b46e; }
+.page[data-spark-theme="dark"] .coverageBadge { color: #79d5c9; border-color: #35645f; background: #183b39; }
+.page[data-spark-theme="dark"] .targetScale,
+.page[data-spark-theme="dark"] .monthComposition > div { background: #2a3b40; }
+.page[data-spark-theme="dark"] .weeklyMetrics .valueButton { background: #1b2c32; }
+.page[data-spark-theme="dark"] .infoNote { color: #aab9be; border-color: #33474e; background: rgba(23,39,45,.72); }
+.page[data-spark-theme="dark"] .infoNote code { color: #c6d5d9; background: #293b41; }
+.page[data-spark-theme="dark"] .periodCard,
+.page[data-spark-theme="dark"] .nbPanel,
+.page[data-spark-theme="dark"] .hygieneCard { background: var(--paper); }
+.page[data-spark-theme="dark"] table { background: var(--paper); }
+.page[data-spark-theme="dark"] th { background: #1d2e34; }
+.page[data-spark-theme="dark"] td { border-color: #2b3d43; }
+.page[data-spark-theme="dark"] tbody tr:hover td { background: #203239; }
+.page[data-spark-theme="dark"] .monthTable th:first-child { background: #1d2e34; }
+.page[data-spark-theme="dark"] .monthTable td:first-child { background: var(--paper); }
+.page[data-spark-theme="dark"] .currentRow td { background: #18332f !important; }
+.page[data-spark-theme="dark"] .pastRow:not(.currentRow) td { background: #192a30; }
+.page[data-spark-theme="dark"] .futureRow td { background: #1a282f; }
+.page[data-spark-theme="dark"] .futureRow td:first-child { color: #9aabb2; }
+.page[data-spark-theme="dark"] .quarterStart td { border-top-color: #50636a; }
+.page[data-spark-theme="dark"] .nowPill { color: #86ddd1; background: #24504b; }
+.page[data-spark-theme="dark"] .countCell { color: #7bd5ca; background: #21423f; }
+.page[data-spark-theme="dark"] .funnelFlow { background: #132228; }
+.page[data-spark-theme="dark"] .funnelFlow > button { border-color: #34494f; }
+.page[data-spark-theme="dark"] .funnelStageStats > span { border-color: rgba(220,240,244,.09); background: rgba(5,14,17,.25); }
+.page[data-spark-theme="dark"] .funnelMeter { background: rgba(220,240,244,.12); }
+.page[data-spark-theme="dark"] .tabs button { background: var(--paper); }
+.page[data-spark-theme="dark"] .tabs button[aria-selected="true"] { border-color: #47747f; background: #24434c; }
+.page[data-spark-theme="dark"] .breakdownVisual { background: linear-gradient(135deg, #14262b, var(--paper)); }
+.page[data-spark-theme="dark"] .donut { box-shadow: inset 0 0 0 1px rgba(220,240,244,.1); }
+.page[data-spark-theme="dark"] .donut > div { background: #1d3036; box-shadow: 0 5px 18px rgba(0,0,0,.28); }
+.page[data-spark-theme="dark"] .donutLegend > div,
+.page[data-spark-theme="dark"] .periodMetrics .valueButton,
+.page[data-spark-theme="dark"] .nbMetrics .valueButton { border-color: #2d4046; }
+.page[data-spark-theme="dark"] .nbPanelHead { background: #30291e; }
+.page[data-spark-theme="dark"] .nbCurrent .nbPanelHead { background: #17312f; }
+.page[data-spark-theme="dark"] .hygieneIcon { background: #3a3021; }
+.page[data-spark-theme="dark"] .hygieneClassification { border-color: #524866; background: linear-gradient(145deg, #282335, var(--paper) 60%); }
+.page[data-spark-theme="dark"] .hygieneClassification .hygieneIcon { background: #39304c; }
+.page[data-spark-theme="dark"] .dialog { border-color: #52656c; background: var(--paper); }
+.page[data-spark-theme="dark"] .dialogCountryBreakdown > div,
+.page[data-spark-theme="dark"] .recordFilters,
+.page[data-spark-theme="dark"] .bulkEditor { background: #1b2d33; }
+.page[data-spark-theme="dark"] .dialogHeadActions button,
+.page[data-spark-theme="dark"] .recordFilters input,
+.page[data-spark-theme="dark"] .recordFilters select,
+.page[data-spark-theme="dark"] .enumEditor select { color: var(--ink); border-color: #43585f; background: #14242a; }
+.page[data-spark-theme="dark"] .dialogHeadActions .exportButton { color: #79d5c9; border-color: #35645f; background: #183b39; }
+.page[data-spark-theme="dark"] .stagePill { color: #bfd0d5; background: #293b41; }
+.page[data-spark-theme="dark"] .objectPill { color: #a8cde2; border-color: #375565; background: #1d3440; }
+.page[data-spark-theme="dark"] .carryover td { background: #332b1e !important; }
+
 @media (hover: hover) {
   .metricCard, .nbPanel, .hygieneCard { transition: transform 160ms ease, box-shadow 160ms ease; }
   .metricCard:hover, .nbPanel:hover, .hygieneCard:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(16,43,55,.07); }
@@ -360,11 +438,17 @@
   .bulkEditor > .editorStatus { width: 100%; margin-left: 0; }
 }
 
+@media (max-width: 380px) {
+  .privacyControls { width: 100%; }
+  .privacyControls button { flex: 1 1 0; justify-content: center; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .page * { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
 }
 
 @media print {
+  .page { color-scheme: light; --ink: #16202a; --muted: #66727e; --line: #dfe5e8; --paper: #fff; --canvas: #fff; }
   .page::before { display: none; }
   .hero, .metricCard, .targetCard, .weeklyCard, .dataCard, .nbPanel, .hygieneCard { box-shadow: none; }
   .sectionNav, .privacyControls, .refreshArea > button, .privacyBanner, .dialogBackdrop { display: none; }

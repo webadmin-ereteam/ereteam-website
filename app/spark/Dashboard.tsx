@@ -13,7 +13,9 @@ import {
   EyeOff,
   Info,
   List,
+  Moon,
   RefreshCw,
+  Sun,
   X,
 } from "lucide-react";
 import type { SparkBreakdownEntry, SparkData, SparkRecord } from "@/lib/spark/types";
@@ -66,6 +68,7 @@ const countryGroup = (value?: string) => {
 };
 const recordKey = (row: SparkRecord) => `${row.objectType ?? ""}:${row.id}`;
 type PrivacyMode = "normal" | "hidden";
+type ThemeMode = "light" | "dark";
 const PrivacyContext = createContext<PrivacyMode>("normal");
 const privateMoney = (value: number, mode: PrivacyMode) => mode === "normal" ? shortMoney(value) : "••••";
 const privateCount = (value: number, mode: PrivacyMode) => mode === "normal" ? String(value) : "••••";
@@ -442,6 +445,7 @@ export default function Dashboard({ data }: { data: SparkData }) {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshMessage, setRefreshMessage] = useState("");
   const [privacyMode, setPrivacyMode] = useState<PrivacyMode>("normal");
+  const [themeMode, setThemeMode] = useState<ThemeMode>("light");
   const invoiceStatusCheckPending = !data.hygiene.some((group) => group.key === "invoice-status-not-paid");
   const year = Number(data.reportDate.slice(0, 4));
   const currentMonth = Number(data.reportDate.slice(5, 7));
@@ -488,6 +492,22 @@ export default function Dashboard({ data }: { data: SparkData }) {
     setDetail(null);
     setPrivacyMode(mode);
   };
+  const changeThemeMode = (mode: ThemeMode) => {
+    setThemeMode(mode);
+    window.localStorage.setItem("spark-theme", mode);
+  };
+  useEffect(() => {
+    const savedTheme = window.localStorage.getItem("spark-theme");
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    if (savedTheme === "light" || savedTheme === "dark") {
+      setThemeMode(savedTheme);
+      return;
+    }
+    const syncSystemTheme = (event: MediaQueryListEvent | MediaQueryList) => setThemeMode(event.matches ? "dark" : "light");
+    syncSystemTheme(mediaQuery);
+    mediaQuery.addEventListener("change", syncSystemTheme);
+    return () => mediaQuery.removeEventListener("change", syncSystemTheme);
+  }, []);
   useEffect(() => setHygiene(normalizeHygiene(data.hygiene)), [data.hygiene]);
   const handleRecordsUpdated = (updatedRows: SparkRecord[], property: EditableProperty) => {
     const urls = new Set(updatedRows.map((row) => row.url));
@@ -519,7 +539,7 @@ export default function Dashboard({ data }: { data: SparkData }) {
 
   return (
     <PrivacyContext.Provider value={privacyMode}>
-      <main className={styles.page} data-privacy={privacyMode}>
+      <main className={styles.page} data-privacy={privacyMode} data-spark-theme={themeMode}>
       <header className={styles.hero}>
         <div className={styles.brandLockup}>
           <div className={styles.logoBox}><Image src="/logos/ereteam-logo.png" alt="Ereteam" width={132} height={76} priority /></div>
@@ -531,7 +551,11 @@ export default function Dashboard({ data }: { data: SparkData }) {
         </div>
         <div className={styles.refreshArea}>
           <span>Son güncelleme {formatDate(data.generatedAt, true)}</span>
-          <div className={styles.privacyControls} aria-label="Gizlilik kontrolleri">
+          <div className={styles.privacyControls} aria-label="Görünüm kontrolleri">
+            <button type="button" aria-pressed={themeMode === "dark"} onClick={() => changeThemeMode(themeMode === "dark" ? "light" : "dark")}>
+              {themeMode === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+              {themeMode === "dark" ? "Açık tema" : "Koyu tema"}
+            </button>
             <button type="button" aria-pressed={privacyMode === "hidden"} onClick={() => changePrivacyMode(privacyMode === "hidden" ? "normal" : "hidden")}>
               {privacyMode === "hidden" ? <Eye size={14} /> : <EyeOff size={14} />}
               {privacyMode === "hidden" ? "Değerleri göster" : "Değerleri gizle"}
@@ -704,7 +728,7 @@ export default function Dashboard({ data }: { data: SparkData }) {
                   <button
                     type="button"
                     key={stage.id}
-                    style={{ borderTopColor: color, background: `linear-gradient(145deg, ${color}14, #fff 58%)` }}
+                    style={{ borderTopColor: color, background: `linear-gradient(145deg, ${color}14, var(--paper) 58%)` }}
                     disabled={privacyMode !== "normal"}
                     onClick={() => openRecords(`${stage.label} fırsatları`, stage.records)}
                   >

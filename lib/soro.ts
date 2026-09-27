@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createHash } from "crypto";
+import { unstable_cache } from "next/cache";
 import Parser from "rss-parser";
 import sanitizeHtml from "sanitize-html";
 import { decode } from "he";
@@ -97,61 +98,55 @@ function validDate(value?: string) {
 }
 
 async function fetchSoroArticles(): Promise<SoroArticle[]> {
-  try {
-    const feedUrl = new URL(SORO_RSS_URL);
-    feedUrl.searchParams.set("ereteam_refresh", String(Math.floor(Date.now() / 60_000)));
+  const response = await fetch(SORO_RSS_URL, {
+    cache: "no-store",
+    headers: { Accept: "application/rss+xml, application/xml;q=0.9, text/xml;q=0.8" },
+  });
 
-    const response = await fetch(feedUrl, {
-      cache: "no-store",
-      headers: {
-        Accept: "application/rss+xml, application/xml;q=0.9, text/xml;q=0.8",
-        "Cache-Control": "no-cache",
-      },
-    });
-
-    if (!response.ok) return [];
-
-    const feed = await parser.parseString(await response.text());
-    const usedSlugs = new Map<string, number>();
-
-    return feed.items
-      .filter((item) => item.title)
-      .map((item) => {
-        const title = plainText(item.title);
-        const baseSlug = slugify(title) || "article";
-        const duplicateNumber = usedSlugs.get(baseSlug) ?? 0;
-        usedSlugs.set(baseSlug, duplicateNumber + 1);
-        const slug = duplicateNumber ? `${baseSlug}-${duplicateNumber + 1}` : baseSlug;
-        const rawContent = item.fullContent || item.content || item.contentSnippet || item.summary || item.description || "";
-        const excerpt = plainText(item.contentSnippet || item.summary || item.description || rawContent).slice(0, 220);
-        const publishedAt = validDate(item.isoDate || item.pubDate);
-        const image = item.enclosure?.url || item.media?.$?.url || firstImage(rawContent);
-        const shareVersion = createHash("sha256")
-          .update(JSON.stringify([title, excerpt, rawContent, image, publishedAt]))
-          .digest("hex")
-          .slice(0, 12);
-
-        return {
-          title,
-          slug,
-          excerpt,
-          content: safeArticleHtml(rawContent),
-          plainContent: plainText(rawContent),
-          publishedAt,
-          author: plainText(item.creator || item.author),
-          category: item.categories?.[0] ? plainText(item.categories[0]) : undefined,
-          image,
-          sourceUrl: item.link,
-          shareVersion,
-        };
-      });
-  } catch (error) {
-    console.error("Soro RSS feed could not be loaded", error);
-    return [];
+  if (!response.ok) {
+    throw new Error(`Soro RSS feed returned ${response.status}`);
   }
+
+  const feed = await parser.parseString(await response.text());
+  const usedSlugs = new Map<string, number>();
+
+  return feed.items
+    .filter((item) => item.title)
+    .map((item) => {
+      const title = plainText(item.title);
+      const baseSlug = slugify(title) || "article";
+      const duplicateNumber = usedSlugs.get(baseSlug) ?? 0;
+      usedSlugs.set(baseSlug, duplicateNumber + 1);
+      const slug = duplicateNumber ? `${baseSlug}-${duplicateNumber + 1}` : baseSlug;
+      const rawContent = item.fullContent || item.content || item.contentSnippet || item.summary || item.description || "";
+      const excerpt = plainText(item.contentSnippet || item.summary || item.description || rawContent).slice(0, 220);
+      const publishedAt = validDate(item.isoDate || item.pubDate);
+      const image = item.enclosure?.url || item.media?.$?.url || firstImage(rawContent);
+      const shareVersion = createHash("sha256")
+        .update(JSON.stringify([title, excerpt, rawContent, image, publishedAt]))
+        .digest("hex")
+        .slice(0, 12);
+
+      return {
+        title,
+        slug,
+        excerpt,
+        content: safeArticleHtml(rawContent),
+        plainContent: plainText(rawContent),
+        publishedAt,
+        author: plainText(item.creator || item.author),
+        category: item.categories?.[0] ? plainText(item.categories[0]) : undefined,
+        image,
+        sourceUrl: item.link,
+        shareVersion,
+      };
+    });
 }
 
-export const getSoroArticles = fetchSoroArticles;
+export const getSoroArticles = unstable_cache(fetchSoroArticles, [SORO_CACHE_TAG], {
+  revalidate: SORO_REVALIDATE_SECONDS,
+  tags: [SORO_CACHE_TAG],
+});
 
 export async function getSoroArticle(slug: string) {
   return (await getSoroArticles()).find((article) => article.slug === slug);

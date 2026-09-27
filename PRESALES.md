@@ -801,6 +801,10 @@ into the Groq system prompt, and explicitly instructs the model to answer only f
 that data and say "I don't have that" otherwise (`app/api/presales/admin/chat/route.ts`).
 It reuses the same `generateChatResponse` helper the marketing site's chat already
 uses — no new LLM integration, just a different context builder and system prompt.
+The admin route currently uses Groq `openai/gpt-oss-20b` with low reasoning.
+The former `llama-3.1-8b-instant` and `llama-3.3-70b-versatile` model ids returned
+`404 model_not_found` in September 2026 and must not be restored without checking
+Groq's live model list first.
 Two correctness fixes to `buildAdminChatContext()` worth knowing about: a
 `file_upload` answer's `SurveyResponse.answerText` is the raw Google Drive
 file id (that's what the customer-facing submit flow writes there) — showing
