@@ -14,7 +14,6 @@ export const clients: Client[] = [
   { name: "Fibabanka", localLogo: "Asset 127.png" },
   { name: "Point72", localLogo: "Asset 125.png" },
   { name: "Gelecek Varlık", localLogo: "Asset 126.png" },
-  { name: "Tera Bank", localLogo: "Asset 124.png" },
   { name: "alBaraka Bank", localLogo: "Asset 128.png" },
   { name: "Burgan Bank", localLogo: "Asset 129.png" },
   // Insurance
