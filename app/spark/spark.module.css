@@ -266,19 +266,15 @@
 .nbMetrics .valueButton:nth-child(1) > b { color: var(--teal); }
 .nbAll .nbMetrics .valueButton:nth-child(3) > b { color: #a76c18; }
 .nbCurrent .nbMetrics .valueButton:nth-child(1) > b { color: var(--blue); }
-.hygieneCard button { display: flex; align-items: center; gap: 5px; padding: 0; color: var(--teal); border: 0; background: transparent; font: inherit; font-size: 9px; font-weight: 800; cursor: pointer; }
-
-.hygieneGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.hygieneCard { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
-.hygieneIcon { width: 32px; height: 32px; display: grid; place-items: center; margin-bottom: 10px; color: var(--amber); border-radius: 9px; background: #fff5e7; }
-.hygieneCard > span { display: block; min-height: 25px; color: var(--muted); font-size: 10px; font-weight: 750; }
-.hygieneCard > strong { display: block; font-size: 27px; line-height: 1; }
-.hygieneCard > p { margin: 4px 0; font-size: 11px; font-weight: 800; }
-.hygieneCard > small { display: block; min-height: 32px; color: var(--muted); font-size: 8px; }
-.hygieneCard button { margin-top: 8px; }
-.hygieneCard button:disabled { color: #a3aaad; cursor: default; }
-.hygieneClassification { border-color: #d9d2e8; background: linear-gradient(145deg, #faf8ff, #fff 60%); }
-.hygieneClassification .hygieneIcon { color: var(--violet); background: #f0ebfa; }
+.hygieneGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; overflow: hidden; padding: 1px; border-radius: 12px; background: var(--line); }
+.hygieneCard { min-width: 0; min-height: 58px; display: grid; grid-template-columns: minmax(0, 1fr) auto 14px; align-items: center; gap: 10px; padding: 10px 12px; color: var(--ink); border: 0; background: #fff; font: inherit; text-align: left; cursor: pointer; }
+.hygieneCard > span { overflow: hidden; font-size: 9px; font-weight: 750; text-overflow: ellipsis; }
+.hygieneCard > strong { color: #a76c18; font-size: 19px; line-height: 1; white-space: nowrap; }
+.hygieneCard > strong small { color: var(--muted); font-size: 8px; font-weight: 750; }
+.hygieneCard > svg { color: var(--teal); }
+.hygieneCard:disabled { color: var(--muted); cursor: default; }
+.hygieneCard:disabled > strong { color: #9ba5a8; }
+.hygieneClassification > strong { color: var(--violet); }
 
 .dialogBackdrop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 24px; background: rgba(8, 22, 27, .62); backdrop-filter: blur(5px); }
 .dialog { width: min(1240px, 100%); max-height: min(780px, calc(100vh - 48px)); display: flex; flex-direction: column; padding: 20px; overflow: hidden; border: 1px solid rgba(255,255,255,.35); border-radius: 18px; background: #fff; box-shadow: 0 28px 80px rgba(0,0,0,.3); }
@@ -370,9 +366,7 @@
 .page[data-spark-theme="dark"] .nbMetrics .valueButton { border-color: #2d4046; }
 .page[data-spark-theme="dark"] .nbPanelHead { background: #30291e; }
 .page[data-spark-theme="dark"] .nbCurrent .nbPanelHead { background: #17312f; }
-.page[data-spark-theme="dark"] .hygieneIcon { background: #3a3021; }
-.page[data-spark-theme="dark"] .hygieneClassification { border-color: #524866; background: linear-gradient(145deg, #282335, var(--paper) 60%); }
-.page[data-spark-theme="dark"] .hygieneClassification .hygieneIcon { background: #39304c; }
+.page[data-spark-theme="dark"] .hygieneClassification > strong { color: #b9a1df; }
 .page[data-spark-theme="dark"] .dialog { border-color: #647a82; background: var(--paper); }
 .page[data-spark-theme="dark"] .dialogCountryBreakdown > div,
 .page[data-spark-theme="dark"] .recordFilters,
@@ -387,8 +381,9 @@
 .page[data-spark-theme="dark"] .carryover td { background: #332b1e !important; }
 
 @media (hover: hover) {
-  .metricCard, .nbPanel, .hygieneCard { transition: transform 160ms ease, box-shadow 160ms ease; }
-  .metricCard:hover, .nbPanel:hover, .hygieneCard:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(16,43,55,.07); }
+  .metricCard, .nbPanel { transition: transform 160ms ease, box-shadow 160ms ease; }
+  .metricCard:hover, .nbPanel:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(16,43,55,.07); }
+  .hygieneCard:not(:disabled):hover { background: #f2f8f7; }
 }
 
 @media (max-width: 1050px) {
@@ -429,7 +424,6 @@
   .nbMetrics { grid-template-columns: 1fr; }
   .nbMetrics .valueButton { min-height: 70px; border-top: 1px solid #edf0ef; border-left: 0; }
   .nbMetrics .valueButton:first-child { border-top: 0; }
-  .hygieneCard > span, .hygieneCard > small { min-height: 0; }
   .funnelFlow { grid-template-columns: 1fr; padding: 9px; }
   .funnelFlow > button { min-height: 210px; }
   .funnelFlow > button::after { display: none; }

@@ -9,8 +9,6 @@ import {
   ArrowUpDown,
   AlertTriangle,
   ArrowUpRight,
-  BarChart3,
-  CircleDollarSign,
   Download,
   Eye,
   EyeOff,
@@ -970,22 +968,25 @@ export default function Dashboard({ data }: { data: SparkData }) {
           <p>Fatura, order ve deal kayıtlarında operasyon ve sınıflandırma kontrolleri</p>
         </div>
         <div className={styles.hygieneGrid}>
-          {hygiene.map((group, index) => {
+          {hygiene.map((group) => {
             const classification = group.key.startsWith("missing-") || requiredHygieneChecks.some((check) => check.key === group.key);
             const checkPending = hygieneCheckPending(group.key);
             return (
-            <article className={`${styles.hygieneCard} ${classification ? styles.hygieneClassification : ""}`} key={group.key}>
-              <div className={styles.hygieneIcon}>{index < 2 ? <AlertTriangle size={18} /> : index === 4 ? <CircleDollarSign size={18} /> : <BarChart3 size={18} />}</div>
+            <button
+              type="button"
+              className={`${styles.hygieneCard} ${classification ? styles.hygieneClassification : ""}`}
+              key={group.key}
+              disabled={checkPending || !group.records.length || privacyMode !== "normal"}
+              title={group.description}
+              onClick={() => openRecords(group.label, group.records)}
+            >
               <span>{group.label}</span>
-              <strong>{checkPending ? "—" : privateCount(group.records.length, privacyMode)}</strong>
-              <p>{checkPending ? "Veri yenilemesi gerekli" : <>{privateMoney(sum(group.records), privacyMode)} {classification ? "toplam tutar" : "pipeline"}</>}</p>
-              <small>{group.description}</small>
-              <button type="button" disabled={!group.records.length || privacyMode !== "normal"} onClick={() => openRecords(group.label, group.records)}>Kayıtları incele {privacyMode === "normal" ? <ArrowUpRight size={13} /> : null}</button>
-            </article>
+              <strong>{checkPending ? "—" : privateCount(group.records.length, privacyMode)}{!checkPending && privacyMode === "normal" ? <small> kayıt</small> : null}</strong>
+              {group.records.length && privacyMode === "normal" ? <ArrowUpRight size={14} aria-hidden /> : null}
+            </button>
             );
           })}
         </div>
-        <InfoNote>CRM hygiene göstergeleri performans puanı değildir. Operasyon kontrolleri aktif pipeline&apos;ı; sınıflandırma kontrolleri ise {year} faturalarını, açık orderları ve yıl kapanış planındaki aktif deal&apos;leri kapsar. Aynı kayıt birden fazla grupta yer alabilir.</InfoNote>
       </section>
 
       <footer>Ereteam · Spark Gelir Yönetim Merkezi · {formatDate(data.generatedAt)}</footer>

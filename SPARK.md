@@ -297,9 +297,9 @@ The technical order-date property name is never rendered in the UI.
   `paid`; another reporting-year Invoice card tracks records with no associated Deal.
   These hygiene checks must never alter the canonical Invoice population. Detail rows
   identify whether the affected HubSpot record is an Invoice, Order, or Deal. A record
-  may appear in more than one action group. Deal-only operational cards label their
-  amount as `pipeline`; mixed Invoice/Order/Deal classification cards label it as
-  `toplam tutar` and must not describe the mixed amount as pipeline. Persisted snapshots
+  may appear in more than one action group. The compact hygiene summary displays only
+  each check's name and affected record count; clicking a non-zero count opens its record
+  details. Persisted snapshots
   created before either Invoice check show the relevant card as awaiting a data refresh rather
   than implying a zero result. Manual-refresh failures surface the server error message
   in the header so missing source configuration is diagnosable.
