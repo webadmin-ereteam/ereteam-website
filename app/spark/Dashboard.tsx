@@ -89,17 +89,21 @@ const PrivacyContext = createContext<PrivacyMode>("normal");
 const privateMoney = (value: number, mode: PrivacyMode) => mode === "normal" ? shortMoney(value) : "••••";
 const privateCount = (value: number, mode: PrivacyMode) => mode === "normal" ? String(value) : "••••";
 const privatePercent = (value: number, mode: PrivacyMode) => mode === "normal" ? `%${value.toFixed(1)}` : "••••";
+const requiredHygieneChecks = [
+  { key: "invoice-status-not-paid", label: "Invoice status Paid değil" },
+  { key: "invoice-without-deal", label: "Deal bağlantısı olmayan fatura" },
+] as const;
 const normalizeHygiene = (groups: SparkData["hygiene"]) => {
   const visibleGroups = groups.filter((group) => group.key !== "old");
-  if (visibleGroups.some((group) => group.key === "invoice-status-not-paid")) return visibleGroups;
-  return [...visibleGroups, {
-    key: "invoice-status-not-paid",
-    label: "Invoice status Paid değil",
-    description: "Bu kontrolün sonucu için Spark verisini yenileyin.",
-    records: [],
-  }];
+  return requiredHygieneChecks.reduce<SparkData["hygiene"]>((result, check) => (
+    result.some((group) => group.key === check.key)
+      ? result
+      : [...result, { ...check, description: "Bu kontrolün sonucu için Spark verisini yenileyin.", records: [] }]
+  ), visibleGroups);
 };
 type EditableProperty = "country" | "vendor_name" | "revenue_type" | "ereteam_domain" | "hs_invoice_status";
+type HygieneResolution = EditableProperty | "invoice-without-deal";
+type DealOption = { id: string; name: string; date?: string };
 type EditableCatalog = Record<NonNullable<SparkRecord["objectType"]>, Record<EditableProperty, {
   label: string;
   multiple: boolean;
@@ -186,7 +190,7 @@ function RecordTable({
   rows: SparkRecord[];
   sort: RecordSort;
   onSort: (key: RecordSortKey) => void;
-  onRecordsUpdated?: (rows: SparkRecord[], property: EditableProperty) => void;
+  onRecordsUpdated?: (rows: SparkRecord[], resolution: HygieneResolution) => void;
 }) {
   const showObjectType = rows.some((row) => row.objectType);
   const showStage = rows.some((row) => row.stage);
@@ -194,9 +198,13 @@ function RecordTable({
   const showWeighted = rows.some((row) => row.weightedAmount != null);
   const showIssue = rows.some((row) => row.issues?.length);
   const editableRows = rows.filter((row) => row.objectType && editablePropertyFor(row));
+  const dealLinkRows = rows.filter((row) => row.objectType === "Invoice" && row.issues?.includes("Deal bağlantısı eksik"));
   const property = editableRows.length ? editablePropertyFor(editableRows[0]) : undefined;
   const directPaidFix = property === "hs_invoice_status";
   const [catalogs, setCatalogs] = useState<EditableCatalog | null>(null);
+  const [dealOptions, setDealOptions] = useState<DealOption[] | null>(null);
+  const [linkTarget, setLinkTarget] = useState<SparkRecord | null>(null);
+  const [dealId, setDealId] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState("");
   const [message, setMessage] = useState("");
@@ -217,7 +225,23 @@ function RecordTable({
   }, [property, directPaidFix]);
 
   useEffect(() => {
+    if (!dealLinkRows.length) return;
+    const controller = new AbortController();
+    fetch("/api/spark/hygiene?resource=deals", { signal: controller.signal })
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Deal kayıtları alınamadı.");
+        setDealOptions(result.deals);
+      })
+      .catch((error) => {
+        if (error instanceof Error && error.name !== "AbortError") setMessage(error.message);
+      });
+    return () => controller.abort();
+  }, [dealLinkRows.length]);
+
+  useEffect(() => {
     setSelected((current) => new Set(Array.from(current).filter((url) => rows.some((row) => row.url === url))));
+    setLinkTarget((current) => current && rows.some((row) => row.url === current.url) ? current : null);
   }, [rows]);
 
   const save = async (records: SparkRecord[], values: string[], key: string) => {
@@ -241,6 +265,29 @@ function RecordTable({
       onRecordsUpdated?.(records, property);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Güncelleme başarısız.");
+    } finally {
+      setSaving("");
+    }
+  };
+
+  const linkDeal = async () => {
+    if (!linkTarget || !dealId) return;
+    setSaving(linkTarget.url);
+    setMessage("");
+    try {
+      const response = await fetch("/api/spark/hygiene", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invoiceId: linkTarget.id, dealId }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Deal bağlantısı kurulamadı.");
+      setMessage(`${linkTarget.name} Deal'e bağlandı.`);
+      onRecordsUpdated?.([linkTarget], "invoice-without-deal");
+      setLinkTarget(null);
+      setDealId("");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Deal bağlantısı kurulamadı.");
     } finally {
       setSaving("");
     }
@@ -277,6 +324,21 @@ function RecordTable({
   };
   return (
     <div className={styles.tableWrap}>
+      {dealLinkRows.length ? (
+        <div className={styles.bulkEditor}>
+          <span>{linkTarget ? `${linkTarget.name} için Deal seçin` : "Bağlamak için satırdan bir Invoice seçin."}</span>
+          {linkTarget ? (
+            <div className={styles.enumEditor}>
+              <select value={dealId} onChange={(event) => setDealId(event.target.value)} aria-label="Bağlanacak Deal" disabled={!dealOptions}>
+                <option value="">{dealOptions ? "Deal seçin" : "Deal kayıtları yükleniyor"}</option>
+                {dealOptions?.map((deal) => <option value={deal.id} key={deal.id}>{deal.name} · {formatDate(deal.date)} · #{deal.id}</option>)}
+              </select>
+              <button type="button" disabled={!dealId || saving === linkTarget.url} onClick={linkDeal}>{saving === linkTarget.url ? "Bağlanıyor" : "Deal'e bağla"}</button>
+            </div>
+          ) : null}
+          {message ? <b className={styles.editorStatus}>{message}</b> : null}
+        </div>
+      ) : null}
       {property ? (
         <div className={styles.bulkEditor}>
           <label><input type="checkbox" checked={editableRows.length > 0 && selected.size === Math.min(editableRows.length, 50)} onChange={(event) => setSelected(event.target.checked ? new Set(editableRows.slice(0, 50).map((row) => row.url)) : new Set())} /> {editableRows.length > 50 ? "İlk 50'yi seç" : "Tümünü seç"}</label>
@@ -322,6 +384,9 @@ function RecordTable({
                     ? <div className={styles.enumEditor}><button type="button" disabled={saving === row.url} onClick={() => save([row], ["paid"], row.url)}>{saving === row.url ? "Kaydediliyor" : "Paid yap"}</button></div>
                     : <EnumEditor catalog={catalogs?.[row.objectType][property]} saving={saving === row.url} onSave={(values) => save([row], values, row.url)} />
                   ) : null}
+                  {row.objectType === "Invoice" && row.issues?.includes("Deal bağlantısı eksik") ? (
+                    <div className={styles.enumEditor}><button type="button" disabled={saving === row.url} onClick={() => { setLinkTarget(row); setDealId(""); }}>Deal bağla</button></div>
+                  ) : null}
                 </td>
               ) : null}
             </tr>
@@ -343,7 +408,7 @@ function RecordDialog({
   rows: SparkRecord[];
   showCountryBreakdown?: boolean;
   onClose: () => void;
-  onRecordsUpdated?: (rows: SparkRecord[], property: EditableProperty) => void;
+  onRecordsUpdated?: (rows: SparkRecord[], resolution: HygieneResolution) => void;
 }) {
   const [exporting, setExporting] = useState(false);
   const [query, setQuery] = useState("");
@@ -512,7 +577,10 @@ export default function Dashboard({ data }: { data: SparkData }) {
   const [privacyMode, setPrivacyMode] = useState<PrivacyMode>("normal");
   const [themeMode, setThemeMode] = useState<ThemeMode>("light");
   const dataStale = isSparkDataStale(data.generatedAt);
-  const invoiceStatusCheckPending = !data.hygiene.some((group) => group.key === "invoice-status-not-paid");
+  const hygieneCheckPending = (key: string) => (
+    requiredHygieneChecks.some((check) => check.key === key)
+    && !data.hygiene.some((group) => group.key === key)
+  );
   const year = Number(data.reportDate.slice(0, 4));
   const currentMonth = Number(data.reportDate.slice(5, 7));
   const guaranteedCoverage = data.ytdInvoice + data.openOrders;
@@ -575,9 +643,11 @@ export default function Dashboard({ data }: { data: SparkData }) {
     return () => mediaQuery.removeEventListener("change", syncSystemTheme);
   }, []);
   useEffect(() => setHygiene(normalizeHygiene(data.hygiene)), [data.hygiene]);
-  const handleRecordsUpdated = (updatedRows: SparkRecord[], property: EditableProperty) => {
+  const handleRecordsUpdated = (updatedRows: SparkRecord[], resolution: HygieneResolution) => {
     const urls = new Set(updatedRows.map((row) => row.url));
-    const groupKey = property === "hs_invoice_status" ? "invoice-status-not-paid" : `missing-${property}`;
+    const groupKey = resolution === "invoice-without-deal"
+      ? resolution
+      : resolution === "hs_invoice_status" ? "invoice-status-not-paid" : `missing-${resolution}`;
     setHygiene((groups) => groups.map((group) => group.key === groupKey
       ? { ...group, records: group.records.filter((row) => !urls.has(row.url)) }
       : group));
@@ -901,13 +971,14 @@ export default function Dashboard({ data }: { data: SparkData }) {
         </div>
         <div className={styles.hygieneGrid}>
           {hygiene.map((group, index) => {
-            const classification = group.key.startsWith("missing-") || group.key === "invoice-status-not-paid";
+            const classification = group.key.startsWith("missing-") || requiredHygieneChecks.some((check) => check.key === group.key);
+            const checkPending = hygieneCheckPending(group.key);
             return (
             <article className={`${styles.hygieneCard} ${classification ? styles.hygieneClassification : ""}`} key={group.key}>
               <div className={styles.hygieneIcon}>{index < 2 ? <AlertTriangle size={18} /> : index === 4 ? <CircleDollarSign size={18} /> : <BarChart3 size={18} />}</div>
               <span>{group.label}</span>
-              <strong>{invoiceStatusCheckPending && group.key === "invoice-status-not-paid" ? "—" : privateCount(group.records.length, privacyMode)}</strong>
-              <p>{invoiceStatusCheckPending && group.key === "invoice-status-not-paid" ? "Veri yenilemesi gerekli" : <>{privateMoney(sum(group.records), privacyMode)} {classification ? "toplam tutar" : "pipeline"}</>}</p>
+              <strong>{checkPending ? "—" : privateCount(group.records.length, privacyMode)}</strong>
+              <p>{checkPending ? "Veri yenilemesi gerekli" : <>{privateMoney(sum(group.records), privacyMode)} {classification ? "toplam tutar" : "pipeline"}</>}</p>
               <small>{group.description}</small>
               <button type="button" disabled={!group.records.length || privacyMode !== "normal"} onClick={() => openRecords(group.label, group.records)}>Kayıtları incele {privacyMode === "normal" ? <ArrowUpRight size={13} /> : null}</button>
             </article>

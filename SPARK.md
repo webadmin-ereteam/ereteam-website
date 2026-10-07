@@ -294,19 +294,22 @@ The technical order-date property name is never rendered in the UI.
   invoices, reporting-year open orders, and reporting-year active deals for missing
   `country`, `vendor_name`, `revenue_type`, or `ereteam_domain` values. A separate
   reporting-year Invoice card tracks records whose `hs_invoice_status` is not exact
-  `paid`; this hygiene check must never alter the canonical Invoice population. Detail rows
+  `paid`; another reporting-year Invoice card tracks records with no associated Deal.
+  These hygiene checks must never alter the canonical Invoice population. Detail rows
   identify whether the affected HubSpot record is an Invoice, Order, or Deal. A record
   may appear in more than one action group. Deal-only operational cards label their
   amount as `pipeline`; mixed Invoice/Order/Deal classification cards label it as
   `toplam tutar` and must not describe the mixed amount as pipeline. Persisted snapshots
-  created before the Invoice-status check show its card as awaiting a data refresh rather
+  created before either Invoice check show the relevant card as awaiting a data refresh rather
   than implying a zero result. Manual-refresh failures surface the server error message
   in the header so missing source configuration is diagnosable.
 - CRM-hygiene detail dialogs can write only `country`, `vendor_name`, `revenue_type`,
   `ereteam_domain`, and Invoice-only `hs_invoice_status = paid`. Values are validated against the live enum catalog before the
   HubSpot update. Users can update one record or select up to 50 records for one bulk
   update. Non-Paid Invoice rows expose direct `Paid yap` and `Seçilenleri Paid yap`
-  actions rather than a general status selector. Checkbox properties support multiple values, and mixed object selections use
+  actions rather than a general status selector. Invoice rows with no Deal association
+  expose a Deal selector; the server verifies that both records still exist and that the
+  Invoice is still unassociated before creating the HubSpot association. Checkbox properties support multiple values, and mixed object selections use
   only enum options common to every selected object type. Successful writes immediately
   remove the corrected records from the current browser's hygiene card and dialog; the
   shared dashboard snapshot is fully reconciled by the next manual or scheduled refresh.

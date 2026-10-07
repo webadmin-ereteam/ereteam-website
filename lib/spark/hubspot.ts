@@ -169,6 +169,13 @@ export async function fetchHubSpotAssociations(
   return map;
 }
 
+export async function associateHubSpotInvoiceToDeal(invoiceId: string, dealId: string) {
+  return request<unknown>(
+    `/crm/v4/objects/invoices/${encodeURIComponent(invoiceId)}/associations/default/deals/${encodeURIComponent(dealId)}`,
+    { method: "PUT" },
+  );
+}
+
 const amount = (row: HubSpotObject, property: string) => Number(row.properties[property] ?? 0) || 0;
 const lower = (value?: string) => (value ?? "").trim().toLowerCase();
 

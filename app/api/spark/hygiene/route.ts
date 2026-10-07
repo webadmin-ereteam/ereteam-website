@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { verifySessionToken } from "@/lib/presales/session";
 import { getClientIp, rateLimit } from "@/lib/rateLimit";
-import { fetchHubSpotPropertyCatalog, updateHubSpotObjectPropertiesBatch } from "@/lib/spark/hubspot";
+import {
+  associateHubSpotInvoiceToDeal,
+  fetchHubSpotAssociations,
+  fetchHubSpotObjects,
+  fetchHubSpotObjectsByIds,
+  fetchHubSpotPropertyCatalog,
+  updateHubSpotObjectPropertiesBatch,
+} from "@/lib/spark/hubspot";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +27,10 @@ const updateSchema = z.object({
   })).min(1).max(50),
   property: z.enum(editableProperties),
   values: z.array(z.string().trim().min(1).max(200)).min(1).max(20),
+});
+const associationSchema = z.object({
+  invoiceId: z.string().regex(/^\d+$/).max(30),
+  dealId: z.string().regex(/^\d+$/).max(30),
 });
 
 async function authorized(request: NextRequest) {
@@ -46,6 +57,18 @@ export async function GET(request: NextRequest) {
   if (!limit.allowed) return NextResponse.json({ error: "Çok fazla istek." }, { status: 429 });
 
   try {
+    if (request.nextUrl.searchParams.get("resource") === "deals") {
+      const deals = await fetchHubSpotObjects("deals", ["dealname", "closedate"]);
+      return NextResponse.json({
+        deals: deals
+          .map((deal) => ({
+            id: deal.id,
+            name: deal.properties.dealname || `Deal ${deal.id}`,
+            date: deal.properties.closedate,
+          }))
+          .sort((left, right) => (right.date || "").localeCompare(left.date || "") || left.name.localeCompare(right.name, "tr-TR")),
+      });
+    }
     const [deals, invoices, orders] = await Promise.all([
       fetchHubSpotPropertyCatalog("deals"),
       fetchHubSpotPropertyCatalog("invoices"),
@@ -61,6 +84,38 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "HubSpot seçenekleri okunamadı." },
+      { status: 503 },
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  if (!(await authorized(request))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const limit = rateLimit(`spark-hygiene-association:${getClientIp(request)}`, 40, 10 * 60 * 1000);
+  if (!limit.allowed) return NextResponse.json({ error: "Çok fazla bağlantı isteği." }, { status: 429 });
+
+  try {
+    const parsed = associationSchema.safeParse(await request.json());
+    if (!parsed.success) return NextResponse.json({ error: "Geçersiz Invoice veya Deal." }, { status: 400 });
+
+    const { invoiceId, dealId } = parsed.data;
+    const [invoices, deals, associations] = await Promise.all([
+      fetchHubSpotObjectsByIds("invoices", [invoiceId], ["hs_number", "invoice_name"]),
+      fetchHubSpotObjectsByIds("deals", [dealId], ["dealname"]),
+      fetchHubSpotAssociations("invoices", [invoiceId]),
+    ]);
+    if (!invoices.some((invoice) => invoice.id === invoiceId) || !deals.some((deal) => deal.id === dealId)) {
+      return NextResponse.json({ error: "Invoice veya Deal HubSpot'ta bulunamadı." }, { status: 404 });
+    }
+    if ((associations.get(invoiceId) ?? []).length) {
+      return NextResponse.json({ error: "Invoice zaten bir Deal kaydına bağlı." }, { status: 409 });
+    }
+
+    await associateHubSpotInvoiceToDeal(invoiceId, dealId);
+    return NextResponse.json({ ok: true, invoiceId, dealId });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Invoice Deal'e bağlanamadı." },
       { status: 503 },
     );
   }

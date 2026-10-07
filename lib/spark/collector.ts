@@ -218,6 +218,15 @@ export async function collectSparkData(now = new Date()): Promise<{ data: SparkD
     description: `${year} invoice kayıtlarında Invoice status alanı Paid olmayan kayıtlar`,
     records: unpaidInvoices,
   });
+  const invoicesWithoutDeal = yearInvoices
+    .filter((row) => !(invoiceDeals.get(row.id)?.length))
+    .map((row) => ({ ...invoiceRecord(row, ownerMap), issues: ["Deal bağlantısı eksik"] }));
+  hygiene.push({
+    key: "invoice-without-deal",
+    label: "Deal bağlantısı olmayan fatura",
+    description: `${year} invoice kayıtlarında bağlı deal bulunmayan kayıtlar`,
+    records: invoicesWithoutDeal,
+  });
   const breakdownFields = [
     ["country", "Ülke"],
     ["vendor_name", "Vendor"],
