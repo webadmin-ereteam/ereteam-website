@@ -48,6 +48,15 @@ snapshot, never to HubSpot. Source health is stored with the snapshot and shown 
 The header also shows the exact Istanbul update time. Authenticated users can
 request a quiet manual refresh; requests made within ten minutes of the latest
 generated report reuse the current snapshot instead of calling the sources.
+The browser does not poll or refresh Spark on an interval. Data collection runs
+only from the `09:00` and `14:00 Europe/Istanbul` cron jobs or an explicit manual
+refresh. After a 75-minute delivery grace period, the dashboard shows a prominent
+stale-data warning if the latest successful snapshot predates the most recently
+expected cron run. A successful manual refresh updates the displayed server data
+immediately. If the Spark session is no longer valid, the manual refresh sends the
+user to the Spark login page instead of displaying a raw `Unauthorized` response.
+Active Spark page requests renew the seven-day signed Spark session so an actively
+used dashboard does not unexpectedly lose manual-refresh authorization.
 The header provides a temporary privacy view that masks every amount, percentage,
 and business record count. While values are hidden, record drill-downs, Excel export,
 manual refresh, and the live data assistant are disabled. A prominent red status
@@ -263,6 +272,10 @@ The technical order-date property name is never rendered in the UI.
   amount/count splits alongside the overall total. Older persisted snapshots that
   predate the row-level country field resolve it by record ID from the existing country
   revenue breakdown. Do not duplicate weekly deal movement elsewhere on the page.
+- Every visible data column in record-detail tables is sortable in both directions
+  from its column header. Text uses Turkish alphabetical ordering; dates, age and
+  amounts use chronological or numeric ordering. The active direction is visible in
+  the header, and Excel export preserves the filtered, sorted row order.
 - Weekly new deals are currently Open, have `closedate` in the reporting year,
   and have `createdate` in the rolling seven-day window. Weekly Won/Lost records
   use their explicit state and a reporting-year `closedate` in that same window.
@@ -305,6 +318,7 @@ The technical order-date property name is never rendered in the UI.
 - Current-month open deals use `closedate` and exclude Closed Won and Closed Lost.
 - Monthly, breakdown, funnel, New Business and hygiene values expose record-count
   drill-downs in one shared modal; only one record detail modal is open at a time.
+  Every record detail modal closes from its close button, backdrop, or the Escape key.
   The stage-funnel header also provides one deduplicated list of all active deals
   represented across the reporting-year funnel stages. The monthly-operation header
   provides equivalent complete reporting-year lists for non-cancelled invoices and

@@ -4,6 +4,9 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
 import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   AlertTriangle,
   ArrowUpRight,
   BarChart3,
@@ -46,6 +49,19 @@ const formatDate = (value?: string, withTime = false) => value
       timeZone: "Europe/Istanbul",
     }).format(new Date(value))
   : "-";
+
+const isSparkDataStale = (generatedAt: string, now = Date.now()) => {
+  const generated = new Date(generatedAt).getTime();
+  if (!Number.isFinite(generated)) return true;
+
+  const current = new Date(now);
+  const schedules = [-1, 0].flatMap((dayOffset) => [6, 11].map((hour) => {
+    const scheduled = Date.UTC(current.getUTCFullYear(), current.getUTCMonth(), current.getUTCDate() + dayOffset, hour);
+    return { scheduled, due: scheduled + 75 * 60 * 1000 };
+  }));
+  const latestDue = schedules.filter((schedule) => schedule.due <= now).at(-1);
+  return latestDue ? generated < latestDue.scheduled : false;
+};
 
 const dataFileDate = () => {
   const parts = new Intl.DateTimeFormat("en", {
@@ -97,6 +113,8 @@ const issueProperties: Record<string, EditableProperty> = {
   "Invoice status Paid değil": "hs_invoice_status",
 };
 const editablePropertyFor = (row: SparkRecord) => row.issues?.map((issue) => issueProperties[issue]).find(Boolean);
+type RecordSortKey = "name" | "objectType" | "stage" | "date" | "ageDays" | "amount" | "weightedAmount" | "owner" | "issues";
+type RecordSort = { key: RecordSortKey; direction: "asc" | "desc" } | null;
 
 function InfoNote({ children }: { children: React.ReactNode }) {
   return <div className={styles.infoNote}><Info size={15} aria-hidden />{children}</div>;
@@ -161,9 +179,13 @@ function EnumEditor({
 
 function RecordTable({
   rows,
+  sort,
+  onSort,
   onRecordsUpdated,
 }: {
   rows: SparkRecord[];
+  sort: RecordSort;
+  onSort: (key: RecordSortKey) => void;
   onRecordsUpdated?: (rows: SparkRecord[], property: EditableProperty) => void;
 }) {
   const showObjectType = rows.some((row) => row.objectType);
@@ -235,6 +257,24 @@ function RecordTable({
         multiple: selectedTypes.every((type) => catalogs[type][property].multiple),
       }
     : undefined;
+  const sortableHeader = (key: RecordSortKey, label: string) => {
+    const active = sort?.key === key;
+    const numeric = ["date", "ageDays", "amount", "weightedAmount"].includes(key);
+    const directionLabel = active
+      ? (numeric
+          ? (sort.direction === "asc" ? "Artan" : "Azalan")
+          : (sort.direction === "asc" ? "A-Z" : "Z-A"))
+      : "Sırala";
+    return (
+      <th aria-sort={active ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}>
+        <button type="button" className={styles.sortButton} onClick={() => onSort(key)} title={`${label}: ${directionLabel}`}>
+          {label}
+          {active ? (sort.direction === "asc" ? <ArrowUp size={11} /> : <ArrowDown size={11} />) : <ArrowUpDown size={11} />}
+          {active ? <span className={styles.sortDirection}>{directionLabel}</span> : null}
+        </button>
+      </th>
+    );
+  };
   return (
     <div className={styles.tableWrap}>
       {property ? (
@@ -252,15 +292,15 @@ function RecordTable({
         <thead>
           <tr>
             {property ? <th>Seç</th> : null}
-            <th>Kayıt</th>
-            {showObjectType ? <th>Tür</th> : null}
-            {showStage ? <th>Stage</th> : null}
-            <th>Tarih</th>
-            {showAge ? <th>Yaş</th> : null}
-            <th>Tutar</th>
-            {showWeighted ? <th>Weighted</th> : null}
-            <th>Owner</th>
-            {showIssue ? <th>Kontrol</th> : null}
+            {sortableHeader("name", "Kayıt")}
+            {showObjectType ? sortableHeader("objectType", "Tür") : null}
+            {showStage ? sortableHeader("stage", "Stage") : null}
+            {sortableHeader("date", "Tarih")}
+            {showAge ? sortableHeader("ageDays", "Yaş") : null}
+            {sortableHeader("amount", "Tutar")}
+            {showWeighted ? sortableHeader("weightedAmount", "Weighted") : null}
+            {sortableHeader("owner", "Owner")}
+            {showIssue ? sortableHeader("issues", "Kontrol") : null}
           </tr>
         </thead>
         <tbody>
@@ -311,6 +351,14 @@ function RecordDialog({
   const [stage, setStage] = useState("");
   const [owner, setOwner] = useState("");
   const [country, setCountry] = useState("");
+  const [sort, setSort] = useState<RecordSort>(null);
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
   const optionValues = (values: Array<string | undefined>) => Array.from(new Set(values.filter((value): value is string => Boolean(value)))).sort((left, right) => left.localeCompare(right, "tr-TR"));
   const objectTypes = optionValues(rows.map((row) => row.objectType));
   const stages = optionValues(rows.map((row) => row.stage));
@@ -331,6 +379,23 @@ function RecordDialog({
       && (!owner || rowOwner === owner)
       && (!country || rowCountry === country);
   });
+  const sortedRows = sort ? [...filteredRows].sort((left, right) => {
+    const value = (row: SparkRecord) => {
+      if (sort.key === "date") return row.date ? new Date(row.date).getTime() : 0;
+      if (sort.key === "issues") return row.issues?.join(", ") ?? "";
+      return row[sort.key] ?? "";
+    };
+    const leftValue = value(left);
+    const rightValue = value(right);
+    const result = typeof leftValue === "number" && typeof rightValue === "number"
+      ? leftValue - rightValue
+      : String(leftValue).localeCompare(String(rightValue), "tr-TR", { numeric: true, sensitivity: "base" });
+    return sort.direction === "asc" ? result : -result;
+  }) : filteredRows;
+  const changeSort = (key: RecordSortKey) => setSort((current) => ({
+    key,
+    direction: current?.key === key && current.direction === "asc" ? "desc" : "asc",
+  }));
   const countries = [
     { key: "Turkiye", label: "TR" },
     { key: "USA", label: "ABD" },
@@ -343,7 +408,7 @@ function RecordDialog({
     setExporting(true);
     try {
       const XLSX = await import("xlsx");
-      const worksheet = XLSX.utils.json_to_sheet(filteredRows.map((row) => ({
+      const worksheet = XLSX.utils.json_to_sheet(sortedRows.map((row) => ({
         "Kayıt": row.name,
         "Tür": row.objectType ?? "",
         "Tarih": formatDate(row.date),
@@ -395,7 +460,7 @@ function RecordDialog({
             {countryOptions.length ? <select value={country} onChange={(event) => setCountry(event.target.value)} aria-label="Ülke"><option value="">Tüm ülkeler</option>{countryOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select> : null}
           </div>
         ) : null}
-        {filteredRows.length ? <RecordTable rows={filteredRows} onRecordsUpdated={onRecordsUpdated} /> : <div className={styles.empty}>{rows.length ? "Filtrelerle eşleşen kayıt bulunmuyor." : "Kayıt bulunmuyor."}</div>}
+        {sortedRows.length ? <RecordTable rows={sortedRows} sort={sort} onSort={changeSort} onRecordsUpdated={onRecordsUpdated} /> : <div className={styles.empty}>{rows.length ? "Filtrelerle eşleşen kayıt bulunmuyor." : "Kayıt bulunmuyor."}</div>}
       </section>
     </div>
   );
@@ -446,6 +511,7 @@ export default function Dashboard({ data }: { data: SparkData }) {
   const [refreshMessage, setRefreshMessage] = useState("");
   const [privacyMode, setPrivacyMode] = useState<PrivacyMode>("normal");
   const [themeMode, setThemeMode] = useState<ThemeMode>("light");
+  const dataStale = isSparkDataStale(data.generatedAt);
   const invoiceStatusCheckPending = !data.hygiene.some((group) => group.key === "invoice-status-not-paid");
   const year = Number(data.reportDate.slice(0, 4));
   const currentMonth = Number(data.reportDate.slice(5, 7));
@@ -525,6 +591,10 @@ export default function Dashboard({ data }: { data: SparkData }) {
     try {
       const response = await fetch("/api/spark/refresh", { method: "POST" });
       const result = await response.json();
+      if (response.status === 401) {
+        window.location.assign("/spark/login?next=/spark");
+        return;
+      }
       if (!response.ok) throw new Error(result.error || "Yenileme başarısız.");
       setRefreshMessage(result.refreshed ? "Güncellendi" : result.message || "Zaten güncel");
       router.refresh();
@@ -568,6 +638,13 @@ export default function Dashboard({ data }: { data: SparkData }) {
           {refreshMessage ? <small aria-live="polite">{refreshMessage}</small> : null}
         </div>
       </header>
+
+      {dataStale ? (
+        <div className={styles.staleBanner} role="alert">
+          <AlertTriangle size={16} />
+          <div><b>Veri güncel değil</b><span>Beklenen planlı yenileme tamamlanmadı. Son başarılı güncelleme: {formatDate(data.generatedAt, true)}.</span></div>
+        </div>
+      ) : null}
 
       {privacyMode !== "normal" ? (
         <div className={styles.privacyBanner} role="status">

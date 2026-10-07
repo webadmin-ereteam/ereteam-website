@@ -46,11 +46,11 @@
 .composer button { width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 13px; background: #1a6fa8; color: #fff; cursor: pointer; }
 .composer button:disabled { opacity: .35; cursor: default; }
 :global([data-spark-theme="dark"]) .panel { border-color:#3b5665; background:#17272d; box-shadow:0 28px 70px rgba(0,0,0,.48); }
-:global([data-spark-theme="dark"]) .scope { border-color:#344b57; background:#1b3440; color:#b4cbd7; }
+:global([data-spark-theme="dark"]) .scope { border-color:#49636f; background:#1e3945; color:#d0dfe5; }
 :global([data-spark-theme="dark"]) .scope svg { color:#72bde5; }
 :global([data-spark-theme="dark"]) .messages { background:linear-gradient(180deg,#13242c,#101e25); }
-:global([data-spark-theme="dark"]) .suggestions p { color:#9db2bd; }
-:global([data-spark-theme="dark"]) .suggestions button { border-color:#38505d; background:#1a2d36; color:#d8e7ed; }
+:global([data-spark-theme="dark"]) .suggestions p { color:#bfd0d7; }
+:global([data-spark-theme="dark"]) .suggestions button { border-color:#4b6672; background:#1d333d; color:#edf5f7; }
 :global([data-spark-theme="dark"]) .metricResult,
 :global([data-spark-theme="dark"]) .breakdownResult,
 :global([data-spark-theme="dark"]) .textResult,
@@ -58,29 +58,29 @@
 :global([data-spark-theme="dark"]) .metricResult { background:radial-gradient(circle at 92% 8%,rgba(64,164,211,.16),transparent 32%),#1a2c34; }
 :global([data-spark-theme="dark"]) .metricResult span,
 :global([data-spark-theme="dark"]) .breakdownResult header span,
-:global([data-spark-theme="dark"]) .textResult > span { color:#a6beca; }
+:global([data-spark-theme="dark"]) .textResult > span { color:#c7d8df; }
 :global([data-spark-theme="dark"]) .metricResult strong,
 :global([data-spark-theme="dark"]) .breakdownGrid article strong { color:#edf7fa; }
 :global([data-spark-theme="dark"]) .metricResult small,
 :global([data-spark-theme="dark"]) .breakdownResult header small,
 :global([data-spark-theme="dark"]) .textResult small,
-:global([data-spark-theme="dark"]) .breakdownGrid article small { color:#8fa7b3; }
+:global([data-spark-theme="dark"]) .breakdownGrid article small { color:#b5c8d0; }
 :global([data-spark-theme="dark"]) .answerText,
 :global([data-spark-theme="dark"]) .textResult p { color:#c5d8e0; }
 :global([data-spark-theme="dark"]) .breakdownGrid article { border-color:#3a525e; background:linear-gradient(145deg,#203640,#192d36); }
 :global([data-spark-theme="dark"]) .breakdownGrid article span,
-:global([data-spark-theme="dark"]) .interpretation { color:#9bb3be; }
+:global([data-spark-theme="dark"]) .interpretation { color:#bed0d7; }
 :global([data-spark-theme="dark"]) .resultHeader { border-color:#354b56; background:#1d323b; }
 :global([data-spark-theme="dark"]) .resultHeader b { color:#dbeaf0; }
 :global([data-spark-theme="dark"]) .resultHeader small,
-:global([data-spark-theme="dark"]) .resultHeader > span { color:#92aab5; }
-:global([data-spark-theme="dark"]) .tableScroll th { background:#223943; color:#a9bdc6; }
-:global([data-spark-theme="dark"]) .tableScroll td { border-color:#30454f; color:#c9dae1; }
+:global([data-spark-theme="dark"]) .resultHeader > span { color:#b7cbd3; }
+:global([data-spark-theme="dark"]) .tableScroll th { background:#29434d; color:#d3e0e4; }
+:global([data-spark-theme="dark"]) .tableScroll td { border-color:#405963; color:#e1ebee; }
 :global([data-spark-theme="dark"]) .tableScroll tr:hover td { background:#213640; }
 :global([data-spark-theme="dark"]) .tableScroll a { color:#73bde4; background:#213f4e; }
 :global([data-spark-theme="dark"]) .empty { border-color:#38505b; background:#1a2c34; color:#a5bbc5; }
 :global([data-spark-theme="dark"]) .error { border-color:#70464a; background:#351f23; color:#e6a2a2; }
-:global([data-spark-theme="dark"]) .loading { color:#9db3bd; }
+:global([data-spark-theme="dark"]) .loading { color:#bed0d7; }
 :global([data-spark-theme="dark"]) .composer { border-color:#344b56; background:#17272d; }
 :global([data-spark-theme="dark"]) .composer input { border-color:#3a5360; background:#102129; color:#e0edf2; }
 @keyframes pulse { 0%,100% { opacity:.25; transform:translateY(0) } 50% { opacity:1; transform:translateY(-2px) } }
