@@ -486,7 +486,12 @@ the page must not introduce root-level horizontal overflow, while wide data tabl
 remain horizontally scrollable inside their own containers.
 The report supports light and dark themes on desktop and mobile across the dashboard,
 detail dialogs, and data assistant. The explicit browser choice is persisted locally;
-without a saved choice, Spark follows the operating-system color preference.
+without a saved choice, Spark follows the operating-system color preference. The
+resolved theme is applied before the first paint by a small inline script on `/spark`
+that resolves the persisted choice or the system preference onto the root element's
+`data-spark-theme` attribute; dark CSS overrides key off that root attribute, and the
+theme toggle and system-theme sync keep it current, so a reload or a report-year
+navigation never flashes the light theme before the dark theme.
 
 ## Commands
 

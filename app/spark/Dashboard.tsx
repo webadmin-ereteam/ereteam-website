@@ -795,15 +795,21 @@ export default function Dashboard({
   const changeThemeMode = (mode: ThemeMode) => {
     setThemeMode(mode);
     window.localStorage.setItem("spark-theme", mode);
+    document.documentElement.dataset.sparkTheme = mode;
   };
   useEffect(() => {
     const savedTheme = window.localStorage.getItem("spark-theme");
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     if (savedTheme === "light" || savedTheme === "dark") {
       setThemeMode(savedTheme);
+      document.documentElement.dataset.sparkTheme = savedTheme;
       return;
     }
-    const syncSystemTheme = (event: MediaQueryListEvent | MediaQueryList) => setThemeMode(event.matches ? "dark" : "light");
+    const syncSystemTheme = (event: MediaQueryListEvent | MediaQueryList) => {
+      const mode = event.matches ? "dark" : "light";
+      setThemeMode(mode);
+      document.documentElement.dataset.sparkTheme = mode;
+    };
     syncSystemTheme(mediaQuery);
     mediaQuery.addEventListener("change", syncSystemTheme);
     return () => mediaQuery.removeEventListener("change", syncSystemTheme);
@@ -871,7 +877,7 @@ export default function Dashboard({
 
   return (
     <PrivacyContext.Provider value={privacyMode}>
-      <main className={styles.page} data-privacy={privacyMode} data-spark-theme={themeMode}>
+      <main className={styles.page} data-privacy={privacyMode}>
       <header className={styles.hero}>
         <div className={styles.brandLockup}>
           <div className={styles.logoBox}><Image src="/logos/ereteam-logo.png" alt="Ereteam" width={132} height={76} priority /></div>

@@ -20,7 +20,7 @@
   font: 14px/1.45 Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-.page[data-spark-theme="dark"] {
+html[data-spark-theme="dark"] .page {
   --ink: #f2f7f8;
   --muted: #bdcbd0;
   --line: #486068;
@@ -373,88 +373,88 @@
 .empty { padding: 28px; color: var(--muted); text-align: center; font-size: 12px; }
 .page footer { padding: 42px 0 4px; color: var(--muted); font-size: 10px; text-align: center; }
 
-.page[data-spark-theme="dark"] .sectionNav { background: rgba(27,45,52,.9); }
-.page[data-spark-theme="dark"] .sectionNav a:hover { background: #294149; }
-.page[data-spark-theme="dark"] .sectionNav a[aria-current="location"] { color: #071d1a; background: #65d1c2; box-shadow: none; }
-.page[data-spark-theme="dark"] .privacyBanner { color: #ffb5b5; border-color: #753f43; background: #351f23; box-shadow: none; }
-.page[data-spark-theme="dark"] .privacyBanner span { color: #d99191; }
-.page[data-spark-theme="dark"] .staleBanner { color: #f0c878; border-color: #725b32; background: #332a1c; box-shadow: none; }
-.page[data-spark-theme="dark"] .staleBanner span { color: #c8ab76; }
-.page[data-spark-theme="dark"] .archiveBanner { color: #a8cbe9; border-color: #3c5e78; background: #233d4d; box-shadow: none; }
-.page[data-spark-theme="dark"] .archiveBanner span { color: #89a7bd; }
-.page[data-spark-theme="dark"] .sectionAction { color: #79d5c9; border-color: #35645f; background: #183b39; }
-.page[data-spark-theme="dark"] .sectionAction:hover { border-color: var(--teal); background: #204844; }
-.page[data-spark-theme="dark"] .sectionAction:disabled { color: #73848a; border-color: var(--line); background: #1a292e; }
-.page[data-spark-theme="dark"] .countryFilter button:hover { color: var(--ink); background: #294149; }
-.page[data-spark-theme="dark"] .countryFilter button[aria-pressed="true"] { color: #071d1a; background: #65d1c2; }
-.page[data-spark-theme="dark"] .overviewScopeBadge { color: #a7e5dc; border-color: #35645f; background: #183b39; }
-.page[data-spark-theme="dark"] .metricPrimary { background: #087f71; border-color: #087f71; }
-.page[data-spark-theme="dark"] .metricForecast { border-color: #675539; background: linear-gradient(145deg, #30291e, var(--paper)); }
-.page[data-spark-theme="dark"] .metricForecast > strong { color: #e2b46e; }
-.page[data-spark-theme="dark"] .metricForecast .metricDetail b { color: #e2b46e; }
-.page[data-spark-theme="dark"] .metricForecast > .cardDrilldown { color: #e2b46e; }
-.page[data-spark-theme="dark"] .metricInvoice { --metric-halo: #29485f; --metric-value: #8bb9e1; border-color: #3c5e78; background: radial-gradient(circle at 100% 0, #233d4d, transparent 48%), var(--paper); }
-.page[data-spark-theme="dark"] .metricOrder { --metric-halo: #324b2b; --metric-value: #9ac77a; border-color: #496541; background: radial-gradient(circle at 100% 0, #293c2a, transparent 48%), var(--paper); }
-.page[data-spark-theme="dark"] .metricPipeline { --metric-halo: #45375d; --metric-value: #b69ae0; border-color: #5b4777; background: radial-gradient(circle at 100% 0, #342b45, transparent 48%), var(--paper); }
-.page[data-spark-theme="dark"] .coverageBadge { color: #79d5c9; border-color: #35645f; background: #183b39; }
-.page[data-spark-theme="dark"] .targetScale,
-.page[data-spark-theme="dark"] .monthComposition > div { background: #2a3b40; }
-.page[data-spark-theme="dark"] .weeklyMetrics .valueButton { background: #1b2c32; }
-.page[data-spark-theme="dark"] .infoNote { color: #c5d2d6; border-color: #486068; background: rgba(27,45,52,.9); }
-.page[data-spark-theme="dark"] .infoNote code { color: #e0e9eb; background: #30454c; }
-.page[data-spark-theme="dark"] .periodCard,
-.page[data-spark-theme="dark"] .nbPanel,
-.page[data-spark-theme="dark"] .hygieneCard { background: var(--paper); }
-.page[data-spark-theme="dark"] table { background: var(--paper); }
-.page[data-spark-theme="dark"] th { color: #d0dce0; background: #243a42; }
-.page[data-spark-theme="dark"] td { border-color: #3b5159; }
-.page[data-spark-theme="dark"] tbody tr:hover td { background: #294048; }
-.page[data-spark-theme="dark"] .monthTable th:first-child { background: #243a42; }
-.page[data-spark-theme="dark"] .monthTable td:first-child { background: var(--paper); }
-.page[data-spark-theme="dark"] .currentRow td { background: #18332f !important; }
-.page[data-spark-theme="dark"] .pastRow:not(.currentRow) td { background: #192a30; }
-.page[data-spark-theme="dark"] .futureRow td { background: #1a282f; }
-.page[data-spark-theme="dark"] .futureRow td:first-child { color: #9aabb2; }
-.page[data-spark-theme="dark"] .monthTable .pastSummaryRow td,
-.page[data-spark-theme="dark"] .monthTable .pastSummaryRow td:first-child { background: #1c3036; }
-.page[data-spark-theme="dark"] .quarterStart td { border-top-color: #50636a; }
-.page[data-spark-theme="dark"] .nowPill { color: #86ddd1; background: #24504b; }
-.page[data-spark-theme="dark"] .countCell { color: #7bd5ca; background: #21423f; }
-.page[data-spark-theme="dark"] .funnelFlow { background: #132228; }
-.page[data-spark-theme="dark"] .funnelFlow > button { border-color: #34494f; }
-.page[data-spark-theme="dark"] .funnelStageStats > span { border-color: rgba(220,240,244,.09); background: rgba(5,14,17,.25); }
-.page[data-spark-theme="dark"] .funnelMeter { background: rgba(220,240,244,.12); }
-.page[data-spark-theme="dark"] .tabs button { background: var(--paper); }
-.page[data-spark-theme="dark"] .tabs button[aria-selected="true"] { border-color: #47747f; background: #24434c; }
-.page[data-spark-theme="dark"] .breakdownVisual { background: linear-gradient(135deg, #14262b, var(--paper)); }
-.page[data-spark-theme="dark"] .donut { box-shadow: inset 0 0 0 1px rgba(220,240,244,.1); }
-.page[data-spark-theme="dark"] .donut > div { background: #1d3036; box-shadow: 0 5px 18px rgba(0,0,0,.28); }
-.page[data-spark-theme="dark"] .donutLegend > div,
-.page[data-spark-theme="dark"] .periodMetrics .valueButton,
-.page[data-spark-theme="dark"] .nbMetrics .valueButton { border-color: #2d4046; }
-.page[data-spark-theme="dark"] .nbPanelHead { background: #30291e; }
-.page[data-spark-theme="dark"] .nbCurrent .nbPanelHead { background: #17312f; }
-.page[data-spark-theme="dark"] .hygieneClassification > strong { color: #b9a1df; }
-.page[data-spark-theme="dark"] .hygieneCleanSummary { color: #9bd8cf; border-color: #365954; background: #193531; }
-.page[data-spark-theme="dark"] .hygieneCleanSummary:hover { border-color: #4f7b74; background: #20423e; }
-.page[data-spark-theme="dark"] .dialog { border-color: #647a82; background: var(--paper); }
-.page[data-spark-theme="dark"] .dialogSummary > div,
-.page[data-spark-theme="dark"] .recordFilters,
-.page[data-spark-theme="dark"] .bulkEditor { background: #223840; }
-.page[data-spark-theme="dark"] .dialogHeadActions button,
-.page[data-spark-theme="dark"] .recordFilters input,
-.page[data-spark-theme="dark"] .recordFilters select,
-.page[data-spark-theme="dark"] .enumEditor select { color: var(--ink); border-color: #587078; background: #17282e; }
-.page[data-spark-theme="dark"] .dialogHeadActions .exportButton { color: #79d5c9; border-color: #35645f; background: #183b39; }
-.page[data-spark-theme="dark"] .stagePill { color: #bfd0d5; background: #293b41; }
-.page[data-spark-theme="dark"] .objectPill { color: #a8cde2; border-color: #375565; background: #1d3440; }
-.page[data-spark-theme="dark"] .carryover td { background: #332b1e !important; }
+html[data-spark-theme="dark"] .page .sectionNav { background: rgba(27,45,52,.9); }
+html[data-spark-theme="dark"] .page .sectionNav a:hover { background: #294149; }
+html[data-spark-theme="dark"] .page .sectionNav a[aria-current="location"] { color: #071d1a; background: #65d1c2; box-shadow: none; }
+html[data-spark-theme="dark"] .page .privacyBanner { color: #ffb5b5; border-color: #753f43; background: #351f23; box-shadow: none; }
+html[data-spark-theme="dark"] .page .privacyBanner span { color: #d99191; }
+html[data-spark-theme="dark"] .page .staleBanner { color: #f0c878; border-color: #725b32; background: #332a1c; box-shadow: none; }
+html[data-spark-theme="dark"] .page .staleBanner span { color: #c8ab76; }
+html[data-spark-theme="dark"] .page .archiveBanner { color: #a8cbe9; border-color: #3c5e78; background: #233d4d; box-shadow: none; }
+html[data-spark-theme="dark"] .page .archiveBanner span { color: #89a7bd; }
+html[data-spark-theme="dark"] .page .sectionAction { color: #79d5c9; border-color: #35645f; background: #183b39; }
+html[data-spark-theme="dark"] .page .sectionAction:hover { border-color: var(--teal); background: #204844; }
+html[data-spark-theme="dark"] .page .sectionAction:disabled { color: #73848a; border-color: var(--line); background: #1a292e; }
+html[data-spark-theme="dark"] .page .countryFilter button:hover { color: var(--ink); background: #294149; }
+html[data-spark-theme="dark"] .page .countryFilter button[aria-pressed="true"] { color: #071d1a; background: #65d1c2; }
+html[data-spark-theme="dark"] .page .overviewScopeBadge { color: #a7e5dc; border-color: #35645f; background: #183b39; }
+html[data-spark-theme="dark"] .page .metricPrimary { background: #087f71; border-color: #087f71; }
+html[data-spark-theme="dark"] .page .metricForecast { border-color: #675539; background: linear-gradient(145deg, #30291e, var(--paper)); }
+html[data-spark-theme="dark"] .page .metricForecast > strong { color: #e2b46e; }
+html[data-spark-theme="dark"] .page .metricForecast .metricDetail b { color: #e2b46e; }
+html[data-spark-theme="dark"] .page .metricForecast > .cardDrilldown { color: #e2b46e; }
+html[data-spark-theme="dark"] .page .metricInvoice { --metric-halo: #29485f; --metric-value: #8bb9e1; border-color: #3c5e78; background: radial-gradient(circle at 100% 0, #233d4d, transparent 48%), var(--paper); }
+html[data-spark-theme="dark"] .page .metricOrder { --metric-halo: #324b2b; --metric-value: #9ac77a; border-color: #496541; background: radial-gradient(circle at 100% 0, #293c2a, transparent 48%), var(--paper); }
+html[data-spark-theme="dark"] .page .metricPipeline { --metric-halo: #45375d; --metric-value: #b69ae0; border-color: #5b4777; background: radial-gradient(circle at 100% 0, #342b45, transparent 48%), var(--paper); }
+html[data-spark-theme="dark"] .page .coverageBadge { color: #79d5c9; border-color: #35645f; background: #183b39; }
+html[data-spark-theme="dark"] .page .targetScale,
+html[data-spark-theme="dark"] .page .monthComposition > div { background: #2a3b40; }
+html[data-spark-theme="dark"] .page .weeklyMetrics .valueButton { background: #1b2c32; }
+html[data-spark-theme="dark"] .page .infoNote { color: #c5d2d6; border-color: #486068; background: rgba(27,45,52,.9); }
+html[data-spark-theme="dark"] .page .infoNote code { color: #e0e9eb; background: #30454c; }
+html[data-spark-theme="dark"] .page .periodCard,
+html[data-spark-theme="dark"] .page .nbPanel,
+html[data-spark-theme="dark"] .page .hygieneCard { background: var(--paper); }
+html[data-spark-theme="dark"] .page table { background: var(--paper); }
+html[data-spark-theme="dark"] .page th { color: #d0dce0; background: #243a42; }
+html[data-spark-theme="dark"] .page td { border-color: #3b5159; }
+html[data-spark-theme="dark"] .page tbody tr:hover td { background: #294048; }
+html[data-spark-theme="dark"] .page .monthTable th:first-child { background: #243a42; }
+html[data-spark-theme="dark"] .page .monthTable td:first-child { background: var(--paper); }
+html[data-spark-theme="dark"] .page .currentRow td { background: #18332f !important; }
+html[data-spark-theme="dark"] .page .pastRow:not(.currentRow) td { background: #192a30; }
+html[data-spark-theme="dark"] .page .futureRow td { background: #1a282f; }
+html[data-spark-theme="dark"] .page .futureRow td:first-child { color: #9aabb2; }
+html[data-spark-theme="dark"] .page .monthTable .pastSummaryRow td,
+html[data-spark-theme="dark"] .page .monthTable .pastSummaryRow td:first-child { background: #1c3036; }
+html[data-spark-theme="dark"] .page .quarterStart td { border-top-color: #50636a; }
+html[data-spark-theme="dark"] .page .nowPill { color: #86ddd1; background: #24504b; }
+html[data-spark-theme="dark"] .page .countCell { color: #7bd5ca; background: #21423f; }
+html[data-spark-theme="dark"] .page .funnelFlow { background: #132228; }
+html[data-spark-theme="dark"] .page .funnelFlow > button { border-color: #34494f; }
+html[data-spark-theme="dark"] .page .funnelStageStats > span { border-color: rgba(220,240,244,.09); background: rgba(5,14,17,.25); }
+html[data-spark-theme="dark"] .page .funnelMeter { background: rgba(220,240,244,.12); }
+html[data-spark-theme="dark"] .page .tabs button { background: var(--paper); }
+html[data-spark-theme="dark"] .page .tabs button[aria-selected="true"] { border-color: #47747f; background: #24434c; }
+html[data-spark-theme="dark"] .page .breakdownVisual { background: linear-gradient(135deg, #14262b, var(--paper)); }
+html[data-spark-theme="dark"] .page .donut { box-shadow: inset 0 0 0 1px rgba(220,240,244,.1); }
+html[data-spark-theme="dark"] .page .donut > div { background: #1d3036; box-shadow: 0 5px 18px rgba(0,0,0,.28); }
+html[data-spark-theme="dark"] .page .donutLegend > div,
+html[data-spark-theme="dark"] .page .periodMetrics .valueButton,
+html[data-spark-theme="dark"] .page .nbMetrics .valueButton { border-color: #2d4046; }
+html[data-spark-theme="dark"] .page .nbPanelHead { background: #30291e; }
+html[data-spark-theme="dark"] .page .nbCurrent .nbPanelHead { background: #17312f; }
+html[data-spark-theme="dark"] .page .hygieneClassification > strong { color: #b9a1df; }
+html[data-spark-theme="dark"] .page .hygieneCleanSummary { color: #9bd8cf; border-color: #365954; background: #193531; }
+html[data-spark-theme="dark"] .page .hygieneCleanSummary:hover { border-color: #4f7b74; background: #20423e; }
+html[data-spark-theme="dark"] .page .dialog { border-color: #647a82; background: var(--paper); }
+html[data-spark-theme="dark"] .page .dialogSummary > div,
+html[data-spark-theme="dark"] .page .recordFilters,
+html[data-spark-theme="dark"] .page .bulkEditor { background: #223840; }
+html[data-spark-theme="dark"] .page .dialogHeadActions button,
+html[data-spark-theme="dark"] .page .recordFilters input,
+html[data-spark-theme="dark"] .page .recordFilters select,
+html[data-spark-theme="dark"] .page .enumEditor select { color: var(--ink); border-color: #587078; background: #17282e; }
+html[data-spark-theme="dark"] .page .dialogHeadActions .exportButton { color: #79d5c9; border-color: #35645f; background: #183b39; }
+html[data-spark-theme="dark"] .page .stagePill { color: #bfd0d5; background: #293b41; }
+html[data-spark-theme="dark"] .page .objectPill { color: #a8cde2; border-color: #375565; background: #1d3440; }
+html[data-spark-theme="dark"] .page .carryover td { background: #332b1e !important; }
 
 @media (hover: hover) {
   .metricCard, .targetCardButton, .nbPanel { transition: transform 160ms ease, box-shadow 160ms ease; }
   .metricCardButton:not(:disabled):hover, .targetCardButton:not(:disabled):hover, .nbPanel:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(16,43,55,.07); }
   .hygieneCard:not(:disabled):hover { background: #f2f8f7; }
-  .page[data-spark-theme="dark"] .hygieneCard:not(:disabled):hover { background: #294149; }
+  html[data-spark-theme="dark"] .page .hygieneCard:not(:disabled):hover { background: #294149; }
 }
 
 @media (max-width: 1050px) {
