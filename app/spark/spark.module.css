@@ -147,7 +147,7 @@
 .metricPrimary .metricDetail b { color: #fff; }
 .metricForecast { border-color: #ead7b9; background: linear-gradient(145deg, #fffaf1, #fff); }
 .metricForecast > strong { color: #a76c18; }
-.metricForecast .metricDetail b { color: #a76c18; }
+.metricForecast .metricDetail b { color: #96600f; }
 .metricSupporting { position: relative; overflow: hidden; box-shadow: 0 8px 22px rgba(16,43,55,.045); }
 .metricSupporting::before { content: ""; position: absolute; inset: 0 0 auto; height: 3px; background: var(--metric-accent); }
 .metricSupporting > span { display: flex; align-items: center; gap: 7px; }
@@ -157,11 +157,11 @@
 .pipelineDetail { display: grid; gap: 3px; }
 .pipelineDetail b { color: var(--metric-value); font-size: 10px; }
 .metricInvoice { --metric-accent: #4f7cac; --metric-halo: #dce9f5; --metric-value: #315f8c; border-color: #cfdeeb; background: radial-gradient(circle at 100% 0, #edf5fb, transparent 48%), var(--paper); }
-.metricOrder { --metric-accent: #689b45; --metric-halo: #e1edd9; --metric-value: #507d33; border-color: #d4e4ca; background: radial-gradient(circle at 100% 0, #f0f7eb, transparent 48%), var(--paper); }
+.metricOrder { --metric-accent: #689b45; --metric-halo: #e1edd9; --metric-value: #4a7730; border-color: #d4e4ca; background: radial-gradient(circle at 100% 0, #f0f7eb, transparent 48%), var(--paper); }
 .metricPipeline { --metric-accent: #845ec2; --metric-halo: #e9e0f5; --metric-value: #69459f; border-color: #ddd2ed; background: radial-gradient(circle at 100% 0, #f5f0fb, transparent 48%), var(--paper); }
 .metricCard > .cardDrilldown, .cardDrilldown { min-height: 0; display: flex; align-items: center; gap: 5px; margin-top: auto; padding-top: 14px; color: var(--teal); font-size: 10px; font-weight: 800; letter-spacing: 0; text-transform: none; }
 .metricPrimary > .cardDrilldown { color: #fff; }
-.metricForecast > .cardDrilldown { color: #a76c18; }
+.metricForecast > .cardDrilldown { color: #96600f; }
 .metricSupporting > .cardDrilldown { color: var(--metric-value); }
 .progress { height: 4px; margin-top: 14px; overflow: hidden; border-radius: 9px; background: rgba(255,255,255,.2); }
 .progress i { display: block; height: 100%; background: var(--lime); border-radius: inherit; }
@@ -392,6 +392,7 @@
 .page[data-spark-theme="dark"] .metricForecast { border-color: #675539; background: linear-gradient(145deg, #30291e, var(--paper)); }
 .page[data-spark-theme="dark"] .metricForecast > strong { color: #e2b46e; }
 .page[data-spark-theme="dark"] .metricForecast .metricDetail b { color: #e2b46e; }
+.page[data-spark-theme="dark"] .metricForecast > .cardDrilldown { color: #e2b46e; }
 .page[data-spark-theme="dark"] .metricInvoice { --metric-halo: #29485f; --metric-value: #8bb9e1; border-color: #3c5e78; background: radial-gradient(circle at 100% 0, #233d4d, transparent 48%), var(--paper); }
 .page[data-spark-theme="dark"] .metricOrder { --metric-halo: #324b2b; --metric-value: #9ac77a; border-color: #496541; background: radial-gradient(circle at 100% 0, #293c2a, transparent 48%), var(--paper); }
 .page[data-spark-theme="dark"] .metricPipeline { --metric-halo: #45375d; --metric-value: #b69ae0; border-color: #5b4777; background: radial-gradient(circle at 100% 0, #342b45, transparent 48%), var(--paper); }
