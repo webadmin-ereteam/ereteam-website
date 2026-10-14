@@ -176,7 +176,15 @@ export async function associateHubSpotInvoiceToDeal(invoiceId: string, dealId: s
   );
 }
 
-const amount = (row: HubSpotObject, property: string) => Number(row.properties[property] ?? 0) || 0;
+export function parseHubSpotAmount(value: string | undefined, property: string) {
+  const raw = value?.trim();
+  if (!raw) return 0;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) throw new Error(`HubSpot ${property} geçerli bir tutar değil: "${raw}"`);
+  return parsed;
+}
+
+const amount = (row: HubSpotObject, property: string) => parseHubSpotAmount(row.properties[property], property);
 const lower = (value?: string) => (value ?? "").trim().toLowerCase();
 
 export function hubspotDealState(row: HubSpotObject, stages: StageMap): "open" | "won" | "lost" {
@@ -194,17 +202,21 @@ export function isHubSpotOpenOrder(row: HubSpotObject, stages: StageMap) {
   return stage?.isClosed === false || (stage?.isClosed == null && lower(stage?.label) === "open");
 }
 
-export function isIncludedInvoice(row: HubSpotObject) {
-  return row.properties.status !== "cancelled";
+export function isIncludedInvoice(row: HubSpotObject, cancelledValue = "cancelled") {
+  return row.properties.status !== cancelledValue;
 }
 
-export function validateInvoiceStatusProperty(catalog: HubSpotProperty[]) {
+export type InvoiceStatusContract = { property: HubSpotProperty; cancelledValue: string };
+
+export function validateInvoiceStatusProperty(catalog: HubSpotProperty[]): InvoiceStatusContract {
   const property = catalog.find((item) => item.name === "status");
-  const values = new Set(property?.options?.map((option) => lower(option.value)) ?? []);
-  if (!property || !values.has("invoiced") || !values.has("cancelled")) {
+  const options = property?.options ?? [];
+  const cancelled = options.find((option) => lower(option.value) === "cancelled");
+  const invoiced = options.find((option) => lower(option.value) === "invoiced");
+  if (!property || !cancelled || !invoiced) {
     throw new Error("HubSpot invoice custom status sözleşmesi bulunamadı (status: invoiced/cancelled)");
   }
-  return property;
+  return { property, cancelledValue: cancelled.value };
 }
 
 export async function fetchHubSpotData() {
@@ -217,12 +229,15 @@ export async function fetchHubSpotData() {
     fetchHubSpotOwners(),
     fetchHubSpotPropertyCatalog("invoices"),
   ]);
-  validateInvoiceStatusProperty(invoiceCatalog);
+  const invoiceStatusContract = validateInvoiceStatusProperty(invoiceCatalog);
   const [invoiceDeals, orderDeals] = await Promise.all([
     fetchHubSpotAssociations("invoices", invoices.map((row) => row.id)),
     fetchHubSpotAssociations("orders", orders.map((row) => row.id)),
   ]);
-  return { deals, invoices, orders, dealStages, orderStages, ownerMap, invoiceDeals, orderDeals };
+  return {
+    deals, invoices, orders, dealStages, orderStages, ownerMap, invoiceDeals, orderDeals,
+    invoiceCancelledValue: invoiceStatusContract.cancelledValue,
+  };
 }
 
 export function dealRecord(
@@ -244,6 +259,8 @@ export function dealRecord(
     amount: amount(row, "amount_in_home_currency"),
     owner: ownerMap.get(row.properties.hubspot_owner_id || ""),
     country: row.properties.country,
+    revenueTypes: (row.properties.revenue_type ?? "").split(";").map((value) => value.trim()).filter(Boolean),
+    domain: row.properties.ereteam_domain?.trim(),
     stage: options.stage,
     weightedAmount: amount(row, "hs_projected_amount_in_home_currency"),
     ageDays,
@@ -262,6 +279,8 @@ export function invoiceRecord(row: HubSpotObject, ownerMap: Map<string, string>)
     owner: ownerMap.get(row.properties.hubspot_owner_id || ""),
     company: row.properties.hs_invoice_latest_company_name,
     country: row.properties.country,
+    revenueTypes: (row.properties.revenue_type ?? "").split(";").map((value) => value.trim()).filter(Boolean),
+    domain: row.properties.ereteam_domain?.trim(),
     url: `https://app.hubspot.com/contacts/${PORTAL_ID}/objects/0-53?filters=%5B%7B%22property%22%3A%22hs_object_id%22%2C%22operator%22%3A%22EQ%22%2C%22value%22%3A%22${row.id}%22%7D%5D&utm_source=spark_dashboard&utm_medium=web&utm_campaign=revenue_growth`,
   };
 }
@@ -275,6 +294,8 @@ export function orderRecord(row: HubSpotObject, ownerMap: Map<string, string>): 
     amount: amount(row, "hs_homecurrency_amount"),
     owner: ownerMap.get(row.properties.hubspot_owner_id || ""),
     country: row.properties.country,
+    revenueTypes: (row.properties.revenue_type ?? "").split(";").map((value) => value.trim()).filter(Boolean),
+    domain: row.properties.ereteam_domain?.trim(),
     url: `https://app.hubspot.com/contacts/${PORTAL_ID}/record/0-123/${row.id}?utm_source=spark_dashboard&utm_medium=web&utm_campaign=revenue_growth`,
   };
 }

@@ -1141,8 +1141,11 @@ async function executePlannedSparkQuery(plan: QueryPlan, catalogs: Record<Object
           : row._company_name),
     }));
   }
+  const invoiceCancelledValue = resolvedPlan.object === "invoices"
+    ? validateInvoiceStatusProperty(catalogs.invoices).cancelledValue
+    : "cancelled";
   let filtered = flattenedRows.filter((row) =>
-    (resolvedPlan.object !== "invoices" || isIncludedInvoice({ id: row._id, properties: row }))
+    (resolvedPlan.object !== "invoices" || isIncludedInvoice({ id: row._id, properties: row }, invoiceCancelledValue))
     && resolvedPlan.filters.every((filter) => sparkChatMatchesFilter(row, filter))
   );
 

@@ -22,15 +22,22 @@ function values(value: string | undefined, multiValue: boolean) {
   return result.length ? result : ["Belirtilmemiş"];
 }
 
-export async function collectSparkData(now = new Date()): Promise<{ data: SparkData; sourceState: SparkSourceState }> {
+type HubSpotData = Awaited<ReturnType<typeof fetchHubSpotData>>;
+
+export async function collectSparkData(
+  now = new Date(),
+  options: { reportYear?: number; hubspot?: HubSpotData } = {},
+): Promise<{ data: SparkData; sourceState: SparkSourceState }> {
   const { start, end } = rollingPeriod(now);
-  const { year, month } = istanbulParts(now);
+  const current = istanbulParts(now);
+  const year = options.reportYear ?? current.year;
+  const month = year === current.year ? current.month : 1;
   const sourceState: SparkSourceState = {
     hubspot: { ok: false },
     budget: { ok: false },
   };
 
-  const hubspot = await fetchHubSpotData();
+  const hubspot = options.hubspot ?? await fetchHubSpotData();
   sourceState.hubspot = { ok: true };
   const { deals, invoices, orders, dealStages, orderStages, ownerMap, invoiceDeals, orderDeals } = hubspot;
   const dealStage = (deal: HubSpotObject) => dealStages.get(deal.properties.dealstage || "");
@@ -41,7 +48,7 @@ export async function collectSparkData(now = new Date()): Promise<{ data: SparkD
   const yearOpenOrders = orders.filter((order) =>
     isHubSpotOpenOrder(order, orderStages) && isReportingYear(order.properties.hs_processed_date, year));
   const yearInvoices = invoices.filter((invoice) =>
-    isIncludedInvoice(invoice) && isReportingYear(invoice.properties.hs_invoice_date, year));
+    isIncludedInvoice(invoice, hubspot.invoiceCancelledValue) && isReportingYear(invoice.properties.hs_invoice_date, year));
   const stageLabel = (deal: HubSpotObject) => dealStage(deal)?.label || "Tanımsız stage";
   const toDealRecord = (
     deal: HubSpotObject,
@@ -194,7 +201,10 @@ export async function collectSparkData(now = new Date()): Promise<{ data: SparkD
   });
   const missingCloseDate = openDeals.filter((deal) => !deal.properties.closedate);
   const missingOwner = yearOpenDeals.filter((deal) => !deal.properties.hubspot_owner_id);
-  const missingAmount = yearOpenDeals.filter((deal) => hubspotHelpers.amount(deal, "amount_in_home_currency") <= 0);
+  const missingAmount = yearOpenDeals.filter((deal) => {
+    const raw = deal.properties.amount_in_home_currency?.trim();
+    return !raw || hubspotHelpers.amount(deal, "amount_in_home_currency") === 0;
+  });
   const hygiene = [
     { key: "overdue", label: "Close date'i geçmiş", description: "Kapanış tarihi bugünden önce olan aktif fırsatlar", rows: overdueDeals },
     { key: "noCloseDate", label: "Close date eksik", description: "Planlanan kapanış tarihi bulunmayan aktif fırsatlar", rows: missingCloseDate },
@@ -228,21 +238,24 @@ export async function collectSparkData(now = new Date()): Promise<{ data: SparkD
     records: invoicesWithoutDeal,
   });
   const breakdownFields = [
-    ["country", "Ülke"],
-    ["vendor_name", "Vendor"],
-    ["revenue_type", "Revenue type"],
-    ["ereteam_domain", "Ereteam domain"],
+    ["country", "Ülke", false],
+    ["vendor_name", "Vendor", true],
+    ["revenue_type", "Revenue type", true],
+    ["ereteam_domain", "Ereteam domain", false],
   ] as const;
-  for (const [property, label] of breakdownFields) {
+  for (const [property, label, multiValue] of breakdownFields) {
     const issue = `${label} eksik`;
+    const isMissingValue = (row: HubSpotObject) => multiValue
+      ? values(row.properties[property], true).includes("Belirtilmemiş")
+      : !row.properties[property]?.trim();
     const invoiceIssues = yearInvoices
-      .filter((row) => !row.properties[property]?.trim())
+      .filter(isMissingValue)
       .map((row) => ({ ...invoiceRecord(row, ownerMap), issues: [issue] }));
     const orderIssues = yearOpenOrders
-      .filter((row) => !row.properties[property]?.trim())
+      .filter(isMissingValue)
       .map((row) => ({ ...orderRecord(row, ownerMap), issues: [issue] }));
     const dealIssues = yearOpenDeals
-      .filter((row) => !row.properties[property]?.trim())
+      .filter(isMissingValue)
       .map((row) => toDealRecord(row, { dateProperty: "closedate", issues: [issue] }));
     hygiene.push({
       key: `missing-${property}`,
@@ -253,7 +266,9 @@ export async function collectSparkData(now = new Date()): Promise<{ data: SparkD
   }
 
   const data: SparkData = {
-    generatedAt: now.toISOString(), reportDate: reportDateKey(now), periodStart: start.toISOString(), periodEnd: end.toISOString(),
+    generatedAt: now.toISOString(),
+    reportDate: year === current.year ? reportDateKey(now) : `${year}-01-01`,
+    periodStart: start.toISOString(), periodEnd: end.toISOString(),
     target,
     ytdInvoice: sum(invoiceRows), monthInvoice: sum(monthInvoices), openOrders: sum(orderRows), monthExpected: sum(monthOrders),
     pipeline: yearOpenDeals.reduce((total, deal) => total + hubspotHelpers.amount(deal, "amount_in_home_currency"), 0),
@@ -271,4 +286,14 @@ export async function collectSparkData(now = new Date()): Promise<{ data: SparkD
     },
   };
   return { data, sourceState };
+}
+
+export async function collectSparkCurrentAndPlanning(now = new Date()) {
+  const hubspot = await fetchHubSpotData();
+  const currentYear = istanbulParts(now).year;
+  const [current, planning] = await Promise.all([
+    collectSparkData(now, { reportYear: currentYear, hubspot }),
+    collectSparkData(now, { reportYear: currentYear + 1, hubspot }),
+  ]);
+  return { current, planning };
 }

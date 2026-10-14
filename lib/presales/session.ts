@@ -7,7 +7,7 @@ export const SESSION_COOKIE_NAME = "presales_admin_session";
 const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 export const SESSION_MAX_AGE_SECONDS = SESSION_DURATION_MS / 1000;
 
-type SessionPayload = { exp: number; epoch: number };
+type SessionPayload = { exp: number; epoch: number; aud?: string };
 
 function toBase64Url(bytes: Uint8Array): string {
   let binary = "";
@@ -41,8 +41,8 @@ async function getKey(): Promise<CryptoKey> {
 // moment the token is issued — see getSessionPayload() for how this is used
 // to let "Tüm cihazlardan çıkış yap" / a password change actually invalidate
 // tokens already issued, not just the current browser's cookie.
-export async function createSessionToken(epoch: number): Promise<string> {
-  const payload: SessionPayload = { exp: Date.now() + SESSION_DURATION_MS, epoch };
+export async function createSessionToken(epoch: number, aud?: string): Promise<string> {
+  const payload: SessionPayload = { exp: Date.now() + SESSION_DURATION_MS, epoch, ...(aud ? { aud } : {}) };
   const payloadB64 = toBase64Url(new TextEncoder().encode(JSON.stringify(payload)));
   const key = await getKey();
   const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payloadB64));
@@ -54,8 +54,8 @@ export async function createSessionToken(epoch: number): Promise<string> {
 // *not* check the epoch: a stolen-but-not-yet-expired token still passes
 // this. getSessionPayload() below is the epoch-aware check, run from the
 // admin layout instead (Node runtime, already doing DB queries per request).
-export async function verifySessionToken(token: string | undefined | null): Promise<boolean> {
-  return (await getSessionPayload(token)) !== null;
+export async function verifySessionToken(token: string | undefined | null, expectedAud?: string): Promise<boolean> {
+  return (await getSessionPayload(token, expectedAud)) !== null;
 }
 
 // Verifies signature + expiry the same way, but returns the decoded payload
@@ -63,7 +63,7 @@ export async function verifySessionToken(token: string | undefined | null): Prom
 // additionally compare it against the current `AdminCredential.sessionEpoch`
 // and reject a token issued before the most recent "sign out everywhere" /
 // password change.
-export async function getSessionPayload(token: string | undefined | null): Promise<SessionPayload | null> {
+export async function getSessionPayload(token: string | undefined | null, expectedAud?: string): Promise<SessionPayload | null> {
   if (!token) return null;
   const [payloadB64, sigB64] = token.split(".");
   if (!payloadB64 || !sigB64) return null;
@@ -80,6 +80,7 @@ export async function getSessionPayload(token: string | undefined | null): Promi
 
     const payload = JSON.parse(new TextDecoder().decode(fromBase64Url(payloadB64)));
     if (typeof payload.exp !== "number" || payload.exp <= Date.now()) return null;
+    if (expectedAud && payload.aud !== expectedAud) return null;
     // Tokens issued before this field existed have no `epoch` — treat as 0
     // (older than any real epoch value) so they fail an epoch check rather
     // than bypass it, while still passing this function's own signature/

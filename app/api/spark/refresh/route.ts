@@ -13,19 +13,26 @@ let refreshInFlight: Promise<
 
 export async function POST(request: NextRequest) {
   const session = request.cookies.get(SPARK_SESSION_COOKIE)?.value;
-  if (!(await verifySessionToken(session))) {
+  if (!(await verifySessionToken(session, "spark"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const current = await getSparkData();
-  const age = Date.now() - new Date(current.data.generatedAt).getTime();
-  if (Number.isFinite(age) && age >= 0 && age < REFRESH_COOLDOWN_MS) {
-    return NextResponse.json({
-      ok: true,
-      refreshed: false,
-      generatedAt: current.data.generatedAt,
-      message: "Rapor zaten güncel.",
-    });
+  try {
+    const current = await getSparkData();
+    const age = Date.now() - new Date(current.data.generatedAt).getTime();
+    if (Number.isFinite(age) && age >= 0 && age < REFRESH_COOLDOWN_MS) {
+      return NextResponse.json({
+        ok: true,
+        refreshed: false,
+        generatedAt: current.data.generatedAt,
+        message: "Rapor zaten güncel.",
+      });
+    }
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Refresh failed" },
+      { status: 503 },
+    );
   }
 
   try {

@@ -1,13 +1,13 @@
 # Spark Revenue Dashboard
 
 Spark is an internal, password-protected revenue dashboard mounted at `/spark`.
-Its Turkish dashboard title is `Gelir Yönetim Merkezi`.
+Its Turkish dashboard title is `Gelir ve Pipeline Raporu`.
 It is intentionally separate from the Presales portal. Spark changes belong in
 this file; do not use `PRESALES.md` as Spark documentation.
 
 ## Routes
 
-- `/spark` — latest password-protected dashboard
+- `/spark` — latest password-protected dashboard; `?year=YYYY` opens an available planning year or annual archive
 - `/spark/login` — shared internal login
 - `/api/cron/spark` — Vercel Cron endpoint
 - `/api/spark/refresh` — Spark-session-protected manual refresh with a ten-minute cooldown
@@ -23,6 +23,10 @@ and the seven preceding calendar days through `generatedAt`. Annual dashboard po
 the complete reporting-year date range; weekly movement uses the generation timestamp as its cutoff. On Vercel Hobby, the invocation can
 occur at any time within each scheduled hour. Environment-variable changes only
 reach a new deployment, so redeploy after changing a secret.
+An additional free-plan-compatible annual cron runs on 31 December at `20:00 UTC`.
+Because Hobby scheduling precision is hourly, it runs between `23:00` and `23:59
+Europe/Istanbul`, before the Istanbul year boundary. This is the final automatic
+snapshot opportunity for that reporting year; no manual year-end refresh is required.
 
 ## Sources
 
@@ -36,19 +40,63 @@ charts, a current-year versus carry-over New Business split, and an action-orien
 CRM-hygiene section. Every amount in these sections has a HubSpot record
 drill-down. Activity, email and calendar metrics are intentionally excluded because
 their integrations are not reliable enough to be management-report sources.
+The executive overview has three combinable presentation-only filters: country
+(`Tümü / TR / US`), Ereteam domain (`Tümü / DC&AI / EP / IM`), and revenue type
+(`Tümü / Lisans / Servis`). Every dimension defaults to `Tümü`. Selections filter
+only overview invoices, open orders, active and weighted pipeline, and weekly pipeline
+movement; all sections below the overview remain unfiltered. `Lisans` contains
+`License` and `SNS`; `Servis` contains every other revenue type. Because revenue type
+is multi-select, a mixed record can match both groups. The annual target is company-wide,
+so filtered views show the selected segment's contribution against that company target
+and never invent a segment target. Active selections also show a persistent combined
+scope badge beside the overview heading, so filtered values cannot be mistaken for the
+default company-wide view. Persisted records carry country, domain, and all selected
+revenue types; breakdown membership is retained as a fallback for older annual records.
+Every executive metric card and the target-coverage card opens the shared record dialog
+with the currently selected country/domain/revenue scope. These dialogs retain the global
+search, sorting, country summary, HubSpot links, and Excel export behavior. Dialog
+totals always match the headline formula: amount dialogs sum `amount`; weighted dialogs
+sum `weightedAmount`; forecast dialogs (forecast coverage and target coverage) sum
+invoice amounts + open-order amounts + deal weighted amounts, with the unweighted
+pipeline total shown separately. Every dialog table adds a sortable contribution column
+for weighted and forecast modes, and the Excel export includes the same contribution
+column plus the calculation kind, with a scope-derived filename. The section navigation remains visible while scrolling and marks the currently active
+report section.
 
-The dashboard does not include an admin screen or historical archive. The current
-snapshot is persisted in PostgreSQL and refreshed twice daily by cron; opening the
-report only reads that snapshot and never queries HubSpot or changes `generatedAt`.
+The dashboard does not include an admin screen. The current snapshot and annual
+snapshot aliases are persisted in PostgreSQL. Every successful refresh fetches HubSpot
+once, derives both the current Istanbul year and the following planning year, and
+atomically writes `current`, `year:<currentYear>`, and `year:<nextYear>`. Opening the
+report only reads a snapshot and never queries HubSpot or changes `generatedAt`.
 Deployments and platform cache misses therefore do not trigger data collection.
 Cron and an explicit manual refresh are the only paths that collect HubSpot data
 and replace the persisted snapshot. A non-expiring platform read cache sits in front
 of PostgreSQL for fast page loads; a cache miss falls back only to the persisted
-snapshot, never to HubSpot. Source health is stored with the snapshot and shown separately.
-The header also shows the exact Istanbul update time. Authenticated users can
+snapshot, never to HubSpot. The following year is labeled `Planlama` and remains mutable:
+its future-dated invoices, open orders, active deals, monthly plan, funnel, breakdowns,
+and hygiene checks update on every normal refresh. If its target environment variables
+are not defined yet, monetary plan values remain visible but target percentages and
+progress bars are replaced with `Hedef henüz tanımlanmadı`. The live year is derived
+from the actual Istanbul calendar year, not from the persisted snapshot: at the year
+boundary the planning year immediately becomes `Güncel` and the preceding year becomes
+`Arşiv`, even before the first new-year refresh rewrites `current`. The global
+report-year selector defaults to the live year and lists all available aliases. Historical
+views are explicitly marked and read-only: stale warnings, manual refresh, live chat, and
+CRM-hygiene writes are disabled, while record drill-downs and Excel export remain available.
+Planning views allow refresh and hygiene correction but hide live chat because relative
+chat periods refer to the actual current year. HubSpot links can show a record's current
+state rather than its frozen snapshot state. Source health is stored with each snapshot;
+a budget-source failure or a not-yet-defined target is shown as a distinct amber banner
+instead of being silently presented as target zero. The header also shows the exact Istanbul update time. Authenticated users can
 request a quiet manual refresh; requests made within ten minutes of the latest
-generated report reuse the current snapshot instead of calling the sources.
-The browser does not poll or refresh Spark on an interval. Data collection runs
+generated report reuse the current snapshot instead of calling the sources. A
+ten-minute distributed refresh lease in the snapshot table additionally guarantees
+that only one collection runs at a time across cron deliveries, manual requests, and
+separate serverless instances; a concurrent attempt returns an explicit
+"already running" error instead of duplicating HubSpot reads. A refresh superseded by
+a newer concurrent run reports the newer stored snapshot, never its own older result.
+The browser does not poll or refresh Spark on an interval, but the stale-data check
+re-evaluates every minute while a mutable report stays open. Data collection runs
 only from the `09:00` and `14:00 Europe/Istanbul` cron jobs or an explicit manual
 refresh. After a 75-minute delivery grace period, the dashboard shows a prominent
 stale-data warning if the latest successful snapshot predates the most recently
@@ -56,10 +104,15 @@ expected cron run. A successful manual refresh updates the displayed server data
 immediately. If the Spark session is no longer valid, the manual refresh sends the
 user to the Spark login page instead of displaying a raw `Unauthorized` response.
 Active Spark page requests renew the seven-day signed Spark session so an actively
-used dashboard does not unexpectedly lose manual-refresh authorization.
+used dashboard does not unexpectedly lose manual-refresh authorization. Spark session
+tokens carry a `spark` audience claim and Spark routes reject tokens without it, so a
+Presales session cookie replayed as `spark_session` never grants Spark access. The
+Spark login preserves the full `?year=` return target across session expiry.
 The header provides a temporary privacy view that masks every amount, percentage,
 and business record count. While values are hidden, record drill-downs, Excel export,
-manual refresh, and the live data assistant are disabled. A prominent red status
+manual refresh, and the live data assistant are disabled, and every data-derived
+geometry (coverage progress bar, target scale, donut chart, monthly composition, and
+funnel meters) is flattened so proportions cannot be inferred from shapes. A prominent red status
 banner makes the active state clear. The setting does not persist across a page reload,
 and it changes presentation only; normal-mode figures and persisted source data remain
 unchanged.
@@ -119,9 +172,14 @@ domain and customer breakdown requests retain their validated `groupBy` dimensio
 Current-month active and weighted pipeline use the full close-date calendar month,
 matching the dashboard rather than stopping at today.
 Invoice queries first validate that the live catalog contains the custom `status`
-enum with `invoiced` and `cancelled` options. Only records whose custom status is
-exactly `cancelled` are excluded; blank, `invoiced`, and any future non-cancelled
-value remain included. This rule is shared by the dashboard and assistant.
+enum with one option whose internal value case-insensitively equals `invoiced` and
+one whose internal value case-insensitively equals `cancelled`. In this portal the
+internal values are capitalized: `Invoiced` and `Cancelled`. Validation returns the
+cancelled option's exact live internal value, and only records whose custom status
+equals that exact value are excluded; blank, `Invoiced`, and any future
+non-cancelled value remain included. This rule is shared by the dashboard and
+assistant. Never hardcode a casing for the financial exclusion; always use the
+live catalog value resolved at refresh or query time.
 Deal Open/Won/Lost and order Open filters use virtual state fields derived from
 HubSpot closed/won properties and live pipeline metadata. Stage labels are display
 values only and are never parsed for state decisions.
@@ -203,6 +261,9 @@ HUBSPOT_ACCESS_TOKEN=
 SPARK_PASSWORD=
 SPARK_LICENSE_TARGET_2026=1846145
 SPARK_SERVICE_TARGET_2026=4029926
+# Add these values and redeploy before the first 2027 refresh:
+SPARK_LICENSE_TARGET_2027=
+SPARK_SERVICE_TARGET_2027=
 CRON_SECRET=
 AMPLEMARKET_WEBHOOK_SECRET=
 ```
@@ -213,15 +274,25 @@ Spark has its own `SPARK_PASSWORD` and `spark_session` cookie; Presales
 credentials do not grant Spark access. Secrets must only be stored in Vercel.
 `CRON_SECRET` is the standard name Vercel uses to attach the cron Authorization
 header. `SPARK_CRON_SECRET` is legacy and can be removed.
+Before each year rollover, define both `SPARK_LICENSE_TARGET_<nextYear>` and
+`SPARK_SERVICE_TARGET_<nextYear>` in Vercel and redeploy. For the 2026 → 2027
+rollover, the 2027 values are intentionally deferred until management supplies them;
+do not copy or infer the 2026 targets. If either value is absent, the new year's
+snapshot records a budget-source error and uses target `0` until configuration is fixed.
 
 ## HubSpot field contract
 
 - Invoice amount/date: `hs_amount_billed_in_company_currency`, `hs_invoice_date`
-- Invoice status: custom enum `status`, with contract values `invoiced` and
-  `cancelled`. Exclude only exact `cancelled`; include blank, `invoiced`, and any
-  other non-cancelled value. Standard `hs_invoice_status` never filters invoices
+- Invoice status: custom enum `status`. The live catalog is validated case-insensitively
+  for one `invoiced` and one `cancelled` option, and the cancelled option's exact
+  internal value (currently `Cancelled` in this portal) is excluded from every
+  financial population; blank, `Invoiced`, and any other non-cancelled value stay
+  included. Standard `hs_invoice_status` never filters invoices
   or changes financial metrics; it is monitored only as a CRM-hygiene field and
   every invoice is expected to have exact internal value `paid`.
+- Amount parsing: blank or missing amount fields count as `0`; any non-numeric or
+  non-finite value (for example `1,000` or `Infinity`) fails the refresh loudly
+  instead of silently becoming `0`, so no malformed HubSpot amount can distort totals.
 - Order amount/date: `hs_homecurrency_amount`, `hs_processed_date` (internal only)
 - Deal amount: `amount_in_home_currency`
 - Guaranteed revenue: period invoices + period open orders
@@ -246,10 +317,16 @@ The technical order-date property name is never rendered in the UI.
 
 ## Reporting rules
 
+- The global report-year selector changes the entire dashboard dataset. The live year
+  uses `current`, the following year uses the mutable `year:<nextYear>` planning snapshot,
+  and a past year uses its frozen `year:<year>` snapshot. Overview country, domain, and
+  revenue-type filters remain presentation-only within the selected year's executive
+  overview. Every refresh may update only the current and following years; never rebuild
+  an older past-year alias from later mutable HubSpot state.
 - Dashboard populations are canonical and must be reused by every headline metric,
   monthly/quarterly view, stage funnel, breakdown, hygiene classification, all-record
   list and drill-down: invoices require reporting-year `hs_invoice_date` and exclude
-  only the exact internal `status = cancelled`; orders require reporting-year
+  only the exact live cancelled status value; orders require reporting-year
   `hs_processed_date` and Open stage metadata; pipeline deals require reporting-year
   `closedate` and Open state, excluding Won and Lost. Explicit Won/Lost and Closed Won
   New Business sections may use their named closed state. The missing-close-date CRM
@@ -277,29 +354,38 @@ The technical order-date property name is never rendered in the UI.
   amounts use chronological or numeric ordering. The active direction is visible in
   the header, and Excel export preserves the filtered, sorted row order.
 - Weekly new deals are currently Open, have `closedate` in the reporting year,
-  and have `createdate` in the rolling seven-day window. Weekly Won/Lost records
+  and have `createdate` in the rolling window covering the current Istanbul day plus
+  the seven preceding calendar days (`Bugün + son 7 gün`). Weekly Won/Lost records
   use their explicit state and a reporting-year `closedate` in that same window.
 - The 12-month operating table shows all reporting-year non-cancelled invoices, reporting-year open orders, active
   close-date pipeline and HubSpot projected weighted pipeline for every month in
-  the reporting year.
+  the reporting year. By default, completed months are condensed into one YTD row
+  with an invoice mini-trend because their open-order and active-pipeline columns
+  naturally become sparse. Users can expand the row to restore all 12 monthly rows;
+  the current and future months always remain detailed.
 - Revenue breakdowns use `country`, `vendor_name`, `revenue_type`, and
   `ereteam_domain`. Missing values remain visible as `Belirtilmemiş`. Vendor and
   revenue type are multi-select fields, so category totals may overlap. The chart
   legend amounts are invoice plus open-order totals and are explicitly labeled
   `Fatura + açık order`; the label belongs above the legend values, not above the donut.
 - CRM hygiene shows overdue, missing-close-date, missing-owner and
-  missing-amount active deals. Operational deal checks use reporting-year Open deals,
+  missing-amount active deals; the missing-amount check flags only blank or
+  zero amounts, because negative amounts are legitimate adjustment values and
+  stay in pipeline totals unflagged. Operational deal checks use reporting-year Open deals,
   except the missing-close-date check, which necessarily inspects Open deals without
   a date and is the only explicit reporting-year date exception. Separate classification cards check reporting-year
   invoices, reporting-year open orders, and reporting-year active deals for missing
-  `country`, `vendor_name`, `revenue_type`, or `ereteam_domain` values. A separate
+  `country`, `vendor_name`, `revenue_type`, or `ereteam_domain` values; multi-select
+  fields are flagged when no selected enum remains after splitting semicolon values,
+  so a semicolon-only value cannot hide as classified. A separate
   reporting-year Invoice card tracks records whose `hs_invoice_status` is not exact
   `paid`; another reporting-year Invoice card tracks records with no associated Deal.
   These hygiene checks must never alter the canonical Invoice population. Detail rows
   identify whether the affected HubSpot record is an Invoice, Order, or Deal. A record
-  may appear in more than one action group. The compact hygiene summary displays only
-  each check's name and affected record count; clicking a non-zero count opens its record
-  details. Persisted snapshots
+  may appear in more than one action group. By default the compact hygiene summary displays
+  only checks with affected records and checks awaiting a data refresh. Known-zero checks
+  are condensed into one `kontrol temiz` row and can be expanded without changing data;
+  clicking a non-zero count opens its record details. Persisted snapshots
   created before either Invoice check show the relevant card as awaiting a data refresh rather
   than implying a zero result. Manual-refresh failures surface the server error message
   in the header so missing source configuration is diagnosable.
@@ -329,7 +415,9 @@ The technical order-date property name is never rendered in the UI.
   Every record-detail modal can export its current rows to an Excel workbook with
   record metadata and HubSpot URLs. Text, object-type, stage, owner, and country
   filters apply to the displayed count, amount, table, and Excel export. The
-  spreadsheet library loads only when export is requested.
+  modal summary cards update with those filters and show record count, total amount,
+  weighted amount when available, and TR/US amount-count splits when country data is
+  available. The spreadsheet library loads only when export is requested.
   Record-detail tables do not show a separate company column because company data is
   not reliably populated by HubSpot and the record names already contain the useful
   company context.
@@ -389,8 +477,8 @@ legacy integrations, but Spark no longer reads or reports Amplemarket data.
 
 The live dashboard uses a minimal management-report hierarchy: branded dark
 header, target/revenue/pipeline summary, compact weekly pipeline movement, month
-and quarter cards, visual 12-month composition, color-separated stage flow, revenue
-charts, split New Business cohorts, and CRM hygiene. Record
+and quarter cards, visual 12-month composition, color-separated stage flow, split
+New Business cohorts, revenue charts, and CRM hygiene. Record
 details open in one shared modal rather than expanding the page. Million-scale
 compact values always show two decimal places. Responsive behavior is verified at
 320px, 375px, 390px, and 768px widths for the dashboard, CRM detail editor, and chat;

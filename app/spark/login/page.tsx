@@ -3,11 +3,13 @@ import { loginSpark } from "@/lib/spark/sessionActions";
 
 export const metadata = { title: "Spark Giriş | Ereteam", robots: { index: false, follow: false } };
 
-export default function SparkLogin({ searchParams }: { searchParams: { error?: string; retry?: string } }) {
+export default function SparkLogin({ searchParams }: { searchParams: { error?: string; retry?: string; next?: string } }) {
+  const safeNext = /^\/spark(?:\/|$|\?)/.test(searchParams.next ?? "") ? searchParams.next : "";
   return (
     <main className="min-h-screen bg-[#081523] px-5 flex items-center justify-center relative overflow-hidden">
       <div className="absolute inset-0 opacity-50 bg-[radial-gradient(circle_at_20%_10%,#188ac744,transparent_35%),radial-gradient(circle_at_90%_80%,#d22e8b33,transparent_35%)]" />
       <form action={loginSpark} className="relative w-full max-w-sm rounded-[28px] border border-white/15 bg-white/[.97] p-8 shadow-2xl">
+        {safeNext ? <input type="hidden" name="next" value={safeNext} /> : null}
         <Image src="/logos/ereteam-logo.png" alt="Ereteam" width={180} height={70} className="mb-7 h-14 w-auto object-contain" priority />
         <p className="text-xs font-bold uppercase tracking-[.2em] text-[#347da5]">Revenue &amp; Growth</p>
         <h1 className="mt-2 text-3xl font-bold text-[#102238]">Spark</h1>

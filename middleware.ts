@@ -8,10 +8,10 @@ export async function middleware(req: NextRequest) {
   if (req.nextUrl.pathname === "/spark/login") return NextResponse.next();
   const token = req.cookies.get(isSpark ? SPARK_SESSION_COOKIE : SESSION_COOKIE_NAME)?.value;
 
-  if (await verifySessionToken(token)) {
+  if (await verifySessionToken(token, isSpark ? "spark" : undefined)) {
     const response = NextResponse.next();
     if (isSpark) {
-      response.cookies.set(SPARK_SESSION_COOKIE, await createSessionToken(0), {
+      response.cookies.set(SPARK_SESSION_COOKIE, await createSessionToken(0, "spark"), {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
@@ -27,7 +27,8 @@ export async function middleware(req: NextRequest) {
   }
 
   const loginUrl = new URL(isSpark ? "/spark/login" : "/presales/login", req.url);
-  loginUrl.searchParams.set("next", req.nextUrl.pathname);
+  const nextTarget = isSpark ? `${req.nextUrl.pathname}${req.nextUrl.search}` : req.nextUrl.pathname;
+  loginUrl.searchParams.set("next", nextTarget);
   return NextResponse.redirect(loginUrl);
 }
 

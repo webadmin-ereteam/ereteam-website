@@ -7,6 +7,8 @@ export type SparkRecord = {
   owner?: string;
   company?: string;
   country?: string;
+  revenueTypes?: string[];
+  domain?: string;
   url: string;
   carryover?: boolean;
   stage?: string;

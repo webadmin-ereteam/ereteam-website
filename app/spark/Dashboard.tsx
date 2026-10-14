@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -19,7 +19,7 @@ import {
   Sun,
   X,
 } from "lucide-react";
-import type { SparkBreakdownEntry, SparkData, SparkRecord } from "@/lib/spark/types";
+import type { SparkBreakdownEntry, SparkData, SparkRecord, SparkSourceState } from "@/lib/spark/types";
 import SparkChatWidget from "./SparkChatWidget";
 import styles from "./spark.module.css";
 
@@ -80,13 +80,48 @@ const countryGroup = (value?: string) => {
   if (["usa", "us", "abd", "united states", "united states of america"].includes(normalized ?? "")) return "USA";
   return value;
 };
+const domainGroup = (value?: string) => {
+  if (value === "Data, Cloud & AI (DC&AI)") return "dcai";
+  if (value === "Enterprise Planning (EP)") return "ep";
+  if (value === "Intelligent MarTech (IM)") return "im";
+  return undefined;
+};
+const revenueGroup = (value?: string) => {
+  if (!value || value === "Belirtilmemiş") return undefined;
+  return ["license", "sns"].includes(value.trim().toLocaleLowerCase("en-US")) ? "license" : "service";
+};
 const recordKey = (row: SparkRecord) => `${row.objectType ?? ""}:${row.id}`;
 type PrivacyMode = "normal" | "hidden";
 type ThemeMode = "light" | "dark";
+type OverviewCountry = "all" | "Turkiye" | "USA";
+type OverviewDomain = "all" | "dcai" | "ep" | "im";
+type OverviewRevenue = "all" | "license" | "service";
+type ReportMode = "current" | "planning" | "archive";
+const sectionLinks = [
+  { id: "overview", label: "Özet" },
+  { id: "months", label: "Aylık görünüm" },
+  { id: "funnel", label: "Stage funnel" },
+  { id: "new-business", label: "New Business" },
+  { id: "breakdowns", label: "Revenue kırılımları" },
+  { id: "hygiene", label: "CRM hygiene" },
+] as const;
+type SectionId = typeof sectionLinks[number]["id"];
 const PrivacyContext = createContext<PrivacyMode>("normal");
 const privateMoney = (value: number, mode: PrivacyMode) => mode === "normal" ? shortMoney(value) : "••••";
 const privateCount = (value: number, mode: PrivacyMode) => mode === "normal" ? String(value) : "••••";
 const privatePercent = (value: number, mode: PrivacyMode) => mode === "normal" ? `%${value.toFixed(1)}` : "••••";
+const breakdownValuesByRecord = (entries: SparkBreakdownEntry[]) => {
+  const result = new Map<string, Set<string>>();
+  entries.forEach((entry) => {
+    [...entry.invoices, ...entry.orders, ...entry.deals].forEach((row) => {
+      const key = recordKey(row);
+      const values = result.get(key) ?? new Set<string>();
+      values.add(entry.key);
+      result.set(key, values);
+    });
+  });
+  return result;
+};
 const requiredHygieneChecks = [
   { key: "invoice-status-not-paid", label: "Invoice status Paid değil" },
   { key: "invoice-without-deal", label: "Deal bağlantısı olmayan fatura" },
@@ -101,6 +136,7 @@ const normalizeHygiene = (groups: SparkData["hygiene"]) => {
 };
 type EditableProperty = "country" | "vendor_name" | "revenue_type" | "ereteam_domain" | "hs_invoice_status";
 type HygieneResolution = EditableProperty | "invoice-without-deal";
+type RecordValueMode = "amount" | "weighted" | "forecast";
 type DealOption = { id: string; name: string; date?: string };
 type EditableCatalog = Record<NonNullable<SparkRecord["objectType"]>, Record<EditableProperty, {
   label: string;
@@ -115,8 +151,13 @@ const issueProperties: Record<string, EditableProperty> = {
   "Invoice status Paid değil": "hs_invoice_status",
 };
 const editablePropertyFor = (row: SparkRecord) => row.issues?.map((issue) => issueProperties[issue]).find(Boolean);
-type RecordSortKey = "name" | "objectType" | "stage" | "date" | "ageDays" | "amount" | "weightedAmount" | "owner" | "issues";
+type RecordSortKey = "name" | "objectType" | "stage" | "date" | "ageDays" | "amount" | "weightedAmount" | "contribution" | "owner" | "issues";
 type RecordSort = { key: RecordSortKey; direction: "asc" | "desc" } | null;
+const recordContribution = (row: SparkRecord, mode: RecordValueMode) => {
+  if (mode === "weighted") return row.weightedAmount ?? 0;
+  if (mode === "forecast" && row.objectType === "Deal") return row.weightedAmount ?? 0;
+  return row.amount;
+};
 
 function InfoNote({ children }: { children: React.ReactNode }) {
   return <div className={styles.infoNote}><Info size={15} aria-hidden />{children}</div>;
@@ -127,12 +168,14 @@ function OpenRecordsButton({
   label,
   onOpen,
   showCountryBreakdown = false,
+  valueMode = "amount",
   children,
 }: {
   rows: SparkRecord[];
   label: string;
-  onOpen: (title: string, rows: SparkRecord[], showCountryBreakdown?: boolean) => void;
+  onOpen: (title: string, rows: SparkRecord[], showCountryBreakdown?: boolean, valueMode?: RecordValueMode) => void;
   showCountryBreakdown?: boolean;
+  valueMode?: RecordValueMode;
   children: React.ReactNode;
 }) {
   const privacyMode = useContext(PrivacyContext);
@@ -142,7 +185,7 @@ function OpenRecordsButton({
       type="button"
       className={styles.valueButton}
       disabled={!rows.length || privateView}
-      onClick={() => onOpen(label, rows, showCountryBreakdown)}
+      onClick={() => onOpen(label, rows, showCountryBreakdown, valueMode)}
       aria-label={privateView ? "Gizlilik modunda kayıt detayları kapalı" : `${label}: ${rows.length} kayıt`}
     >
       {children}
@@ -184,11 +227,15 @@ function RecordTable({
   sort,
   onSort,
   onRecordsUpdated,
+  allowEditing,
+  valueMode,
 }: {
   rows: SparkRecord[];
   sort: RecordSort;
   onSort: (key: RecordSortKey) => void;
   onRecordsUpdated?: (rows: SparkRecord[], resolution: HygieneResolution) => void;
+  allowEditing: boolean;
+  valueMode: RecordValueMode;
 }) {
   const showObjectType = rows.some((row) => row.objectType);
   const showStage = rows.some((row) => row.stage);
@@ -196,8 +243,8 @@ function RecordTable({
   const showWeighted = rows.some((row) => row.weightedAmount != null);
   const showIssue = rows.some((row) => row.issues?.length);
   const editableRows = rows.filter((row) => row.objectType && editablePropertyFor(row));
-  const dealLinkRows = rows.filter((row) => row.objectType === "Invoice" && row.issues?.includes("Deal bağlantısı eksik"));
-  const property = editableRows.length ? editablePropertyFor(editableRows[0]) : undefined;
+  const dealLinkRows = allowEditing ? rows.filter((row) => row.objectType === "Invoice" && row.issues?.includes("Deal bağlantısı eksik")) : [];
+  const property = allowEditing && editableRows.length ? editablePropertyFor(editableRows[0]) : undefined;
   const directPaidFix = property === "hs_invoice_status";
   const [catalogs, setCatalogs] = useState<EditableCatalog | null>(null);
   const [dealOptions, setDealOptions] = useState<DealOption[] | null>(null);
@@ -304,7 +351,7 @@ function RecordTable({
     : undefined;
   const sortableHeader = (key: RecordSortKey, label: string) => {
     const active = sort?.key === key;
-    const numeric = ["date", "ageDays", "amount", "weightedAmount"].includes(key);
+    const numeric = ["date", "ageDays", "amount", "weightedAmount", "contribution"].includes(key);
     const directionLabel = active
       ? (numeric
           ? (sort.direction === "asc" ? "Artan" : "Azalan")
@@ -359,6 +406,7 @@ function RecordTable({
             {showAge ? sortableHeader("ageDays", "Yaş") : null}
             {sortableHeader("amount", "Tutar")}
             {showWeighted ? sortableHeader("weightedAmount", "Weighted") : null}
+            {valueMode !== "amount" ? sortableHeader("contribution", valueMode === "forecast" ? "Forecast katkısı" : "Weighted katkı") : null}
             {sortableHeader("owner", "Owner")}
             {showIssue ? sortableHeader("issues", "Kontrol") : null}
           </tr>
@@ -374,6 +422,7 @@ function RecordTable({
               {showAge ? <td>{row.ageDays != null ? `${row.ageDays} gün` : "-"}</td> : null}
               <td><b>{exactMoney(row.amount)}</b></td>
               {showWeighted ? <td>{exactMoney(row.weightedAmount ?? 0)}</td> : null}
+              {valueMode !== "amount" ? <td><b>{exactMoney(recordContribution(row, valueMode))}</b></td> : null}
               <td>{row.owner || "-"}</td>
               {showIssue ? (
                 <td>
@@ -401,12 +450,16 @@ function RecordDialog({
   showCountryBreakdown,
   onClose,
   onRecordsUpdated,
+  allowEditing,
+  valueMode,
 }: {
   title: string;
   rows: SparkRecord[];
   showCountryBreakdown?: boolean;
   onClose: () => void;
   onRecordsUpdated?: (rows: SparkRecord[], resolution: HygieneResolution) => void;
+  allowEditing: boolean;
+  valueMode: RecordValueMode;
 }) {
   const [exporting, setExporting] = useState(false);
   const [query, setQuery] = useState("");
@@ -415,13 +468,42 @@ function RecordDialog({
   const [owner, setOwner] = useState("");
   const [country, setCountry] = useState("");
   const [sort, setSort] = useState<RecordSort>(null);
+  const dialogRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   useEffect(() => {
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusables = () => Array.from(
+      dialogRef.current?.querySelectorAll<HTMLElement>("button, input, select, a[href], [tabindex]:not([tabindex='-1'])") ?? [],
+    ).filter((element) => !(element as HTMLButtonElement | HTMLInputElement | HTMLSelectElement).disabled && element.offsetParent !== null);
+    focusables()[0]?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        onCloseRef.current();
+        return;
+      }
+      if (event.key === "Tab") {
+        const items = focusables();
+        if (!items.length) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+        const active = document.activeElement;
+        if (event.shiftKey && (active === first || !dialogRef.current?.contains(active))) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && (active === last || !dialogRef.current?.contains(active))) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
     };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [onClose]);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      opener?.focus?.();
+    };
+  }, []);
   const optionValues = (values: Array<string | undefined>) => Array.from(new Set(values.filter((value): value is string => Boolean(value)))).sort((left, right) => left.localeCompare(right, "tr-TR"));
   const objectTypes = optionValues(rows.map((row) => row.objectType));
   const stages = optionValues(rows.map((row) => row.stage));
@@ -446,6 +528,7 @@ function RecordDialog({
     const value = (row: SparkRecord) => {
       if (sort.key === "date") return row.date ? new Date(row.date).getTime() : 0;
       if (sort.key === "issues") return row.issues?.join(", ") ?? "";
+      if (sort.key === "contribution") return recordContribution(row, valueMode);
       return row[sort.key] ?? "";
     };
     const leftValue = value(left);
@@ -461,11 +544,15 @@ function RecordDialog({
   }));
   const countries = [
     { key: "Turkiye", label: "TR" },
-    { key: "USA", label: "ABD" },
+    { key: "USA", label: "US" },
   ].map((country) => {
     const countryRows = filteredRows.filter((row) => countryGroup(row.country) === country.key);
-    return { ...country, count: countryRows.length, amount: sum(countryRows) };
+    return { ...country, count: countryRows.length, amount: countryRows.reduce((total, row) => total + recordContribution(row, valueMode), 0) };
   });
+  const filteredWeighted = filteredRows.reduce((total, row) => total + (row.weightedAmount ?? 0), 0);
+  const filteredContribution = filteredRows.reduce((total, row) => total + recordContribution(row, valueMode), 0);
+  const hasWeighted = filteredRows.some((row) => row.weightedAmount != null);
+  const hasCountryData = filteredRows.some((row) => countryGroup(row.country) === "Turkiye" || countryGroup(row.country) === "USA");
   const exportExcel = async () => {
     if (!filteredRows.length || exporting) return;
     setExporting(true);
@@ -477,6 +564,8 @@ function RecordDialog({
         "Tarih": formatDate(row.date),
         "Tutar (USD)": row.amount,
         "Weighted (USD)": row.weightedAmount ?? "",
+        "Hesaplama türü": valueMode === "forecast" ? "Forecast katkısı" : valueMode === "weighted" ? "Weighted katkı" : "Tutar",
+        "Hesaplama katkısı (USD)": recordContribution(row, valueMode),
         "Stage": row.stage ?? "",
         "Owner": row.owner ?? "",
         "Ülke": countryGroup(row.country) ?? "",
@@ -486,28 +575,30 @@ function RecordDialog({
       })));
       worksheet["!cols"] = [
         { wch: 42 }, { wch: 10 }, { wch: 14 }, { wch: 16 }, { wch: 18 },
-        { wch: 24 }, { wch: 24 }, { wch: 12 }, { wch: 10 }, { wch: 28 }, { wch: 48 },
+        { wch: 18 }, { wch: 22 }, { wch: 24 }, { wch: 24 }, { wch: 12 },
+        { wch: 10 }, { wch: 28 }, { wch: 48 },
       ];
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Kayıtlar");
-      XLSX.writeFile(workbook, `spark-kayitlari-${dataFileDate()}.xlsx`, { compression: true });
+      const scope = title.toLocaleLowerCase("tr-TR").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
+      XLSX.writeFile(workbook, `spark-${scope || "kayitlar"}-${dataFileDate()}.xlsx`, { compression: true });
     } finally {
       setExporting(false);
     }
   };
   return (
     <div className={styles.dialogBackdrop} role="presentation" onMouseDown={onClose}>
-      <section className={styles.dialog} role="dialog" aria-modal="true" aria-label={title} onMouseDown={(event) => event.stopPropagation()}>
+      <section ref={dialogRef} className={styles.dialog} role="dialog" aria-modal="true" aria-label={title} onMouseDown={(event) => event.stopPropagation()}>
         <div className={styles.dialogHead}>
           <div>
             <span>Kayıt detayı</span>
             <h2>{title}</h2>
-            <p>{filteredRows.length === rows.length ? `${rows.length} kayıt` : `${filteredRows.length} / ${rows.length} kayıt`} · {exactMoney(sum(filteredRows))}</p>
-            {showCountryBreakdown ? (
-              <div className={styles.dialogCountryBreakdown}>
-                {countries.map((country) => <div key={country.key}><span>{country.label}</span><b>{exactMoney(country.amount)}</b><small>{country.count} kayıt</small></div>)}
-              </div>
-            ) : null}
+            <div className={styles.dialogSummary}>
+              <div><span>Kayıt</span><b>{filteredRows.length === rows.length ? rows.length : `${filteredRows.length} / ${rows.length}`}</b><small>görüntülenen</small></div>
+              <div><span>{valueMode === "forecast" ? "Forecast toplamı" : valueMode === "weighted" ? "Weighted toplam" : "Toplam tutar"}</span><b>{exactMoney(filteredContribution)}</b><small>filtrelenmiş kayıt katkısı</small></div>
+              {hasWeighted && valueMode !== "weighted" ? <div><span>Pipeline weighted</span><b>{exactMoney(filteredWeighted)}</b><small>HubSpot projected</small></div> : null}
+              {(showCountryBreakdown || hasCountryData) ? countries.map((country) => <div key={country.key}><span>{country.label}</span><b>{exactMoney(country.amount)}</b><small>{country.count} kayıt</small></div>) : null}
+            </div>
           </div>
           <div className={styles.dialogHeadActions}>
             <button className={styles.exportButton} type="button" disabled={!filteredRows.length || exporting} onClick={exportExcel}><Download size={15} />{exporting ? "Hazırlanıyor" : "Excel indir"}</button>
@@ -523,7 +614,7 @@ function RecordDialog({
             {countryOptions.length ? <select value={country} onChange={(event) => setCountry(event.target.value)} aria-label="Ülke"><option value="">Tüm ülkeler</option>{countryOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select> : null}
           </div>
         ) : null}
-        {sortedRows.length ? <RecordTable rows={sortedRows} sort={sort} onSort={changeSort} onRecordsUpdated={onRecordsUpdated} /> : <div className={styles.empty}>{rows.length ? "Filtrelerle eşleşen kayıt bulunmuyor." : "Kayıt bulunmuyor."}</div>}
+        {sortedRows.length ? <RecordTable rows={sortedRows} sort={sort} onSort={changeSort} onRecordsUpdated={onRecordsUpdated} allowEditing={allowEditing} valueMode={valueMode} /> : <div className={styles.empty}>{rows.length ? "Filtrelerle eşleşen kayıt bulunmuyor." : "Kayıt bulunmuyor."}</div>}
       </section>
     </div>
   );
@@ -533,6 +624,7 @@ const chartColors = ["#087f71", "#4f7cac", "#d99532", "#845ec2", "#2c9fb3", "#c8
 
 function DonutChart({ entries, overlapping }: { entries: Array<{ label: string; value: number }>; overlapping: boolean }) {
   const privacyMode = useContext(PrivacyContext);
+  const hidden = privacyMode !== "normal";
   const ranked = entries.filter((entry) => entry.value > 0).sort((left, right) => right.value - left.value);
   const visible = ranked.slice(0, 5);
   const other = ranked.slice(5).reduce((total, entry) => total + entry.value, 0);
@@ -547,7 +639,7 @@ function DonutChart({ entries, overlapping }: { entries: Array<{ label: string; 
 
   return (
     <div className={styles.breakdownVisual}>
-      <div className={styles.donut} style={{ background: gradient ? `conic-gradient(${gradient})` : "#e8edeb" }}>
+      <div className={styles.donut} style={{ background: gradient && !hidden ? `conic-gradient(${gradient})` : "#e8edeb" }}>
         <div><strong>{privateCount(items.length, privacyMode)}</strong><span>{overlapping ? "kategori" : "pay"}</span></div>
       </div>
       <div className={styles.donutLegend}>
@@ -565,33 +657,63 @@ function DonutChart({ entries, overlapping }: { entries: Array<{ label: string; 
   );
 }
 
-export default function Dashboard({ data }: { data: SparkData }) {
+export default function Dashboard({
+  data,
+  availableYears,
+  liveYear,
+  reportMode,
+  sourceState,
+}: {
+  data: SparkData;
+  availableYears: number[];
+  liveYear: number;
+  reportMode: ReportMode;
+  sourceState?: SparkSourceState;
+}) {
   const router = useRouter();
-  const [detail, setDetail] = useState<{ title: string; rows: SparkRecord[]; showCountryBreakdown?: boolean } | null>(null);
+  const [detail, setDetail] = useState<{ title: string; rows: SparkRecord[]; showCountryBreakdown?: boolean; valueMode?: RecordValueMode } | null>(null);
   const [breakdownKey, setBreakdownKey] = useState(data.revenueBreakdowns[0]?.key ?? "country");
   const [hygiene, setHygiene] = useState(() => normalizeHygiene(data.hygiene));
   const [refreshing, setRefreshing] = useState(false);
   const [refreshMessage, setRefreshMessage] = useState("");
   const [privacyMode, setPrivacyMode] = useState<PrivacyMode>("normal");
   const [themeMode, setThemeMode] = useState<ThemeMode>("light");
-  const dataStale = isSparkDataStale(data.generatedAt);
+  const [overviewCountry, setOverviewCountry] = useState<OverviewCountry>("all");
+  const [overviewDomain, setOverviewDomain] = useState<OverviewDomain>("all");
+  const [overviewRevenue, setOverviewRevenue] = useState<OverviewRevenue>("all");
+  const [showPastMonths, setShowPastMonths] = useState(false);
+  const [showCleanHygiene, setShowCleanHygiene] = useState(false);
+  const [activeSection, setActiveSection] = useState<SectionId>("overview");
+  const isCurrent = reportMode === "current";
+  const isPlanning = reportMode === "planning";
+  const isArchive = reportMode === "archive";
+  const isMutable = !isArchive;
+  const hasTarget = data.target > 0;
+  const budgetFailure = sourceState?.budget && !sourceState.budget.ok ? sourceState.budget.message : undefined;
+  const budgetPending = Boolean(budgetFailure && /tanımlı değil/.test(budgetFailure));
+  const dataStale = isMutable && isSparkDataStale(data.generatedAt);
+  const [, setStaleTick] = useState(0);
+  useEffect(() => {
+    if (!isMutable) return;
+    const timer = window.setInterval(() => setStaleTick((value) => value + 1), 60_000);
+    return () => window.clearInterval(timer);
+  }, [isMutable]);
   const hygieneCheckPending = (key: string) => (
     requiredHygieneChecks.some((check) => check.key === key)
     && !data.hygiene.some((group) => group.key === key)
   );
   const year = Number(data.reportDate.slice(0, 4));
   const currentMonth = Number(data.reportDate.slice(5, 7));
-  const guaranteedCoverage = data.ytdInvoice + data.openOrders;
-  const remaining = Math.max(data.target - guaranteedCoverage, 0);
-  const forecastCoverage = guaranteedCoverage + data.yearWeightedPipeline;
-  const won = sum(data.weeklyWon);
-  const lost = sum(data.weeklyLost);
   const selectedBreakdown = data.revenueBreakdowns.find((item) => item.key === breakdownKey) ?? data.revenueBreakdowns[0];
   const breakdownChart = selectedBreakdown?.entries.map((entry) => ({
     label: entry.label,
     value: sum(entry.invoices) + sum(entry.orders),
   })) ?? [];
   const currentMonthData = data.monthlyPerformance.find((item) => item.month === currentMonth);
+  const pastMonths = data.monthlyPerformance.filter((item) => item.month < currentMonth);
+  const visibleMonths = showPastMonths ? data.monthlyPerformance : data.monthlyPerformance.filter((item) => item.month >= currentMonth);
+  const pastInvoices = pastMonths.flatMap((item) => item.invoices);
+  const pastInvoiceMax = Math.max(...pastMonths.map((item) => sum(item.invoices)), 1);
   const currentQuarter = Math.floor((currentMonth - 1) / 3) + 1;
   const quarterMonths = data.monthlyPerformance.slice((currentQuarter - 1) * 3, currentQuarter * 3);
   const monthInvoices = currentMonthData?.invoices ?? [];
@@ -603,22 +725,68 @@ export default function Dashboard({ data }: { data: SparkData }) {
   const quarterWeighted = quarterMonths.reduce((total, item) => total + item.weightedPipeline, 0);
   const yearInvoices = data.monthlyPerformance.flatMap((item) => item.invoices);
   const yearOrders = data.monthlyPerformance.flatMap((item) => item.orders);
+  const yearDeals = data.monthlyPerformance.flatMap((item) => item.deals);
   const countryEntries = data.revenueBreakdowns.find((breakdown) => breakdown.key === "country")?.entries ?? [];
   const countryByRecord = new Map(countryEntries.flatMap((entry) =>
     [...entry.invoices, ...entry.orders, ...entry.deals].map((row) => [recordKey(row), countryGroup(entry.key)] as const),
   ));
+  const domainByRecord = breakdownValuesByRecord(data.revenueBreakdowns.find((breakdown) => breakdown.key === "domain")?.entries ?? []);
+  const revenueByRecord = breakdownValuesByRecord(data.revenueBreakdowns.find((breakdown) => breakdown.key === "revenueType")?.entries ?? []);
+  const overviewUnfiltered = overviewCountry === "all" && overviewDomain === "all" && overviewRevenue === "all";
+  const matchesOverviewFilters = (row: SparkRecord) => {
+    const key = recordKey(row);
+    const countryMatches = overviewCountry === "all" || (countryGroup(row.country) ?? countryByRecord.get(key)) === overviewCountry;
+    const domainValues = row.domain ? [row.domain] : Array.from(domainByRecord.get(key) ?? []);
+    const domainMatches = overviewDomain === "all" || domainValues.some((value) => domainGroup(value) === overviewDomain);
+    const revenueValues = row.revenueTypes?.length ? row.revenueTypes : Array.from(revenueByRecord.get(key) ?? []);
+    const revenueMatches = overviewRevenue === "all" || revenueValues.some((value) => revenueGroup(value) === overviewRevenue);
+    return countryMatches && domainMatches && revenueMatches;
+  };
+  const overviewInvoices = overviewUnfiltered ? yearInvoices : yearInvoices.filter(matchesOverviewFilters);
+  const overviewOrders = overviewUnfiltered ? yearOrders : yearOrders.filter(matchesOverviewFilters);
+  const overviewDeals = overviewUnfiltered ? yearDeals : yearDeals.filter(matchesOverviewFilters);
+  const overviewWeeklyNew = overviewUnfiltered ? data.weeklyNewDeals : data.weeklyNewDeals.filter(matchesOverviewFilters);
+  const overviewWeeklyWon = overviewUnfiltered ? data.weeklyWon : data.weeklyWon.filter(matchesOverviewFilters);
+  const overviewWeeklyLost = overviewUnfiltered ? data.weeklyLost : data.weeklyLost.filter(matchesOverviewFilters);
+  const overviewInvoice = overviewUnfiltered ? data.ytdInvoice : sum(overviewInvoices);
+  const overviewOpenOrders = overviewUnfiltered ? data.openOrders : sum(overviewOrders);
+  const overviewPipeline = overviewUnfiltered ? data.pipeline : sum(overviewDeals);
+  const overviewActiveDeals = overviewUnfiltered ? data.activeDeals : overviewDeals.length;
+  const overviewWeightedPipeline = overviewUnfiltered
+    ? data.yearWeightedPipeline
+    : overviewDeals.reduce((total, row) => total + (row.weightedAmount ?? 0), 0);
+  const overviewWeeklyNewPipeline = overviewUnfiltered ? data.weeklyNewPipeline : sum(overviewWeeklyNew);
+  const guaranteedCoverage = overviewInvoice + overviewOpenOrders;
+  const remaining = Math.max(data.target - guaranteedCoverage, 0);
+  const forecastCoverage = guaranteedCoverage + overviewWeightedPipeline;
+  const won = sum(overviewWeeklyWon);
+  const lost = sum(overviewWeeklyLost);
+  const overviewCountryLabel = overviewCountry === "Turkiye" ? "TR" : overviewCountry === "USA" ? "US" : "Tümü";
+  const overviewDomainLabel = overviewDomain === "dcai" ? "DC&AI" : overviewDomain === "ep" ? "EP" : overviewDomain === "im" ? "IM" : "Tümü";
+  const overviewRevenueLabel = overviewRevenue === "license" ? "Lisans" : overviewRevenue === "service" ? "Servis" : "Tümü";
+  const overviewScopeLabel = [
+    overviewCountry !== "all" ? overviewCountryLabel : "",
+    overviewDomain !== "all" ? overviewDomainLabel : "",
+    overviewRevenue !== "all" ? overviewRevenueLabel : "",
+  ].filter(Boolean).join(" · ");
+  const overviewScopeTitle = overviewScopeLabel || "Tüm şirket";
+  const overviewGuaranteedRows = [...overviewInvoices, ...overviewOrders];
+  const overviewForecastRows = [...overviewGuaranteedRows, ...overviewDeals];
+  const cleanHygiene = hygiene.filter((group) => !hygieneCheckPending(group.key) && !group.records.length);
+  const visibleHygiene = showCleanHygiene ? hygiene : hygiene.filter((group) => hygieneCheckPending(group.key) || group.records.length);
   const nbCarryoverInvoices = data.newBusiness.invoices.filter((row) => row.carryover);
   const nbCarryoverOrders = data.newBusiness.orders.filter((row) => row.carryover);
   const funnelDeals = Array.from(new Map(data.stageFunnel
     .flatMap((stage) => stage.records)
     .map((row) => [recordKey(row), row])).values());
   const funnelMax = Math.max(...data.stageFunnel.map((stage) => sum(stage.records)), 1);
-  const openRecords = (title: string, rows: SparkRecord[], showCountryBreakdown = false) => setDetail({
+  const openRecords = (title: string, rows: SparkRecord[], showCountryBreakdown = false, valueMode: RecordValueMode = "amount") => setDetail({
     title,
     rows: showCountryBreakdown
       ? rows.map((row) => ({ ...row, country: countryGroup(row.country) ?? countryByRecord.get(recordKey(row)) }))
       : rows,
     showCountryBreakdown,
+    valueMode,
   });
   const changePrivacyMode = (mode: PrivacyMode) => {
     setDetail(null);
@@ -641,6 +809,29 @@ export default function Dashboard({ data }: { data: SparkData }) {
     return () => mediaQuery.removeEventListener("change", syncSystemTheme);
   }, []);
   useEffect(() => setHygiene(normalizeHygiene(data.hygiene)), [data.hygiene]);
+  useEffect(() => {
+    let frame = 0;
+    const syncActiveSection = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const marker = window.innerHeight * 0.28;
+        let current: SectionId = "overview";
+        sectionLinks.forEach(({ id }) => {
+          const section = document.getElementById(id);
+          if (section && section.getBoundingClientRect().top <= marker) current = id;
+        });
+        setActiveSection(current);
+      });
+    };
+    syncActiveSection();
+    window.addEventListener("scroll", syncActiveSection, { passive: true });
+    window.addEventListener("resize", syncActiveSection);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", syncActiveSection);
+      window.removeEventListener("resize", syncActiveSection);
+    };
+  }, []);
   const handleRecordsUpdated = (updatedRows: SparkRecord[], resolution: HygieneResolution) => {
     const urls = new Set(updatedRows.map((row) => row.url));
     const groupKey = resolution === "invoice-without-deal"
@@ -653,7 +844,7 @@ export default function Dashboard({ data }: { data: SparkData }) {
   };
 
   const refreshDashboard = async () => {
-    if (refreshing) return;
+    if (refreshing || !isMutable) return;
     setRefreshing(true);
     setRefreshMessage("");
     try {
@@ -664,7 +855,10 @@ export default function Dashboard({ data }: { data: SparkData }) {
         return;
       }
       if (!response.ok) throw new Error(result.error || "Yenileme başarısız.");
-      setRefreshMessage(result.refreshed ? "Güncellendi" : result.message || "Zaten güncel");
+      const budgetWarning = result.refreshed && result.sources?.budget && !result.sources.budget.ok
+        ? ` · Hedef hatası: ${result.sources.budget.message ?? "hedef okunamadı"}`
+        : "";
+      setRefreshMessage(result.refreshed ? `Güncellendi${budgetWarning}` : result.message || "Zaten güncel");
       router.refresh();
     } catch (error) {
       setRefreshMessage(error instanceof Error ? error.message : "Şu anda yenilenemedi");
@@ -682,12 +876,25 @@ export default function Dashboard({ data }: { data: SparkData }) {
         <div className={styles.brandLockup}>
           <div className={styles.logoBox}><Image src="/logos/ereteam-logo.png" alt="Ereteam" width={132} height={76} priority /></div>
           <div>
-            <span className={styles.eyebrow}>Ereteam Spark</span>
-            <h1>Gelir Yönetim Merkezi</h1>
-            <p>{year} görünümü · HubSpot canlı operasyon verisi</p>
+           <span className={styles.eyebrow}>Ereteam Spark</span>
+            <h1>Gelir ve Pipeline Raporu</h1>
+            <p>{year} görünümü · {isCurrent ? "HubSpot canlı operasyon verisi" : isPlanning ? "HubSpot güncel planlama verisi" : "Dondurulmuş yıllık snapshot"}</p>
           </div>
         </div>
         <div className={styles.refreshArea}>
+          <label className={styles.yearSelector}>
+            <span>Rapor yılı</span>
+            <select
+              value={year}
+              onChange={(event) => {
+                const nextYear = Number(event.target.value);
+                setDetail(null);
+                router.push(nextYear === liveYear ? "/spark" : `/spark?year=${nextYear}`);
+              }}
+            >
+              {availableYears.map((option) => <option value={option} key={option}>{option}{option === liveYear ? " · Güncel" : option > liveYear ? " · Planlama" : " · Arşiv"}</option>)}
+            </select>
+          </label>
           <span>Son güncelleme {formatDate(data.generatedAt, true)}</span>
           <div className={styles.privacyControls} aria-label="Görünüm kontrolleri">
             <button type="button" aria-pressed={themeMode === "dark"} onClick={() => changeThemeMode(themeMode === "dark" ? "light" : "dark")}>
@@ -699,13 +906,39 @@ export default function Dashboard({ data }: { data: SparkData }) {
               {privacyMode === "hidden" ? "Değerleri göster" : "Değerleri gizle"}
             </button>
           </div>
-          <button type="button" onClick={refreshDashboard} disabled={refreshing || privacyMode !== "normal"}>
-            <RefreshCw size={14} className={refreshing ? styles.spinning : ""} />
-            {refreshing ? "Yenileniyor" : "Veriyi yenile"}
-          </button>
+          {isMutable ? (
+            <button type="button" onClick={refreshDashboard} disabled={refreshing || privacyMode !== "normal"}>
+              <RefreshCw size={14} className={refreshing ? styles.spinning : ""} />
+              {refreshing ? "Yenileniyor" : "Veriyi yenile"}
+            </button>
+          ) : null}
           {refreshMessage ? <small aria-live="polite">{refreshMessage}</small> : null}
         </div>
       </header>
+
+      {isArchive ? (
+        <div className={styles.archiveBanner} role="status">
+          <Info size={16} />
+          <div><b>{year} arşiv görünümü</b><span>Bu snapshot salt okunurdur. HubSpot bağlantıları kayıtların bugünkü durumunu açabilir.</span></div>
+        </div>
+      ) : null}
+
+      {isPlanning ? (
+        <div className={styles.archiveBanner} role="status">
+          <Info size={16} />
+          <div><b>{year} planlama görünümü</b><span>Açık order ve aktif fırsatlar her veri yenilemesinde güncellenir.{hasTarget ? " Yıllık hedef tanımlıdır." : " Yıllık hedef henüz tanımlanmadı."}</span></div>
+        </div>
+      ) : null}
+
+      {budgetFailure ? (
+        <div className={styles.staleBanner} role="alert">
+          <AlertTriangle size={16} />
+          <div>
+            <b>{budgetPending ? "Yıllık hedef tanımlı değil" : "Yıllık hedef okunamadı"}</b>
+            <span>{budgetFailure}. Hedef bazlı yüzde ve ilerleme metrikleri gizlenir.</span>
+          </div>
+        </div>
+      ) : null}
 
       {dataStale ? (
         <div className={styles.staleBanner} role="alert">
@@ -722,67 +955,119 @@ export default function Dashboard({ data }: { data: SparkData }) {
       ) : null}
 
       <nav className={styles.sectionNav} aria-label="Rapor bölümleri">
-        <a href="#overview">Özet</a>
-        <a href="#months">Aylık görünüm</a>
-        <a href="#funnel">Stage funnel</a>
-        <a href="#breakdowns">Revenue kırılımları</a>
-        <a href="#new-business">New Business</a>
-        <a href="#hygiene">CRM hygiene</a>
+        {sectionLinks.map((link) => <a href={`#${link.id}`} key={link.id} aria-current={activeSection === link.id ? "location" : undefined}>{link.label}</a>)}
       </nav>
 
       <section id="overview">
         <div className={styles.sectionHead}>
           <div><span>01</span><h2>Yönetici özeti</h2></div>
-          <p>Hedef, gerçekleşen gelir ve canlı pipeline</p>
+          <div className={styles.overviewHeadActions}>
+            <p>Hedef, gerçekleşen gelir ve {isCurrent ? "canlı" : isPlanning ? "planlanan" : "arşivlenmiş"} pipeline</p>
+            {overviewScopeLabel ? <span className={styles.overviewScopeBadge}>{overviewScopeLabel} görünümü</span> : null}
+          </div>
+        </div>
+        <div className={styles.overviewFilters} aria-label="Yönetici özeti filtreleri">
+          <div className={styles.overviewFilterGroup}>
+            <span>Ülke</span>
+            <div className={styles.countryFilter} role="group" aria-label="Ülke filtresi">
+              {(["all", "Turkiye", "USA"] as const).map((country) => (
+                <button type="button" key={country} aria-pressed={overviewCountry === country} onClick={() => setOverviewCountry(country)}>
+                  {country === "all" ? "Tümü" : country === "Turkiye" ? "TR" : "US"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className={styles.overviewFilterGroup}>
+            <span>Ereteam domain</span>
+            <div className={styles.countryFilter} role="group" aria-label="Ereteam domain filtresi">
+              {(["all", "dcai", "ep", "im"] as const).map((domain) => (
+                <button type="button" key={domain} aria-pressed={overviewDomain === domain} onClick={() => setOverviewDomain(domain)}>
+                  {domain === "all" ? "Tümü" : domain === "dcai" ? "DC&AI" : domain.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className={styles.overviewFilterGroup}>
+            <span>Revenue type</span>
+            <div className={styles.countryFilter} role="group" aria-label="Revenue type filtresi">
+              {(["all", "license", "service"] as const).map((revenue) => (
+                <button type="button" key={revenue} aria-pressed={overviewRevenue === revenue} onClick={() => setOverviewRevenue(revenue)}>
+                  {revenue === "all" ? "Tümü" : revenue === "license" ? "Lisans" : "Servis"}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
         <div className={styles.heroMetrics}>
-          <article className={`${styles.metricCard} ${styles.metricPrimary}`}>
+          <button type="button" className={`${styles.metricCard} ${styles.metricCardButton} ${styles.metricPrimary} ${styles.metricEmphasis}`} disabled={!overviewGuaranteedRows.length || privacyMode !== "normal"} onClick={() => openRecords(`${year} · ${overviewScopeTitle} · Garanti revenue kayıtları`, overviewGuaranteedRows, true)}>
             <span>Garanti revenue coverage</span>
-            <strong>{privatePercent(pct(guaranteedCoverage, data.target), privacyMode)}</strong>
-            <p>{privateMoney(guaranteedCoverage, privacyMode)} / {privateMoney(data.target, privacyMode)}</p>
-            <div className={styles.progress}><i style={{ width: `${Math.min(pct(guaranteedCoverage, data.target), 100)}%` }} /></div>
-          </article>
-          <article className={styles.metricCard}>
-            <span>{year} faturaları</span><strong>{privateMoney(data.ytdInvoice, privacyMode)}</strong><p>Cancelled hariç tüm invoice</p>
-          </article>
-          <article className={styles.metricCard}>
-            <span>Açık order</span><strong>{privateMoney(data.openOrders, privacyMode)}</strong><p>{year} faturalanma planı</p>
-          </article>
-          <article className={`${styles.metricCard} ${styles.metricForecast}`}>
-            <span>Forecast coverage</span><strong>{privatePercent(pct(forecastCoverage, data.target), privacyMode)}</strong><p>{privateMoney(forecastCoverage, privacyMode)} · weighted dahil</p>
-          </article>
-          <article className={styles.metricCard}>
-            <span>Aktif pipeline</span><strong>{privateMoney(data.pipeline, privacyMode)}</strong><p>{privateCount(data.activeDeals, privacyMode)} opportunity</p>
-          </article>
+            <strong>{privateMoney(guaranteedCoverage, privacyMode)}</strong>
+            <p className={styles.metricDetail}>
+              <b>{hasTarget ? privatePercent(pct(guaranteedCoverage, data.target), privacyMode) : "Hedef bekleniyor"}</b>
+              <span>{hasTarget ? `Şirket hedefi ${privateMoney(data.target, privacyMode)}` : `${year} hedefi henüz tanımlanmadı`}</span>
+            </p>
+            {hasTarget && privacyMode === "normal" ? <div className={styles.progress}><i style={{ width: `${Math.min(pct(guaranteedCoverage, data.target), 100)}%` }} /></div> : null}
+            <span className={styles.cardDrilldown}><List size={12} /> Kayıtları gör</span>
+          </button>
+          <button type="button" className={`${styles.metricCard} ${styles.metricCardButton} ${styles.metricForecast} ${styles.metricEmphasis}`} disabled={!overviewForecastRows.length || privacyMode !== "normal"} onClick={() => openRecords(`${year} · ${overviewScopeTitle} · Forecast kayıtları`, overviewForecastRows, true, "forecast")}>
+            <span>Forecast coverage</span>
+            <strong>{privateMoney(forecastCoverage, privacyMode)}</strong>
+            <p className={styles.metricDetail}>
+              <b>{hasTarget ? privatePercent(pct(forecastCoverage, data.target), privacyMode) : "Hedef bekleniyor"}</b>
+              <span>Weighted dahil</span>
+            </p>
+            <span className={styles.cardDrilldown}><List size={12} /> Kayıtları gör</span>
+          </button>
+          <button type="button" className={`${styles.metricCard} ${styles.metricCardButton} ${styles.metricSupporting} ${styles.metricInvoice}`} disabled={!overviewInvoices.length || privacyMode !== "normal"} onClick={() => openRecords(`${year} · ${overviewScopeTitle} · Invoice kayıtları`, overviewInvoices, true)}>
+            <span>{year} faturaları</span><strong>{privateMoney(overviewInvoice, privacyMode)}</strong><p>Cancelled hariç tüm invoice</p>
+            <span className={styles.cardDrilldown}><List size={12} /> Kayıtları gör</span>
+          </button>
+          <button type="button" className={`${styles.metricCard} ${styles.metricCardButton} ${styles.metricSupporting} ${styles.metricOrder}`} disabled={!overviewOrders.length || privacyMode !== "normal"} onClick={() => openRecords(`${year} · ${overviewScopeTitle} · Açık order kayıtları`, overviewOrders, true)}>
+            <span>Açık order</span><strong>{privateMoney(overviewOpenOrders, privacyMode)}</strong><p>{year} faturalanma planı</p>
+            <span className={styles.cardDrilldown}><List size={12} /> Kayıtları gör</span>
+          </button>
+          <button type="button" className={`${styles.metricCard} ${styles.metricCardButton} ${styles.metricSupporting} ${styles.metricPipeline}`} disabled={!overviewDeals.length || privacyMode !== "normal"} onClick={() => openRecords(`${year} · ${overviewScopeTitle} · Aktif pipeline kayıtları`, overviewDeals, true)}>
+            <span>Aktif pipeline</span>
+            <strong>{privateMoney(overviewPipeline, privacyMode)}</strong>
+            <p className={styles.pipelineDetail}>
+              <span>{privateCount(overviewActiveDeals, privacyMode)} opportunity</span>
+              <b>Weighted pipeline {privateMoney(overviewWeightedPipeline, privacyMode)}</b>
+            </p>
+            <span className={styles.cardDrilldown}><List size={12} /> Kayıtları gör</span>
+          </button>
         </div>
 
         <div className={styles.overviewGrid}>
-          <article className={styles.targetCard}>
+          <button type="button" className={`${styles.targetCard} ${styles.targetCardButton}`} disabled={!overviewForecastRows.length || privacyMode !== "normal"} onClick={() => openRecords(`${year} · ${overviewScopeTitle} · Hedef coverage kayıtları`, overviewForecastRows, true, "forecast")}>
             <div className={styles.targetTop}>
-              <div><span>Hedefe kalan</span><strong>{privateMoney(remaining, privacyMode)}</strong></div>
-              <div className={styles.coverageBadge}>Forecast ile {privatePercent(pct(forecastCoverage, data.target), privacyMode)}</div>
+              <div>
+                <span>{hasTarget ? (overviewUnfiltered ? "Hedefe kalan" : "Şirket toplam hedefi") : `${year} yıllık hedef`}</span>
+                <strong>{hasTarget ? privateMoney(overviewUnfiltered ? remaining : data.target, privacyMode) : "Tanımlanmadı"}</strong>
+              </div>
+              <div className={styles.coverageBadge}>{hasTarget ? `${overviewUnfiltered ? "Forecast ile" : `${overviewScopeLabel} forecast katkısı`} ${privatePercent(pct(forecastCoverage, data.target), privacyMode)}` : `Forecast ${privateMoney(forecastCoverage, privacyMode)}`}</div>
             </div>
-            <div className={styles.targetScale}>
-              <i className={styles.invoiceSegment} style={{ width: `${Math.min(pct(data.ytdInvoice, data.target), 100)}%` }} />
-              <i className={styles.orderSegment} style={{ width: `${Math.min(pct(data.openOrders, data.target), Math.max(100 - pct(data.ytdInvoice, data.target), 0))}%` }} />
-              <i className={styles.forecastSegment} style={{ width: `${Math.min(pct(data.yearWeightedPipeline, data.target), Math.max(100 - pct(guaranteedCoverage, data.target), 0))}%` }} />
-            </div>
+            {hasTarget && privacyMode === "normal" ? <div className={styles.targetScale}>
+              <i className={styles.invoiceSegment} style={{ width: `${Math.min(pct(overviewInvoice, data.target), 100)}%` }} />
+              <i className={styles.orderSegment} style={{ width: `${Math.min(pct(overviewOpenOrders, data.target), Math.max(100 - pct(overviewInvoice, data.target), 0))}%` }} />
+              <i className={styles.forecastSegment} style={{ width: `${Math.min(pct(overviewWeightedPipeline, data.target), Math.max(100 - pct(guaranteedCoverage, data.target), 0))}%` }} />
+            </div> : null}
             <div className={styles.legendRow}>
-              <span><i className={styles.dotInvoice} />Fatura {privateMoney(data.ytdInvoice, privacyMode)}</span>
-              <span><i className={styles.dotOrder} />Order {privateMoney(data.openOrders, privacyMode)}</span>
-              <span><i className={styles.dotForecast} />Weighted {privateMoney(data.yearWeightedPipeline, privacyMode)}</span>
+              <span><i className={styles.dotInvoice} />Fatura {privateMoney(overviewInvoice, privacyMode)}</span>
+              <span><i className={styles.dotOrder} />Order {privateMoney(overviewOpenOrders, privacyMode)}</span>
+              <span><i className={styles.dotForecast} />Weighted {privateMoney(overviewWeightedPipeline, privacyMode)}</span>
             </div>
-          </article>
+            <span className={styles.cardDrilldown}><List size={12} /> İlgili kayıtları gör</span>
+          </button>
           <article className={styles.weeklyCard}>
-            <div className={styles.cardTitle}><span>Son 7 gün · Pipeline hareketi</span><small>{formatDate(data.periodStart)} – {formatDate(data.periodEnd)}</small></div>
+            <div className={styles.cardTitle}><span>{isCurrent ? "Bugün + son 7 gün" : isPlanning ? `Bugün + son 7 günde eklenen ${year} planı` : "Snapshot günü + önceki 7 gün"} · Pipeline hareketi</span><small>{formatDate(data.periodStart)} – {formatDate(data.periodEnd)}</small></div>
             <div className={styles.weeklyMetrics}>
-              <OpenRecordsButton rows={data.weeklyNewDeals} label="Bu hafta açılan fırsatlar" onOpen={openRecords}><span>Yeni pipeline</span><b>{privateMoney(data.weeklyNewPipeline, privacyMode)}</b><small>{privateCount(data.weeklyNewDeals.length, privacyMode)} fırsat</small></OpenRecordsButton>
-              <OpenRecordsButton rows={data.weeklyWon} label="Bu hafta kazanılan fırsatlar" onOpen={openRecords}><span>Won pipeline</span><b>{privateMoney(won, privacyMode)}</b><small>{privateCount(data.weeklyWon.length, privacyMode)} fırsat</small></OpenRecordsButton>
-              <OpenRecordsButton rows={data.weeklyLost} label="Bu hafta kaybedilen fırsatlar" onOpen={openRecords}><span>Lost pipeline</span><b>{privateMoney(lost, privacyMode)}</b><small>{privateCount(data.weeklyLost.length, privacyMode)} fırsat</small></OpenRecordsButton>
+              <OpenRecordsButton rows={overviewWeeklyNew} label="Bugün + son 7 günde açılan fırsatlar" onOpen={openRecords}><span>Yeni pipeline</span><b>{privateMoney(overviewWeeklyNewPipeline, privacyMode)}</b><small>{privateCount(overviewWeeklyNew.length, privacyMode)} fırsat</small></OpenRecordsButton>
+              <OpenRecordsButton rows={overviewWeeklyWon} label="Bugün + son 7 günde kazanılan fırsatlar" onOpen={openRecords}><span>Won pipeline</span><b>{privateMoney(won, privacyMode)}</b><small>{privateCount(overviewWeeklyWon.length, privacyMode)} fırsat</small></OpenRecordsButton>
+              <OpenRecordsButton rows={overviewWeeklyLost} label="Bugün + son 7 günde kaybedilen fırsatlar" onOpen={openRecords}><span>Lost pipeline</span><b>{privateMoney(lost, privacyMode)}</b><small>{privateCount(overviewWeeklyLost.length, privacyMode)} fırsat</small></OpenRecordsButton>
             </div>
           </article>
         </div>
-        <InfoNote>Weighted forecast doğrudan HubSpot <code>Projected amount in company currency</code> alanından gelir. Custom <code>status</code> alanının internal değeri tam olarak <code>cancelled</code> olan faturalar tüm hesaplardan çıkarılır; diğer değerler dahil edilir.</InfoNote>
+        <InfoNote>Weighted forecast doğrudan HubSpot <code>Projected amount in company currency</code> alanından gelir. Custom <code>status</code> alanı canlı katalogdaki <code>Cancelled</code> internal değerine eşit olan faturalar tüm hesaplardan çıkarılır; boş ve diğer tüm değerler dahil edilir.</InfoNote>
       </section>
 
       <section id="months">
@@ -790,27 +1075,28 @@ export default function Dashboard({ data }: { data: SparkData }) {
           <div><span>02</span><h2>Aylık operasyon görünümü</h2></div>
           <div className={styles.sectionActions}>
             <p>{year} · 12 aylık revenue ve pipeline planı</p>
+            {pastMonths.length ? <button className={styles.sectionAction} type="button" onClick={() => setShowPastMonths((current) => !current)}>{showPastMonths ? "Geçmiş ayları özetle" : `Geçmiş ayları göster (${pastMonths.length})`}</button> : null}
             <button className={styles.sectionAction} type="button" disabled={!yearInvoices.length || privacyMode !== "normal"} onClick={() => openRecords(`${year} tüm invoice kayıtları`, yearInvoices, true)}><List size={13} /> Tüm invoice&apos;ları gör ({privateCount(yearInvoices.length, privacyMode)})</button>
             <button className={styles.sectionAction} type="button" disabled={!yearOrders.length || privacyMode !== "normal"} onClick={() => openRecords(`${year} tüm açık order kayıtları`, yearOrders, true)}><List size={13} /> Tüm açık order&apos;ları gör ({privateCount(yearOrders.length, privacyMode)})</button>
           </div>
         </div>
         <div className={styles.periodGrid}>
           <article className={`${styles.periodCard} ${styles.periodMonth}`}>
-            <div className={styles.periodTitle}><span>Bu ay</span><b>{currentMonthData?.label}</b></div>
+            <div className={styles.periodTitle}><span>{isCurrent ? "Bu ay" : isPlanning ? "Plan başlangıç ayı" : "Snapshot ayı"}</span><b>{currentMonthData?.label}</b></div>
             <div className={styles.periodMetrics}>
               <OpenRecordsButton rows={monthInvoices} label="Bu ay faturalar" onOpen={openRecords} showCountryBreakdown><span>Fatura</span><b>{privateMoney(sum(monthInvoices), privacyMode)}</b><small>{privateCount(monthInvoices.length, privacyMode)} kayıt</small></OpenRecordsButton>
               <OpenRecordsButton rows={monthOrders} label="Bu ay açık orderlar" onOpen={openRecords} showCountryBreakdown><span>Açık order</span><b>{privateMoney(sum(monthOrders), privacyMode)}</b><small>{privateCount(monthOrders.length, privacyMode)} kayıt</small></OpenRecordsButton>
               <OpenRecordsButton rows={monthDeals} label="Bu ay kapanış planlı aktif fırsatlar" onOpen={openRecords} showCountryBreakdown><span>Pipeline</span><b>{privateMoney(sum(monthDeals), privacyMode)}</b><small>{privateCount(monthDeals.length, privacyMode)} fırsat</small></OpenRecordsButton>
-              <OpenRecordsButton rows={monthDeals} label="Bu ay weighted pipeline" onOpen={openRecords}><span>Weighted</span><b>{privateMoney(currentMonthData?.weightedPipeline ?? 0, privacyMode)}</b><small>HubSpot projected</small></OpenRecordsButton>
+              <OpenRecordsButton rows={monthDeals} label="Bu ay weighted pipeline" onOpen={openRecords} valueMode="weighted"><span>Weighted</span><b>{privateMoney(currentMonthData?.weightedPipeline ?? 0, privacyMode)}</b><small>HubSpot projected</small></OpenRecordsButton>
             </div>
           </article>
           <article className={`${styles.periodCard} ${styles.periodQuarter}`}>
-            <div className={styles.periodTitle}><span>Bu çeyrek</span><b>Q{currentQuarter}</b></div>
+            <div className={styles.periodTitle}><span>{isCurrent ? "Bu çeyrek" : isPlanning ? "Plan başlangıç çeyreği" : "Snapshot çeyreği"}</span><b>Q{currentQuarter}</b></div>
             <div className={styles.periodMetrics}>
               <OpenRecordsButton rows={quarterInvoices} label={`Q${currentQuarter} faturaları`} onOpen={openRecords} showCountryBreakdown><span>Fatura</span><b>{privateMoney(sum(quarterInvoices), privacyMode)}</b><small>{privateCount(quarterInvoices.length, privacyMode)} kayıt</small></OpenRecordsButton>
               <OpenRecordsButton rows={quarterOrders} label={`Q${currentQuarter} açık orderları`} onOpen={openRecords} showCountryBreakdown><span>Açık order</span><b>{privateMoney(sum(quarterOrders), privacyMode)}</b><small>{privateCount(quarterOrders.length, privacyMode)} kayıt</small></OpenRecordsButton>
               <OpenRecordsButton rows={quarterDeals} label={`Q${currentQuarter} kapanış planlı aktif fırsatlar`} onOpen={openRecords} showCountryBreakdown><span>Pipeline</span><b>{privateMoney(sum(quarterDeals), privacyMode)}</b><small>{privateCount(quarterDeals.length, privacyMode)} fırsat</small></OpenRecordsButton>
-              <OpenRecordsButton rows={quarterDeals} label={`Q${currentQuarter} weighted pipeline`} onOpen={openRecords}><span>Weighted</span><b>{privateMoney(quarterWeighted, privacyMode)}</b><small>HubSpot projected</small></OpenRecordsButton>
+              <OpenRecordsButton rows={quarterDeals} label={`Q${currentQuarter} weighted pipeline`} onOpen={openRecords} valueMode="weighted"><span>Weighted</span><b>{privateMoney(quarterWeighted, privacyMode)}</b><small>HubSpot projected</small></OpenRecordsButton>
             </div>
           </article>
         </div>
@@ -819,7 +1105,26 @@ export default function Dashboard({ data }: { data: SparkData }) {
             <table className={styles.monthTable}>
               <thead><tr><th>Ay</th><th>Revenue kompozisyonu</th><th>Fatura</th><th>Açık order</th><th>Aktif pipeline</th><th>Weighted pipeline</th><th>Fırsat</th></tr></thead>
               <tbody>
-                {data.monthlyPerformance.map((item) => {
+                {!showPastMonths && pastMonths.length ? (
+                  <tr className={styles.pastSummaryRow}>
+                    <td><b>{pastMonths[0]?.label} – {pastMonths.at(-1)?.label}</b><small>{pastMonths.length} ay · YTD özeti</small></td>
+                    <td>
+                      <div className={styles.pastTrend} aria-label="Geçmiş ayların fatura trendi">
+                        {pastMonths.map((item) => {
+                          const amount = sum(item.invoices);
+                          const height = privacyMode === "normal" ? Math.max((amount / pastInvoiceMax) * 100, amount ? 8 : 2) : 45;
+                          return <span key={item.month} title={item.label}><i style={{ height: `${height}%` }} /><small>{item.label.slice(0, 3)}</small></span>;
+                        })}
+                      </div>
+                    </td>
+                    <td><OpenRecordsButton rows={pastInvoices} label="Geçmiş ay faturaları" onOpen={openRecords} showCountryBreakdown><b>{privateMoney(sum(pastInvoices), privacyMode)}</b><small>{privateCount(pastInvoices.length, privacyMode)} kayıt</small></OpenRecordsButton></td>
+                    <td><span className={styles.emptyMetric}>—</span></td>
+                    <td><span className={styles.emptyMetric}>—</span></td>
+                    <td><span className={styles.emptyMetric}>—</span></td>
+                    <td><span className={styles.emptyMetric}>—</span></td>
+                  </tr>
+                ) : null}
+                {visibleMonths.map((item) => {
                   const invoiceAmount = sum(item.invoices);
                   const orderAmount = sum(item.orders);
                   const forecastAmount = invoiceAmount + orderAmount + item.weightedPipeline;
@@ -831,17 +1136,17 @@ export default function Dashboard({ data }: { data: SparkData }) {
                   ].filter(Boolean).join(" ");
                   return (
                     <tr key={item.month} className={rowClass}>
-                      <td><b>{item.label}</b>{item.month === currentMonth ? <span className={styles.nowPill}>Bu ay</span> : null}{[1, 4, 7, 10].includes(item.month) ? <small>Q{Math.floor((item.month - 1) / 3) + 1}</small> : null}</td>
+                      <td><b>{item.label}</b>{item.month === currentMonth ? <span className={styles.nowPill}>{isCurrent ? "Bu ay" : isPlanning ? "Plan başlangıcı" : "Snapshot"}</span> : null}{[1, 4, 7, 10].includes(item.month) ? <small>Q{Math.floor((item.month - 1) / 3) + 1}</small> : null}</td>
                       <td>
                         <div className={styles.monthComposition} aria-label={`${item.label} revenue kompozisyonu`}>
-                          <div><i className={styles.invoiceSegment} style={{ width: `${pct(invoiceAmount, forecastAmount)}%` }} /><i className={styles.orderSegment} style={{ width: `${pct(orderAmount, forecastAmount)}%` }} /><i className={styles.forecastSegment} style={{ width: `${pct(item.weightedPipeline, forecastAmount)}%` }} /></div>
+                          <div><i className={styles.invoiceSegment} style={{ width: `${privacyMode === "normal" ? pct(invoiceAmount, forecastAmount) : 0}%` }} /><i className={styles.orderSegment} style={{ width: `${privacyMode === "normal" ? pct(orderAmount, forecastAmount) : 0}%` }} /><i className={styles.forecastSegment} style={{ width: `${privacyMode === "normal" ? pct(item.weightedPipeline, forecastAmount) : 0}%` }} /></div>
                           <span><b>{privateMoney(invoiceAmount + orderAmount, privacyMode)}</b> garanti · {privateMoney(forecastAmount, privacyMode)} forecast</span>
                         </div>
                       </td>
                       <td><OpenRecordsButton rows={item.invoices} label={`${item.label} faturaları`} onOpen={openRecords} showCountryBreakdown><b>{privateMoney(invoiceAmount, privacyMode)}</b><small>{privateCount(item.invoices.length, privacyMode)} kayıt</small></OpenRecordsButton></td>
                       <td><OpenRecordsButton rows={item.orders} label={`${item.label} açık orderları`} onOpen={openRecords} showCountryBreakdown><b>{privateMoney(orderAmount, privacyMode)}</b><small>{privateCount(item.orders.length, privacyMode)} kayıt</small></OpenRecordsButton></td>
                       <td><OpenRecordsButton rows={item.deals} label={`${item.label} kapanış tarihli aktif fırsatlar`} onOpen={openRecords} showCountryBreakdown><b>{privateMoney(sum(item.deals), privacyMode)}</b><small>{privateCount(item.deals.length, privacyMode)} kayıt</small></OpenRecordsButton></td>
-                      <td><OpenRecordsButton rows={item.deals} label={`${item.label} weighted pipeline kayıtları`} onOpen={openRecords}><b>{privateMoney(item.weightedPipeline, privacyMode)}</b><small>HubSpot projected</small></OpenRecordsButton></td>
+                      <td><OpenRecordsButton rows={item.deals} label={`${item.label} weighted pipeline kayıtları`} onOpen={openRecords} valueMode="weighted"><b>{privateMoney(item.weightedPipeline, privacyMode)}</b><small>HubSpot projected</small></OpenRecordsButton></td>
                       <td><span className={styles.countCell}>{privateCount(item.deals.length, privacyMode)}</span></td>
                     </tr>
                   );
@@ -880,7 +1185,7 @@ export default function Dashboard({ data }: { data: SparkData }) {
                     <span className={styles.funnelStageHead}><i style={{ background: color }}>{String(index + 1).padStart(2, "0")}</i><b>{stage.label}</b>{privacyMode === "normal" ? <ArrowUpRight size={15} /> : null}</span>
                     <strong>{privateMoney(stageAmount, privacyMode)}</strong>
                     <span className={styles.funnelStageStats}><span><b>{privateCount(stage.records.length, privacyMode)}</b> fırsat</span><span><b>{privacyMode === "hidden" ? "••••" : `%${(stage.probability * 100).toFixed(0)}`}</b> olasılık</span><span><b>{privacyMode === "hidden" ? "••••" : stage.averageAgeDays.toFixed(0)}</b> gün</span></span>
-                    <span className={styles.funnelMeter}><i style={{ width: `${Math.max((stageAmount / funnelMax) * 100, 2)}%`, background: color }} /></span>
+                    <span className={styles.funnelMeter}><i style={{ width: `${privacyMode === "normal" ? Math.max((stageAmount / funnelMax) * 100, 2) : 0}%`, background: color }} /></span>
                     <span className={styles.funnelWeighted}><b>{privateMoney(stage.weightedPipeline, privacyMode)}</b> weighted pipeline</span>
                   </button>
                 );
@@ -891,49 +1196,9 @@ export default function Dashboard({ data }: { data: SparkData }) {
         <InfoNote>Funnel yalnız aktif fırsatları gösterir. Won, Lost ve Open ayrımı stage adından değil HubSpot closed/won alanları ve pipeline metadata’sından yapılır.</InfoNote>
       </section>
 
-      <section id="breakdowns">
-        <div className={styles.sectionHead}>
-          <div><span>04</span><h2>Revenue kırılımları</h2></div>
-          <p>Gerçekleşen, planlanan ve pipeline kompozisyonu</p>
-        </div>
-        <div className={styles.tabs} role="tablist" aria-label="Revenue kırılımı">
-          {data.revenueBreakdowns.map((breakdown) => (
-            <button type="button" role="tab" aria-selected={breakdown.key === selectedBreakdown?.key} key={breakdown.key} onClick={() => setBreakdownKey(breakdown.key)}>{breakdown.label}</button>
-          ))}
-        </div>
-        <article className={styles.dataCard}>
-          {selectedBreakdown?.entries.length ? (
-            <div>
-              <DonutChart entries={breakdownChart} overlapping={selectedBreakdown.multiValue} />
-              <div className={styles.tableWrap}>
-                <table className={styles.breakdownTable}>
-                  <thead><tr><th>{selectedBreakdown.label}</th><th>Fatura</th><th>Açık order</th><th>Aktif pipeline</th><th>Weighted</th><th>Garanti gelir</th></tr></thead>
-                  <tbody>
-                    {selectedBreakdown.entries.map((entry) => {
-                      const realized = sum(entry.invoices) + sum(entry.orders);
-                      return (
-                        <tr key={entry.key}>
-                          <td><b>{entry.label}</b></td>
-                          <td><OpenRecordsButton rows={breakdownRows(entry, "invoices")} label={`${entry.label} faturaları`} onOpen={openRecords}>{privateMoney(sum(entry.invoices), privacyMode)}</OpenRecordsButton></td>
-                          <td><OpenRecordsButton rows={breakdownRows(entry, "orders")} label={`${entry.label} açık orderları`} onOpen={openRecords}>{privateMoney(sum(entry.orders), privacyMode)}</OpenRecordsButton></td>
-                          <td><OpenRecordsButton rows={breakdownRows(entry, "deals")} label={`${entry.label} aktif fırsatları`} onOpen={openRecords}>{privateMoney(sum(entry.deals), privacyMode)}</OpenRecordsButton></td>
-                          <td><OpenRecordsButton rows={breakdownRows(entry, "deals")} label={`${entry.label} weighted fırsatları`} onOpen={openRecords}>{privateMoney(entry.weightedPipeline, privacyMode)}</OpenRecordsButton></td>
-                          <td><b>{privateMoney(realized, privacyMode)}</b><small> fatura + order</small></td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : <div className={styles.empty}>Bu kırılım için sınıflandırılmış kayıt bulunmuyor.</div>}
-        </article>
-        <InfoNote>{selectedBreakdown?.multiValue ? `${selectedBreakdown.label} çoklu seçim alanıdır. Bir kayıt seçili her kategoride tam tutarıyla yer alabileceği için satır toplamları genel toplamı aşabilir.` : "Belirtilmemiş satırı, ilgili HubSpot alanı boş olan kayıtları görünür tutar."}</InfoNote>
-      </section>
-
       <section id="new-business">
         <div className={styles.sectionHead}>
-          <div><span>05</span><h2>New Business</h2></div>
+          <div><span>04</span><h2>New Business</h2></div>
           <p>Toplam portföy ve {year} kazanım kohortu</p>
         </div>
         <div className={styles.nbSplit}>
@@ -962,13 +1227,53 @@ export default function Dashboard({ data }: { data: SparkData }) {
         </div>
       </section>
 
+      <section id="breakdowns">
+        <div className={styles.sectionHead}>
+          <div><span>05</span><h2>Revenue kırılımları</h2></div>
+          <p>Gerçekleşen, planlanan ve pipeline kompozisyonu</p>
+        </div>
+        <div className={styles.tabs} role="tablist" aria-label="Revenue kırılımı">
+          {data.revenueBreakdowns.map((breakdown) => (
+            <button type="button" role="tab" aria-selected={breakdown.key === selectedBreakdown?.key} key={breakdown.key} onClick={() => setBreakdownKey(breakdown.key)}>{breakdown.label}</button>
+          ))}
+        </div>
+        <article className={styles.dataCard}>
+          {selectedBreakdown?.entries.length ? (
+            <div>
+              <DonutChart entries={breakdownChart} overlapping={selectedBreakdown.multiValue} />
+              <div className={styles.tableWrap}>
+                <table className={styles.breakdownTable}>
+                  <thead><tr><th>{selectedBreakdown.label}</th><th>Fatura</th><th>Açık order</th><th>Aktif pipeline</th><th>Weighted</th><th>Garanti gelir</th></tr></thead>
+                  <tbody>
+                    {selectedBreakdown.entries.map((entry) => {
+                      const realized = sum(entry.invoices) + sum(entry.orders);
+                      return (
+                        <tr key={entry.key}>
+                          <td><b>{entry.label}</b></td>
+                          <td><OpenRecordsButton rows={breakdownRows(entry, "invoices")} label={`${entry.label} faturaları`} onOpen={openRecords}>{privateMoney(sum(entry.invoices), privacyMode)}</OpenRecordsButton></td>
+                          <td><OpenRecordsButton rows={breakdownRows(entry, "orders")} label={`${entry.label} açık orderları`} onOpen={openRecords}>{privateMoney(sum(entry.orders), privacyMode)}</OpenRecordsButton></td>
+                          <td><OpenRecordsButton rows={breakdownRows(entry, "deals")} label={`${entry.label} aktif fırsatları`} onOpen={openRecords}>{privateMoney(sum(entry.deals), privacyMode)}</OpenRecordsButton></td>
+                          <td><OpenRecordsButton rows={breakdownRows(entry, "deals")} label={`${entry.label} weighted fırsatları`} onOpen={openRecords} valueMode="weighted">{privateMoney(entry.weightedPipeline, privacyMode)}</OpenRecordsButton></td>
+                          <td><b>{privateMoney(realized, privacyMode)}</b><small> fatura + order</small></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : <div className={styles.empty}>Bu kırılım için sınıflandırılmış kayıt bulunmuyor.</div>}
+        </article>
+        <InfoNote>{selectedBreakdown?.multiValue ? `${selectedBreakdown.label} çoklu seçim alanıdır. Bir kayıt seçili her kategoride tam tutarıyla yer alabileceği için satır toplamları genel toplamı aşabilir.` : "Belirtilmemiş satırı, ilgili HubSpot alanı boş olan kayıtları görünür tutar."}</InfoNote>
+      </section>
+
       <section id="hygiene">
         <div className={styles.sectionHead}>
           <div><span>06</span><h2>CRM hygiene</h2></div>
           <p>Fatura, order ve deal kayıtlarında operasyon ve sınıflandırma kontrolleri</p>
         </div>
-        <div className={styles.hygieneGrid}>
-          {hygiene.map((group) => {
+        {visibleHygiene.length ? <div className={styles.hygieneGrid}>
+          {visibleHygiene.map((group) => {
             const classification = group.key.startsWith("missing-") || requiredHygieneChecks.some((check) => check.key === group.key);
             const checkPending = hygieneCheckPending(group.key);
             return (
@@ -986,12 +1291,18 @@ export default function Dashboard({ data }: { data: SparkData }) {
             </button>
             );
           })}
-        </div>
+        </div> : null}
+        {cleanHygiene.length ? (
+          <button className={styles.hygieneCleanSummary} type="button" aria-expanded={showCleanHygiene} onClick={() => setShowCleanHygiene((current) => !current)}>
+            <span><b>{privateCount(cleanHygiene.length, privacyMode)} kontrol temiz</b><small>Sorun bulunmayan kontroller kompakt gösteriliyor.</small></span>
+            <span>{showCleanHygiene ? "Temiz kontrolleri gizle" : "Temiz kontrolleri göster"}</span>
+          </button>
+        ) : null}
       </section>
 
-      <footer>Ereteam · Spark Gelir Yönetim Merkezi · {formatDate(data.generatedAt)}</footer>
-        {detail && privacyMode === "normal" ? <RecordDialog title={detail.title} rows={detail.rows} showCountryBreakdown={detail.showCountryBreakdown} onClose={() => setDetail(null)} onRecordsUpdated={handleRecordsUpdated} /> : null}
-        {privacyMode === "normal" ? <SparkChatWidget /> : null}
+      <footer>Ereteam · Spark Gelir ve Pipeline Raporu · {formatDate(data.generatedAt)}</footer>
+        {detail && privacyMode === "normal" ? <RecordDialog title={detail.title} rows={detail.rows} showCountryBreakdown={detail.showCountryBreakdown} onClose={() => setDetail(null)} onRecordsUpdated={isMutable ? handleRecordsUpdated : undefined} allowEditing={isMutable} valueMode={detail.valueMode ?? "amount"} /> : null}
+        {isCurrent && privacyMode === "normal" ? <SparkChatWidget /> : null}
       </main>
     </PrivacyContext.Provider>
   );

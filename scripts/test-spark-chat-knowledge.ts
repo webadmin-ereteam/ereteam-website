@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { applyLiveCatalogContracts, applySparkQueryGuardrails, normalizeSparkPlanProperties, resolveSparkDateRange, resolveSparkOwnerFilter, resolveSparkOwnerName, sparkChatComparableValue, sparkChatMatchesFilter, sparkQueryPlanJsonSchema } from "../lib/spark/chat";
 import { SPARK_CHAT_KNOWLEDGE, canonicalSparkCountry, detectSparkCompanyName, detectSparkCompositeRevenueMetric, detectSparkCountries, detectSparkDashboardMetric, sparkRevenueGroup, sparkUnsupportedQuestionAnswer, type SparkObjectType } from "../lib/spark/chatKnowledge";
-import { hubspotDealState, isHubSpotOpenOrder, isIncludedInvoice, validateInvoiceStatusProperty, type HubSpotObject, type StageMap } from "../lib/spark/hubspot";
+import { hubspotDealState, isHubSpotOpenOrder, isIncludedInvoice, parseHubSpotAmount, validateInvoiceStatusProperty, type HubSpotObject, type StageMap } from "../lib/spark/hubspot";
+import { isReportingYear, istanbulParts } from "../lib/spark/time";
 
 const amountProperties: Record<SparkObjectType, string> = {
   deals: "amount_in_home_currency",
@@ -86,8 +87,28 @@ assert.equal(isIncludedInvoice({ id: "4", properties: { status: "Cancelled" } })
 assert.equal(isIncludedInvoice({ id: "5", properties: { status: " cancelled " } }), true);
 assert.equal(isIncludedInvoice({ id: "6", properties: { status: "invoiced", hs_invoice_status: "open" } }), true);
 assert.equal(isIncludedInvoice({ id: "7", properties: { status: "cancelled", hs_invoice_status: "paid" } }), false);
-assert.equal(validateInvoiceStatusProperty([{ name: "status", label: "Status", options: [{ label: "Invoiced", value: "invoiced" }, { label: "Cancelled", value: "cancelled" }] }]).name, "status");
+assert.equal(validateInvoiceStatusProperty([{ name: "status", label: "Status", options: [{ label: "Invoiced", value: "invoiced" }, { label: "Cancelled", value: "cancelled" }] }]).cancelledValue, "cancelled");
+assert.equal(validateInvoiceStatusProperty([{ name: "status", label: "Status", options: [{ label: "Invoiced", value: "Invoiced" }, { label: "Cancelled", value: "Cancelled" }] }]).cancelledValue, "Cancelled");
+assert.throws(() => validateInvoiceStatusProperty([{ name: "status", label: "Status", options: [{ label: "Invoiced", value: "Invoiced" }] }]), /custom status sözleşmesi/);
 assert.throws(() => validateInvoiceStatusProperty([{ name: "hs_invoice_status", label: "Invoice status", options: [] }]), /custom status sözleşmesi/);
+assert.equal(isIncludedInvoice({ id: "8", properties: { status: "Cancelled" } }, "Cancelled"), false);
+assert.equal(isIncludedInvoice({ id: "9", properties: { status: "Invoiced" } }, "Cancelled"), true);
+assert.equal(isIncludedInvoice({ id: "10", properties: {} }, "Cancelled"), true);
+
+assert.equal(parseHubSpotAmount(undefined, "hs_homecurrency_amount"), 0);
+assert.equal(parseHubSpotAmount("  ", "hs_homecurrency_amount"), 0);
+assert.equal(parseHubSpotAmount("123.45", "hs_homecurrency_amount"), 123.45);
+assert.equal(parseHubSpotAmount("-50", "amount_in_home_currency"), -50);
+assert.throws(() => parseHubSpotAmount("1,000", "hs_homecurrency_amount"), /geçerli bir tutar değil/);
+assert.throws(() => parseHubSpotAmount("Infinity", "hs_homecurrency_amount"), /geçerli bir tutar değil/);
+assert.throws(() => parseHubSpotAmount("abc", "hs_projected_amount_in_home_currency"), /geçerli bir tutar değil/);
+
+assert.equal(isReportingYear("2026-12-31T20:59:59.999Z", 2026), true, "31 Aralık 20:59 UTC kaydı 2026 kalmalı");
+assert.equal(isReportingYear("2026-12-31T21:00:00Z", 2026), false, "31 Aralık 21:00 UTC kaydı 2027 olmalı");
+assert.equal(isReportingYear("2026-12-31T21:00:00Z", 2027), true);
+assert.equal(istanbulParts(new Date("2026-12-31T20:59:59.999Z")).year, 2026);
+assert.equal(istanbulParts(new Date("2026-12-31T21:00:00Z")).year, 2027);
+assert.equal(istanbulParts(new Date("2027-01-01T00:00:00+03:00")).year, 2027);
 
 const stageMap: StageMap = new Map([
   ["active-tr-label", { label: "Görüşme", probability: 0.5, isClosed: false, displayOrder: 0, pipelineLabel: "Sales" }],

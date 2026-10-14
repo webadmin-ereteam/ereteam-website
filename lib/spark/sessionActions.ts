@@ -18,7 +18,7 @@ export async function loginSpark(formData: FormData) {
   await recordLoginResult(ok);
   if (!ok) redirect("/spark/login?error=1");
 
-  const token = await createSessionToken(0);
+  const token = await createSessionToken(0, "spark");
   cookies().set(SPARK_SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -26,5 +26,6 @@ export async function loginSpark(formData: FormData) {
     maxAge: SESSION_MAX_AGE_SECONDS,
     path: "/",
   });
-  redirect("/spark");
+  const requested = String(formData.get("next") ?? "");
+  redirect(/^\/spark(?:\/|$|\?)/.test(requested) ? requested : "/spark");
 }

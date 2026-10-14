@@ -34,7 +34,7 @@ const associationSchema = z.object({
 });
 
 async function authorized(request: NextRequest) {
-  return verifySessionToken(request.cookies.get(SPARK_SESSION_COOKIE)?.value);
+  return verifySessionToken(request.cookies.get(SPARK_SESSION_COOKIE)?.value, "spark");
 }
 
 function editableCatalog(catalog: Awaited<ReturnType<typeof fetchHubSpotPropertyCatalog>>) {

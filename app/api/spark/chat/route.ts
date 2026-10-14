@@ -27,7 +27,7 @@ const schema = z.object({
 
 export async function POST(request: NextRequest) {
   const session = request.cookies.get("spark_session")?.value;
-  if (!(await verifySessionToken(session))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(await verifySessionToken(session, "spark"))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const limit = rateLimit(`spark-chat:${getClientIp(request)}`, 15, 10 * 60 * 1000);
   if (!limit.allowed) return NextResponse.json(
     { error: "Çok fazla sorgu gönderildi. Birkaç dakika sonra tekrar deneyin." },
