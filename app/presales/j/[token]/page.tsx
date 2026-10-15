@@ -81,9 +81,10 @@ function BackgroundBlobs() {
   );
 }
 
-export default async function CustomerJourneyPage({ params }: { params: { token: string } }) {
+export default async function CustomerJourneyPage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params;
   const journey = await prisma.journey.findUnique({
-    where: { accessToken: params.token },
+    where: { accessToken: token },
     include: {
       prospect: true,
       salesRep: true,
@@ -126,7 +127,7 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
   // Skipped when the request carries a valid admin session cookie, so an
   // admin previewing the link (the "Müşteri sayfasını aç" button, or just
   // opening it themselves to check) never counts as a customer view.
-  const isAdminPreview = await verifySessionToken(cookies().get(SESSION_COOKIE_NAME)?.value);
+  const isAdminPreview = await verifySessionToken((await cookies()).get(SESSION_COOKIE_NAME)?.value);
   if (!isAdminPreview) {
     try {
       await prisma.journey.update({
@@ -224,7 +225,7 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
                       className="mb-3 h-11 max-w-[220px] object-contain sm:h-14"
                     />
                   ) : (
-                    <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 ring-1 ring-inset ring-white/25 backdrop-blur-sm">
+                    <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 ring-1 ring-inset ring-white/25 backdrop-blur-xs">
                       <Sparkles size={11} className="text-white/80" />
                       <span className="text-[10.5px] font-medium uppercase tracking-wider text-white/80">
                         {journey!.prospect.companyName}
@@ -423,7 +424,7 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
               pendingSurveys.map((survey) => (
                 <form
                   key={survey.id}
-                  action={submitSurveyResponses.bind(null, params.token, survey.id)}
+                  action={submitSurveyResponses.bind(null, token, survey.id)}
                   className={`overflow-hidden ${glassCardClass}`}
                 >
                   <div className="h-1.5 w-full bg-gradient-to-r from-brand-primary to-brand-magenta" />
@@ -440,10 +441,10 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
                     <SurveyAnswerForm selections={survey.selections} />
                     <div className="flex flex-wrap items-center gap-3">
                       <SubmitButton
-                        className="rounded-xl border border-gray-300 bg-white/80 px-5 py-2.5 font-medium text-text-body backdrop-blur-sm transition-colors hover:border-brand-primary hover:text-brand-primary"
+                        className="rounded-xl border border-gray-300 bg-white/80 px-5 py-2.5 font-medium text-text-body backdrop-blur-xs transition-colors hover:border-brand-primary hover:text-brand-primary"
                         pendingLabel="Kaydediliyor..."
                         formNoValidate
-                        formAction={saveSurveyDraft.bind(null, params.token, survey.id)}
+                        formAction={saveSurveyDraft.bind(null, token, survey.id)}
                       >
                         Taslağı Kaydet
                       </SubmitButton>
@@ -485,7 +486,7 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
                   {completedSurveys.map((survey) => (
                     <Link
                       key={survey.id}
-                      href={`/presales/j/${params.token}/surveys/${survey.id}`}
+                      href={`/presales/j/${token}/surveys/${survey.id}`}
                       className={`group flex flex-wrap items-center justify-between gap-2 p-4 transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-18px_rgba(26,111,168,0.2)] ${glassCardClass}`}
                     >
                       <span className="flex items-center gap-2.5 text-sm font-medium text-brand-dark">
@@ -528,7 +529,7 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
                       <UserRound size={13} /> Satış Temsilciniz
                     </p>
                     <div className="flex items-center gap-3">
-                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-magenta text-sm font-semibold text-white shadow-sm">
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-magenta text-sm font-semibold text-white shadow-xs">
                         {initialsOf(journey!.salesRep.name)}
                       </span>
                       <div>
@@ -587,7 +588,7 @@ export default async function CustomerJourneyPage({ params }: { params: { token:
                 })}
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-gray-300/70 bg-white/40 p-6 text-center backdrop-blur-sm">
+              <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-gray-300/70 bg-white/40 p-6 text-center backdrop-blur-xs">
                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-400">
                   <Inbox size={16} />
                 </span>

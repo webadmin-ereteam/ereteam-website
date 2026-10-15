@@ -30,7 +30,7 @@ type Selection = {
 };
 
 const inputClass =
-  "w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm transition-colors focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/15";
+  "w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm transition-colors focus:border-brand-primary focus:outline-hidden focus:ring-2 focus:ring-brand-primary/15";
 const optionClass =
   "flex items-center gap-2.5 rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm transition-colors hover:border-brand-primary hover:bg-brand-primary/[0.03]";
 

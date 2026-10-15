@@ -267,7 +267,7 @@ export default function FinancialPerformancePage() {
             {techPartners.map((partner) => (
               <div
                 key={partner.name}
-                className="px-6 py-3 bg-white rounded-xl border border-gray-200 hover:border-gray-300 transition-colors shadow-sm"
+                className="px-6 py-3 bg-white rounded-xl border border-gray-200 hover:border-gray-300 transition-colors shadow-xs"
               >
                 <span className="font-bold text-brand-dark">{partner.name}</span>
               </div>

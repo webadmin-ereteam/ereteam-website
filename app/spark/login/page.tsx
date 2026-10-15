@@ -3,7 +3,8 @@ import { loginSpark } from "@/lib/spark/sessionActions";
 
 export const metadata = { title: "Spark Giriş | Ereteam", robots: { index: false, follow: false } };
 
-export default function SparkLogin({ searchParams }: { searchParams: { error?: string; retry?: string; next?: string } }) {
+export default async function SparkLogin({ searchParams: searchParamsPromise }: { searchParams: Promise<{ error?: string; retry?: string; next?: string }> }) {
+  const searchParams = await searchParamsPromise;
   const safeNext = /^\/spark(?:\/|$|\?)/.test(searchParams.next ?? "") ? searchParams.next : "";
   return (
     <main className="min-h-screen bg-[#081523] px-5 flex items-center justify-center relative overflow-hidden">
@@ -15,7 +16,7 @@ export default function SparkLogin({ searchParams }: { searchParams: { error?: s
         <h1 className="mt-2 text-3xl font-bold text-[#102238]">Spark</h1>
         <p className="mt-2 text-sm text-slate-500">Güncel raporu görüntülemek için giriş yapın.</p>
         <label className="mt-7 block text-sm font-semibold text-slate-700">Şifre</label>
-        <input name="password" type="password" autoFocus required autoComplete="current-password" className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#347da5] focus:ring-4 focus:ring-[#347da5]/10" />
+        <input name="password" type="password" autoFocus required autoComplete="current-password" className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 outline-hidden focus:border-[#347da5] focus:ring-4 focus:ring-[#347da5]/10" />
         {searchParams.error === "locked" ? <p className="mt-4 text-sm text-red-600">Çok fazla deneme yapıldı. {searchParams.retry ?? "Birkaç"} dakika sonra tekrar deneyin.</p> : searchParams.error ? <p className="mt-4 text-sm text-red-600">Şifre hatalı.</p> : null}
         <button className="mt-6 w-full rounded-xl bg-[#102238] px-4 py-3 font-semibold text-white transition hover:bg-[#347da5]">Raporu aç</button>
       </form>

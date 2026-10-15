@@ -3,8 +3,8 @@
  *
  * Çalıştırmak için:
  *   1. sanity.io/manage → API → Tokens → "Editor" izinli token oluştur
- *   2. Aşağıya token'ı yaz
- *   3. Terminal: npx ts-node --esm scripts/migrate-to-sanity.ts
+ *   2. SANITY_API_WRITE_TOKEN ortam değişkenine token'ı yaz
+ *   3. Terminal: npx tsx scripts/migrate-to-sanity.ts
  *
  * NOT: Bu script idempotent'tir — ikinci çalıştırmada yeni doküman oluşturmaz,
  *       mevcut olanları günceller.
@@ -13,7 +13,8 @@
 import { createClient } from "@sanity/client";
 import { useCases } from "../lib/data/usecases";
 
-const SANITY_TOKEN = "skEDqZV4mUe6k2wleb9dFLCRlZ8kgcGpUAxs3gNewQUFRo03xvelPKah3oQULct72Ac6ZNcS9KmRPcMBe7wbznckPN5vlW3KmVqEW8hauNwDi0zTdZqXmnCqnzqw4OgqmexVA81hkHUB5HZQO6XFmRhklYwxXyArH30PbDN3bMNsLpw7nnjN";
+const SANITY_TOKEN = process.env.SANITY_API_WRITE_TOKEN;
+if (!SANITY_TOKEN) throw new Error("SANITY_API_WRITE_TOKEN is required.");
 
 const client = createClient({
   projectId: "oe7hnrwl",

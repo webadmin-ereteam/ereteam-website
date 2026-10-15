@@ -152,7 +152,7 @@ export default async function CompanyPage() {
             {pillars.map((pillar) => (
               <div
                 key={pillar.title}
-                className="bg-white rounded-2xl p-8 border border-gray-200 shadow-sm"
+                className="bg-white rounded-2xl p-8 border border-gray-200 shadow-xs"
               >
                 <div className="mb-5 h-1 w-10 bg-brand-primary/55" />
                 <h3 className="text-lg font-bold text-brand-dark mb-3">

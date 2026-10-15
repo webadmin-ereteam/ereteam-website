@@ -14,11 +14,11 @@ const leadSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const limit = rateLimit(`lead:${getClientIp(req)}`, 5, 60 * 60 * 1000);
+    const limit = await rateLimit(`lead:${getClientIp(req)}`, 5, 60 * 60 * 1000);
     if (!limit.allowed) {
       return NextResponse.json(
-        { error: "Too many requests. Please try again later." },
-        { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
+        { error: limit.unavailable ? "Service temporarily unavailable" : "Too many requests. Please try again later." },
+        { status: limit.unavailable ? 503 : 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
       );
     }
 
@@ -27,21 +27,19 @@ export async function POST(req: NextRequest) {
 
     const { name, email, company, message, page } = payload.data;
 
-    if (!name || !email) {
-      return NextResponse.json({ error: "Name and email are required" }, { status: 400 });
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      console.error("Lead delivery is unavailable: RESEND_API_KEY is not configured");
+      return NextResponse.json({ error: "Lead delivery is temporarily unavailable" }, { status: 503 });
     }
 
-    console.log("📩 New lead:", { name, email, company, page });
-
-    const apiKey = process.env.RESEND_API_KEY;
-    if (apiKey) {
-      const resend = new Resend(apiKey);
-      const safeName = escapeHtml(name);
-      const safeEmail = escapeHtml(email);
-      const safeCompany = escapeHtml(company);
-      const safeMessage = escapeHtml(message);
-      const safePage = escapeHtml(page);
-      const result = await resend.emails.send({
+    const resend = new Resend(apiKey);
+    const safeName = escapeHtml(name);
+    const safeEmail = escapeHtml(email);
+    const safeCompany = escapeHtml(company);
+    const safeMessage = escapeHtml(message);
+    const safePage = escapeHtml(page);
+    const result = await resend.emails.send({
         from: "onboarding@resend.dev",
         to: "webadmin@ereteam.com",
         subject: `New AI Chat Lead: ${stripNewlines(name)}${company ? ` — ${stripNewlines(company)}` : ""}`,
@@ -58,8 +56,11 @@ export async function POST(req: NextRequest) {
             </table>
           </div>
         `,
-      });
-      console.log("📧 Resend result:", JSON.stringify(result));
+    });
+
+    if (result.error) {
+      console.error("Lead delivery failed:", result.error.name);
+      return NextResponse.json({ error: "Failed to deliver lead" }, { status: 502 });
     }
 
     return NextResponse.json({ success: true });

@@ -242,7 +242,7 @@ export default function MarketingIntelligencePage() {
             {technologyExpertise.map((technology) => (
               <div
                 key={technology.name}
-                className="px-5 py-3 bg-white rounded-xl border border-gray-200 shadow-sm"
+                className="px-5 py-3 bg-white rounded-xl border border-gray-200 shadow-xs"
               >
                 <span className="font-bold text-brand-dark">{technology.name}</span>
               </div>

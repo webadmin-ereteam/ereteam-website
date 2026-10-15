@@ -179,7 +179,7 @@ export default function ServicesPage() {
             ].map((item) => (
               <div
                 key={item.title}
-                className="bg-white rounded-2xl p-8 border border-gray-200 hover:border-brand-primary/50 transition-colors shadow-sm"
+                className="bg-white rounded-2xl p-8 border border-gray-200 hover:border-brand-primary/50 transition-colors shadow-xs"
               >
                 <h3 className="text-lg font-bold text-brand-dark mb-3">
                   {item.title}

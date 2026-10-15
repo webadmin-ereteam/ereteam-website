@@ -17,6 +17,8 @@ function getTransport() {
     transport = nodemailer.createTransport({
       service: "gmail",
       auth: { user, pass },
+      disableFileAccess: true,
+      disableUrlAccess: true,
     });
   }
   return transport;

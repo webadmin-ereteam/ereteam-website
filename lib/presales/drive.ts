@@ -3,6 +3,8 @@ import { Readable } from "node:stream";
 import { DOCUMENT_TYPE_FOLDER } from "./documentTypes";
 import { ssrfSafeFetch } from "./ssrfGuard";
 
+const ALLOWED_LOGO_MIME_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+
 function getDriveClient() {
   const rawKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
   if (!rawKey) {
@@ -311,9 +313,9 @@ export async function uploadLogoFromUrl(params: {
     throw new Error(`Link'ten dosya alınamadı (HTTP ${res.status}).`);
   }
 
-  const contentType = res.headers.get("content-type") ?? "";
-  if (!contentType.startsWith("image/")) {
-    throw new Error("Bu link bir görsele işaret etmiyor.");
+  const contentType = (res.headers.get("content-type") ?? "").split(";", 1)[0].trim().toLowerCase();
+  if (!ALLOWED_LOGO_MIME_TYPES.includes(contentType)) {
+    throw new Error("Link PNG, JPG, WebP veya GIF görseline işaret etmeli.");
   }
 
   const contentLength = Number(res.headers.get("content-length") ?? "0");

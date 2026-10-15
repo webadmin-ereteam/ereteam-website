@@ -303,7 +303,7 @@ export default async function CareersPage() {
                     </div>
                     <Link
                       href="/contact"
-                      className="flex-shrink-0 inline-flex items-center px-5 py-2.5 bg-brand-primary text-white text-sm font-semibold rounded-lg hover:bg-opacity-90 transition-all"
+                      className="flex-shrink-0 inline-flex items-center px-5 py-2.5 bg-brand-primary text-white text-sm font-semibold rounded-lg hover:bg-brand-primary/90 transition-all"
                     >
                       Apply Now
                     </Link>

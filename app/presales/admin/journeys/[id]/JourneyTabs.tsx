@@ -23,7 +23,7 @@ export default function JourneyTabs({ journeyId }: { journeyId: string }) {
           href={tab.href}
           className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
             tab.active
-              ? "bg-white text-brand-primary shadow-sm"
+              ? "bg-white text-brand-primary shadow-xs"
               : "text-text-muted hover:text-brand-dark"
           }`}
         >

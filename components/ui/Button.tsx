@@ -28,11 +28,11 @@ type ButtonProps = ButtonAsButtonProps | ButtonAsLinkProps;
 
 const variantClasses: Record<Variant, string> = {
   primary:
-    "bg-brand-primary text-white hover:bg-opacity-90 shadow-sm hover:shadow-md",
+    "bg-brand-primary text-white hover:bg-brand-primary/90 shadow-xs hover:shadow-md",
   secondary:
     "bg-transparent border-2 border-white text-white hover:bg-white hover:text-brand-dark",
   magenta:
-    "bg-brand-magenta text-white hover:bg-opacity-90 shadow-sm hover:shadow-md",
+    "bg-brand-magenta text-white hover:bg-brand-magenta/90 shadow-xs hover:shadow-md",
 };
 
 const sizeClasses: Record<Size, string> = {

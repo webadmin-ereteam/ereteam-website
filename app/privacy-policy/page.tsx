@@ -112,7 +112,7 @@ export default function PrivacyPolicyPage() {
                     target="_blank"
                     rel="noopener noreferrer"
                     download
-                    className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-brand-primary text-white text-sm font-semibold rounded-lg hover:bg-opacity-90 transition-all"
+                    className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-brand-primary text-white text-sm font-semibold rounded-lg hover:bg-brand-primary/90 transition-all"
                   >
                     <Download size={14} />
                     Download
@@ -146,7 +146,7 @@ export default function PrivacyPolicyPage() {
                     target="_blank"
                     rel="noopener noreferrer"
                     download
-                    className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-brand-primary text-white text-sm font-semibold rounded-lg hover:bg-opacity-90 transition-all"
+                    className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-brand-primary text-white text-sm font-semibold rounded-lg hover:bg-brand-primary/90 transition-all"
                   >
                     <Download size={14} />
                     Download

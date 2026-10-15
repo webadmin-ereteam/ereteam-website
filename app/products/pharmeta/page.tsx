@@ -156,7 +156,7 @@ export default function PharmPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {steps.map((step, i) => (
-              <div key={step.id} className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm relative">
+              <div key={step.id} className="bg-white rounded-2xl p-6 border border-gray-200 shadow-xs relative">
                 <span className={`inline-block text-xs font-bold text-white px-3 py-1 rounded-full mb-4 ${step.color}`}>
                   {step.id}
                 </span>
@@ -206,7 +206,7 @@ export default function PharmPage() {
             <h2 className="text-3xl font-extrabold text-brand-dark mb-2">Not Another MDM Tool</h2>
             <p className="text-text-muted">See how Pharmeta compares</p>
           </div>
-          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs">
             <div className="grid grid-cols-4 text-xs font-bold uppercase tracking-wider">
               <div className="p-4 bg-gray-50 border-b border-gray-200"></div>
               <div className="p-4 bg-gray-50 border-b border-gray-200 text-center text-blue-500">Manual / Excel</div>

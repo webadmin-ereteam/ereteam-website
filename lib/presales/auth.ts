@@ -6,12 +6,9 @@ import { verifyPassword } from "./passwordHash";
 // client. middleware.ts itself never calls this; it only verifies the signed
 // session cookie (lib/presales/session.ts), which needs no DB access at all.
 async function loadCredentialRow() {
-  try {
-    return await prisma.adminCredential.findFirst();
-  } catch {
-    // DB unreachable — never let that lock everyone out if env vars still work.
-    return null;
-  }
+  // A database failure must not silently reactivate potentially stale
+  // environment credentials. The fallback is only for a confirmed empty table.
+  return prisma.adminCredential.findFirst();
 }
 
 // Username only — the account page shows this to prefill the form, but the

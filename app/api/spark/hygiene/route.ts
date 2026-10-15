@@ -53,8 +53,11 @@ function editableCatalog(catalog: Awaited<ReturnType<typeof fetchHubSpotProperty
 
 export async function GET(request: NextRequest) {
   if (!(await authorized(request))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const limit = rateLimit(`spark-hygiene-options:${getClientIp(request)}`, 20, 10 * 60 * 1000);
-  if (!limit.allowed) return NextResponse.json({ error: "Çok fazla istek." }, { status: 429 });
+  const limit = await rateLimit(`spark-hygiene-options:${getClientIp(request)}`, 20, 10 * 60 * 1000);
+  if (!limit.allowed) return NextResponse.json(
+    { error: limit.unavailable ? "Servis geçici olarak kullanılamıyor." : "Çok fazla istek." },
+    { status: limit.unavailable ? 503 : 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
+  );
 
   try {
     if (request.nextUrl.searchParams.get("resource") === "deals") {
@@ -91,8 +94,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   if (!(await authorized(request))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const limit = rateLimit(`spark-hygiene-association:${getClientIp(request)}`, 40, 10 * 60 * 1000);
-  if (!limit.allowed) return NextResponse.json({ error: "Çok fazla bağlantı isteği." }, { status: 429 });
+  const limit = await rateLimit(`spark-hygiene-association:${getClientIp(request)}`, 40, 10 * 60 * 1000);
+  if (!limit.allowed) return NextResponse.json(
+    { error: limit.unavailable ? "Servis geçici olarak kullanılamıyor." : "Çok fazla bağlantı isteği." },
+    { status: limit.unavailable ? 503 : 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
+  );
 
   try {
     const parsed = associationSchema.safeParse(await request.json());
@@ -123,8 +129,11 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   if (!(await authorized(request))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const limit = rateLimit(`spark-hygiene-write:${getClientIp(request)}`, 40, 10 * 60 * 1000);
-  if (!limit.allowed) return NextResponse.json({ error: "Çok fazla güncelleme isteği." }, { status: 429 });
+  const limit = await rateLimit(`spark-hygiene-write:${getClientIp(request)}`, 40, 10 * 60 * 1000);
+  if (!limit.allowed) return NextResponse.json(
+    { error: limit.unavailable ? "Servis geçici olarak kullanılamıyor." : "Çok fazla güncelleme isteği." },
+    { status: limit.unavailable ? 503 : 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
+  );
 
   try {
     const parsed = updateSchema.safeParse(await request.json());

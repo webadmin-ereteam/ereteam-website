@@ -1,15 +1,15 @@
 "use client";
 
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
 import { uploadCompanyLogoFromUrl } from "@/lib/presales/adminActions";
 import { inputClass, buttonSecondaryClass } from "../../../../_components/ui";
 import { SubmitButton } from "../../../../_components/SubmitButton";
 
-// The only logo form that uses useFormState instead of a plain throw — see
+// The only logo form that uses useActionState instead of a plain throw — see
 // the comment on uploadCompanyLogoFromUrl for why. A failed fetch shows
 // right here under the input instead of crashing into the error.tsx boundary.
 export function LogoUrlForm({ journeyId, hasExistingLogo }: { journeyId: string; hasExistingLogo: boolean }) {
-  const [state, formAction] = useFormState(uploadCompanyLogoFromUrl.bind(null, journeyId), { error: null });
+  const [state, formAction] = useActionState(uploadCompanyLogoFromUrl.bind(null, journeyId), { error: null });
 
   return (
     <form action={formAction} className="mt-2">

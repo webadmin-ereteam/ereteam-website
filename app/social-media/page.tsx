@@ -34,10 +34,11 @@ const themes = [
 ];
 
 export default async function SocialMediaPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: { post?: string };
+  searchParams: Promise<{ post?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const posts = await getLinkedInPosts();
   const initialPostId = typeof searchParams?.post === "string" ? searchParams.post : undefined;
 

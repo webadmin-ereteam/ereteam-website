@@ -1,6 +1,17 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@config "../tailwind.config.mjs";
+@import "tailwindcss";
+
+@layer base {
+  *, ::after, ::before, ::backdrop, ::file-selector-button {
+    border-color: var(--color-gray-200, currentColor);
+  }
+  /* Tailwind v4 Preflight changed the placeholder default to a translucent
+     currentColor; this restores the v3 gray-400 default this site was
+     designed against (explicit placeholder-* utilities still win). */
+  ::placeholder {
+    color: var(--color-gray-400, #9ca3af);
+  }
+}
 
 :root {
   --ink: #071a2a;
@@ -108,7 +119,8 @@ body:has(.site-header) main .rounded-lg { border-radius: 2px; }
 body:has(.site-header) main .shadow-lg,
 body:has(.site-header) main .shadow-xl,
 body:has(.site-header) main .shadow-md,
-body:has(.site-header) main .shadow-sm { box-shadow: none; }
+body:has(.site-header) main .shadow-sm,
+body:has(.site-header) main .shadow-xs { box-shadow: none; }
 body:has(.site-header) main .font-extrabold { font-weight: 650; letter-spacing: -.025em; }
 body:has(.site-header) main .bg-brand-light { background-color: var(--paper); }
 body:has(.site-header) main p[class~="text-sm"] {
@@ -211,12 +223,16 @@ body:has(.site-header) main a[class*="bg-gradient-to-r"] {
   font-size: .875rem !important;
   line-height: 1.55 !important;
 }
-.detail-page .space-y-20 > :not([hidden]) ~ :not([hidden]) { margin-top: 3.75rem !important; }
+/* Tailwind v4's space-y applies margin-block-end to every child except the
+   last, so the override targets that mechanism (v3 applied margin-top to
+   every child except the first, which no longer exists in v4). */
+.detail-page .space-y-20 > :not(:last-child) { margin-block-end: 3.75rem !important; }
 .detail-page .mb-16 { margin-bottom: 3rem !important; }
 .detail-page .mb-12 { margin-bottom: 2.5rem !important; }
 .detail-page img { transition: filter .45s ease, transform .7s var(--ease); }
 .detail-page article:hover img,
 .detail-page a.group:hover img { transform: scale(1.025); }
+.detail-page .shadow-xs,
 .detail-page .shadow-sm,
 .detail-page .shadow-md,
 .detail-page .shadow-lg { box-shadow: none !important; }
@@ -258,7 +274,7 @@ body:has(.site-header) main a[class*="bg-gradient-to-r"] {
 ::-webkit-scrollbar-thumb { background: var(--blue); }
 
 @layer utilities {
-  .focus-ring { @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2; }
+  .focus-ring { @apply focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2; }
   .text-balance { text-wrap: balance; }
 }
 

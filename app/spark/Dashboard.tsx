@@ -857,7 +857,7 @@ export default function Dashboard({
       const response = await fetch("/api/spark/refresh", { method: "POST" });
       const result = await response.json();
       if (response.status === 401) {
-        window.location.assign("/spark/login?next=/spark");
+        router.push("/spark/login?next=/spark");
         return;
       }
       if (!response.ok) throw new Error(result.error || "Yenileme başarısız.");

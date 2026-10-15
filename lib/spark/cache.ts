@@ -122,7 +122,7 @@ export async function refreshSparkData() {
       }
     }
   });
-  revalidateTag(SNAPSHOT_TAG);
+  revalidateTag(SNAPSHOT_TAG, "max");
   const stored = await prisma.sparkDashboardSnapshot.findUnique({
     where: { id: CURRENT_SNAPSHOT_ID },
     select: { payload: true },

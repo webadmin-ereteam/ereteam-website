@@ -71,7 +71,7 @@ export function PageHeader({
 }
 
 export const inputClass =
-  "rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm text-text-body transition-colors focus:border-brand-primary focus:outline-none focus:ring-[3px] focus:ring-brand-primary/10";
+  "rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm text-text-body transition-colors focus:border-brand-primary focus:outline-hidden focus:ring-[3px] focus:ring-brand-primary/10";
 
 export const labelClass = "mb-1.5 block text-sm font-medium text-text-body";
 

@@ -10,10 +10,11 @@ import { QuestionListEditor, type QuestionDraft } from "../../../../../../_compo
 export default async function EditSurveyPage({
   params,
 }: {
-  params: { id: string; surveyId: string };
+  params: Promise<{ id: string; surveyId: string }>;
 }) {
+  const { id, surveyId } = await params;
   const survey = await prisma.surveyInstance.findFirst({
-    where: { id: params.surveyId, journeyId: params.id },
+    where: { id: surveyId, journeyId: id },
     include: { stage: true, selections: { orderBy: { order: "asc" } } },
   });
 
@@ -22,7 +23,7 @@ export default async function EditSurveyPage({
   // Sent/completed surveys have no edit form — bounce to the read-only
   // results page instead of showing a form that would just error on submit.
   if (survey!.status !== "draft") {
-    redirect(`/presales/admin/journeys/${params.id}/surveys/${params.surveyId}`);
+    redirect(`/presales/admin/journeys/${id}/surveys/${surveyId}`);
   }
 
   const initialQuestions: QuestionDraft[] = survey!.selections.map((item) => ({
@@ -37,7 +38,7 @@ export default async function EditSurveyPage({
   return (
     <div>
       <Link
-        href={`/presales/admin/journeys/${params.id}/surveys`}
+        href={`/presales/admin/journeys/${id}/surveys`}
         className="mb-4 inline-flex items-center gap-1 text-sm text-text-muted hover:text-brand-primary"
       >
         <ArrowLeft size={14} /> Anketlere geri dön
@@ -49,7 +50,7 @@ export default async function EditSurveyPage({
       />
 
       <Card>
-        <form action={updateSurveyInstance.bind(null, survey!.id, params.id)} className="space-y-5">
+        <form action={updateSurveyInstance.bind(null, survey!.id, id)} className="space-y-5">
           <div>
             <label className={labelClass}>Anket Başlığı</label>
             <input name="title" required defaultValue={survey!.title} className={`${inputClass} w-full max-w-md`} />
@@ -61,7 +62,7 @@ export default async function EditSurveyPage({
             <SubmitButton className={buttonPrimaryClass} pendingLabel="Kaydediliyor...">
               Değişiklikleri Kaydet
             </SubmitButton>
-            <Link href={`/presales/admin/journeys/${params.id}/surveys`} className={buttonSecondaryClass}>
+            <Link href={`/presales/admin/journeys/${id}/surveys`} className={buttonSecondaryClass}>
               Vazgeç
             </Link>
           </div>

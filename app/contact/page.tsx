@@ -116,7 +116,7 @@ export default function ContactPage() {
   };
 
   const inputClass = (field: keyof ContactFormData) =>
-    `w-full px-4 py-2.5 rounded-lg border text-sm text-brand-dark bg-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary transition-colors ${
+    `w-full px-4 py-2.5 rounded-lg border text-sm text-brand-dark bg-brand-light focus:outline-hidden focus:ring-2 focus:ring-brand-primary transition-colors ${
       errors[field]
         ? "border-red-400"
         : "border-gray-300 hover:border-gray-400"
@@ -139,7 +139,7 @@ export default function ContactPage() {
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-12">
             {/* Contact Form */}
             <div className="lg:col-span-3">
-              <div className="bg-white rounded-2xl p-5 sm:p-8 border border-gray-200 shadow-sm">
+              <div className="bg-white rounded-2xl p-5 sm:p-8 border border-gray-200 shadow-xs">
                 {submitted ? (
                   <div className="flex flex-col items-center justify-center text-center py-12">
                     <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-5">
@@ -231,7 +231,7 @@ export default function ContactPage() {
                             placeholder="+1 (555) 000-0000"
                             value={form.phone}
                             onChange={handleChange}
-                            className="w-full px-4 py-2.5 rounded-lg border border-gray-300 hover:border-gray-400 text-sm text-brand-dark bg-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary transition-colors"
+                            className="w-full px-4 py-2.5 rounded-lg border border-gray-300 hover:border-gray-400 text-sm text-brand-dark bg-brand-light focus:outline-hidden focus:ring-2 focus:ring-brand-primary transition-colors"
                           />
                         </div>
                       </div>
@@ -304,7 +304,7 @@ export default function ContactPage() {
                       <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-brand-primary text-white font-semibold rounded-lg hover:bg-opacity-90 disabled:opacity-70 disabled:cursor-not-allowed transition-all"
+                        className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-brand-primary text-white font-semibold rounded-lg hover:bg-brand-primary/90 disabled:opacity-70 disabled:cursor-not-allowed transition-all"
                       >
                         {isSubmitting ? (
                           <>
@@ -334,7 +334,7 @@ export default function ContactPage() {
             {/* Contact details */}
             <div className="lg:col-span-2 space-y-6">
               {/* General email */}
-              <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+              <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-xs">
                 <p className="text-xs font-semibold text-brand-magenta uppercase tracking-widest mb-2">General Inquiries</p>
                 <h3 className="font-bold text-brand-dark mb-3">Email Us</h3>
                 <a href="mailto:info@ereteam.com" className="flex items-center gap-2 text-sm text-text-body hover:text-brand-primary transition-colors">
@@ -344,7 +344,7 @@ export default function ContactPage() {
               </div>
 
               {/* US HQ */}
-              <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+              <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-xs">
                 <p className="text-xs font-semibold text-brand-magenta uppercase tracking-widest mb-2">US Headquarters</p>
                 <h3 className="font-bold text-brand-dark mb-3">Ereteam Analytics USA HQ</h3>
                 <p className="text-sm text-text-muted leading-relaxed mb-3">
@@ -357,7 +357,7 @@ export default function ContactPage() {
               </div>
 
               {/* Turkey Operations */}
-              <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+              <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-xs">
                 <p className="text-xs font-semibold text-brand-magenta uppercase tracking-widest mb-2">Operations Center</p>
                 <h3 className="font-bold text-brand-dark mb-3">Ereteam Operations Center</h3>
                 <p className="text-sm text-text-muted leading-relaxed mb-3">

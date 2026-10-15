@@ -8,9 +8,13 @@ import { generateAccessToken } from "@/lib/presales/tokens";
 import { uploadFileToDrive, copyExistingDriveFile, extractDriveFileId, uploadLogoToDrive, uploadLogoFromUrl, trashDriveFile } from "@/lib/presales/drive";
 import { findCurrentStage } from "@/lib/presales/stageProgress";
 import { encodeOtherOption } from "@/lib/presales/surveyOptions";
-import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/presales/fileUpload";
+import { ALLOWED_UPLOAD_LABEL, ALLOWED_UPLOAD_MIME_TYPES, MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from "@/lib/presales/fileUpload";
 import { fileContentMatchesDeclaredType } from "@/lib/presales/fileSignature";
 import { hashPassword } from "@/lib/presales/passwordHash";
+import { requireCurrentAdminSession } from "@/lib/presales/adminSession";
+import { DOCUMENT_TYPES } from "@/lib/presales/documentTypes";
+
+const ALLOWED_LOGO_MIME_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 
 // "Firma - Ürün - 06.07.2026" — the fixed format used for both a journey's own
 // `name` and the Drive folder created for it, so the two always match.
@@ -22,6 +26,7 @@ function formatJourneyDate(date: Date) {
 }
 
 export async function createProspectAndJourney(formData: FormData) {
+  await requireCurrentAdminSession();
   const companyName = String(formData.get("companyName") ?? "").trim();
   const contactName = String(formData.get("contactName") ?? "").trim();
   const contactEmail = String(formData.get("contactEmail") ?? "").trim();
@@ -52,8 +57,8 @@ export async function createProspectAndJourney(formData: FormData) {
     if (logoFile.size > MAX_UPLOAD_BYTES) {
       throw new Error(`Logo dosyası çok büyük (maksimum ${MAX_UPLOAD_LABEL}).`);
     }
-    if (!logoFile.type.startsWith("image/")) {
-      throw new Error("Logo bir resim dosyası olmalı (PNG, JPG, SVG vb.).");
+    if (!ALLOWED_LOGO_MIME_TYPES.includes(logoFile.type)) {
+      throw new Error("Logo PNG, JPG, WebP veya GIF formatında olmalı.");
     }
     if (!(await fileContentMatchesDeclaredType(logoFile))) {
       throw new Error("Dosyanın içeriği, seçtiğin dosya türüyle uyuşmuyor.");
@@ -127,6 +132,7 @@ export async function createProspectAndJourney(formData: FormData) {
 // stages), not by jumping a later stage ahead while earlier ones are still open.
 
 export async function completeCurrentStage(journeyId: string) {
+  await requireCurrentAdminSession();
   const stages = await prisma.journeyStage.findMany({
     where: { journeyId, isActive: true },
     orderBy: { order: "asc" },
@@ -178,6 +184,7 @@ export async function completeCurrentStage(journeyId: string) {
 // pending stage" that's no longer the right one, since this already
 // activated it out of band.
 export async function forceCompleteCurrentStage(journeyId: string) {
+  await requireCurrentAdminSession();
   const [stages, journey] = await Promise.all([
     prisma.journeyStage.findMany({ where: { journeyId, isActive: true }, orderBy: { order: "asc" } }),
     prisma.journey.findUniqueOrThrow({ where: { id: journeyId }, select: { accessToken: true } }),
@@ -219,6 +226,7 @@ export async function forceCompleteCurrentStage(journeyId: string) {
 }
 
 export async function reopenLastCompletedStage(journeyId: string) {
+  await requireCurrentAdminSession();
   const stages = await prisma.journeyStage.findMany({
     where: { journeyId, isActive: true },
     orderBy: { order: "asc" },
@@ -252,6 +260,7 @@ export async function reopenLastCompletedStage(journeyId: string) {
 }
 
 export async function toggleProposalRequested(journeyId: string, requested: boolean) {
+  await requireCurrentAdminSession();
   await prisma.journey.update({
     where: { id: journeyId },
     data: {
@@ -264,6 +273,7 @@ export async function toggleProposalRequested(journeyId: string, requested: bool
 }
 
 export async function setJourneyOutcome(journeyId: string, formData: FormData) {
+  await requireCurrentAdminSession();
   const status = String(formData.get("status") ?? "active");
   const outcomeReason = String(formData.get("outcomeReason") ?? "").trim() || null;
   const closeDateRaw = String(formData.get("outcomeSetAt") ?? "").trim();
@@ -282,6 +292,7 @@ export async function setJourneyOutcome(journeyId: string, formData: FormData) {
 }
 
 export async function assignSalesRep(journeyId: string, formData: FormData) {
+  await requireCurrentAdminSession();
   const salesRepId = String(formData.get("salesRepId") ?? "").trim() || null;
   const journey = await prisma.journey.update({
     where: { id: journeyId },
@@ -294,6 +305,7 @@ export async function assignSalesRep(journeyId: string, formData: FormData) {
 }
 
 export async function setJourneyLinkDisabled(journeyId: string, linkDisabled: boolean) {
+  await requireCurrentAdminSession();
   await prisma.journey.update({ where: { id: journeyId }, data: { linkDisabled } });
   revalidatePath(`/presales/admin/journeys/${journeyId}`);
   revalidatePath("/presales/admin");
@@ -301,6 +313,7 @@ export async function setJourneyLinkDisabled(journeyId: string, linkDisabled: bo
 
 // Independent of status/outcome — a won or lost journey can also be archived.
 export async function setJourneyArchived(journeyId: string, archived: boolean) {
+  await requireCurrentAdminSession();
   await prisma.journey.update({ where: { id: journeyId }, data: { archived } });
   revalidatePath(`/presales/admin/journeys/${journeyId}`);
   revalidatePath("/presales/admin");
@@ -315,6 +328,7 @@ export async function setJourneyArchived(journeyId: string, archived: boolean) {
 // confirm prompt itself. `Prospect` is left alone too (a company record can
 // outlive any one journey).
 export async function deleteJourney(journeyId: string) {
+  await requireCurrentAdminSession();
   await prisma.$transaction([
     prisma.document.deleteMany({ where: { journeyId } }),
     prisma.surveyResponse.deleteMany({
@@ -337,6 +351,7 @@ function revalidateJourneys(journeyIds: string[]) {
 }
 
 export async function bulkSetJourneyStatus(journeyIds: string[], status: string) {
+  await requireCurrentAdminSession();
   if (journeyIds.length === 0) return;
   await prisma.journey.updateMany({
     where: { id: { in: journeyIds } },
@@ -349,6 +364,7 @@ export async function bulkSetJourneyStatus(journeyIds: string[], status: string)
 }
 
 export async function bulkAssignSalesRep(journeyIds: string[], salesRepId: string | null) {
+  await requireCurrentAdminSession();
   if (journeyIds.length === 0) return;
   const journeys = await prisma.journey.findMany({
     where: { id: { in: journeyIds } },
@@ -360,12 +376,14 @@ export async function bulkAssignSalesRep(journeyIds: string[], salesRepId: strin
 }
 
 export async function bulkSetJourneyLinkDisabled(journeyIds: string[], linkDisabled: boolean) {
+  await requireCurrentAdminSession();
   if (journeyIds.length === 0) return;
   await prisma.journey.updateMany({ where: { id: { in: journeyIds } }, data: { linkDisabled } });
   revalidateJourneys(journeyIds);
 }
 
 export async function bulkSetJourneyArchived(journeyIds: string[], archived: boolean) {
+  await requireCurrentAdminSession();
   if (journeyIds.length === 0) return;
   await prisma.journey.updateMany({ where: { id: { in: journeyIds } }, data: { archived } });
   revalidateJourneys(journeyIds);
@@ -379,6 +397,7 @@ export async function bulkSetJourneyArchived(journeyIds: string[], archived: boo
 // there until something else happened to revalidate that specific route).
 
 export async function createStageTemplate(formData: FormData) {
+  await requireCurrentAdminSession();
   const name = String(formData.get("name") ?? "").trim();
   if (!name) {
     throw new Error("Şablon adı zorunludur.");
@@ -390,6 +409,7 @@ export async function createStageTemplate(formData: FormData) {
 }
 
 export async function renameStageTemplate(id: string, formData: FormData) {
+  await requireCurrentAdminSession();
   const name = String(formData.get("name") ?? "").trim();
   if (!name) {
     throw new Error("Şablon adı zorunludur.");
@@ -401,6 +421,7 @@ export async function renameStageTemplate(id: string, formData: FormData) {
 }
 
 export async function duplicateStageTemplate(id: string) {
+  await requireCurrentAdminSession();
   const source = await prisma.stageTemplate.findUniqueOrThrow({
     where: { id },
     include: { stages: { orderBy: { order: "asc" } } },
@@ -429,6 +450,7 @@ export async function duplicateStageTemplate(id: string) {
 }
 
 export async function deleteStageTemplate(id: string) {
+  await requireCurrentAdminSession();
   const templateCount = await prisma.stageTemplate.count();
 
   if (templateCount <= 1) {
@@ -441,6 +463,7 @@ export async function deleteStageTemplate(id: string) {
 }
 
 export async function upsertStageDefinition(stageTemplateId: string, formData: FormData) {
+  await requireCurrentAdminSession();
   const id = String(formData.get("id") ?? "").trim() || undefined;
   const key = String(formData.get("key") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
@@ -476,11 +499,13 @@ export async function upsertStageDefinition(stageTemplateId: string, formData: F
 }
 
 export async function setStageActive(id: string, stageTemplateId: string, isActive: boolean) {
+  await requireCurrentAdminSession();
   await prisma.stageDefinition.update({ where: { id }, data: { isActive } });
   revalidatePath(`/presales/admin/stages/${stageTemplateId}`);
 }
 
 export async function reorderStageDefinitions(stageTemplateId: string, orderedIds: string[]) {
+  await requireCurrentAdminSession();
   await prisma.$transaction(
     orderedIds.map((id, index) => prisma.stageDefinition.update({ where: { id }, data: { order: index } }))
   );
@@ -493,6 +518,7 @@ export async function reorderStageDefinitions(stageTemplateId: string, orderedId
 // description/etc regardless, so it's nulled out (not restricted) before the
 // delete rather than blocking it.
 export async function deleteStageDefinition(id: string, stageTemplateId: string) {
+  await requireCurrentAdminSession();
   await prisma.$transaction([
     prisma.journeyStage.updateMany({
       where: { sourceStageDefinitionId: id },
@@ -508,6 +534,7 @@ export async function deleteStageDefinition(id: string, stageTemplateId: string)
 // Fields are named `stage_{index}_*` (same convention as QuestionListEditor's
 // `question_{index}_*`), read back here and applied in a single transaction.
 export async function saveAllStageDefinitions(stageTemplateId: string, formData: FormData) {
+  await requireCurrentAdminSession();
   const count = Number(formData.get("stageCount") ?? 0);
 
   const updates = [];
@@ -546,6 +573,7 @@ export async function saveAllStageDefinitions(stageTemplateId: string, formData:
 // --- Per-case stages (JourneyStage): freely editable copies scoped to one journey ---
 
 export async function createJourneyStage(formData: FormData) {
+  await requireCurrentAdminSession();
   const journeyId = String(formData.get("journeyId") ?? "").trim();
   const key = String(formData.get("key") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
@@ -568,6 +596,7 @@ export async function createJourneyStage(formData: FormData) {
 }
 
 export async function updateJourneyStage(formData: FormData) {
+  await requireCurrentAdminSession();
   const id = String(formData.get("id") ?? "").trim();
   const journeyId = String(formData.get("journeyId") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
@@ -601,12 +630,14 @@ export async function updateJourneyStage(formData: FormData) {
 }
 
 export async function setJourneyStageActive(id: string, journeyId: string, isActive: boolean) {
+  await requireCurrentAdminSession();
   await prisma.journeyStage.update({ where: { id }, data: { isActive } });
   revalidatePath(`/presales/admin/journeys/${journeyId}`);
   revalidatePath(`/presales/admin/journeys/${journeyId}/stages`);
 }
 
 export async function reorderJourneyStages(journeyId: string, orderedIds: string[]) {
+  await requireCurrentAdminSession();
   await prisma.$transaction(
     orderedIds.map((id, index) => prisma.journeyStage.update({ where: { id }, data: { order: index } }))
   );
@@ -621,6 +652,7 @@ export async function reorderJourneyStages(journeyId: string, orderedIds: string
 // than silently cascading; any Documents scoped to the stage instead just
 // lose that scoping (Document.stageId is optional) and become "genel".
 export async function deleteJourneyStage(id: string, journeyId: string) {
+  await requireCurrentAdminSession();
   const surveyCount = await prisma.surveyInstance.count({ where: { stageId: id } });
   if (surveyCount > 0) {
     throw new Error(
@@ -641,6 +673,7 @@ export async function deleteJourneyStage(id: string, journeyId: string) {
 // the stage template editor's "Tüm Değişiklikleri Kaydet": editing several
 // stages used to mean clicking "Kaydet" once per card.
 export async function saveAllJourneyStages(journeyId: string, formData: FormData) {
+  await requireCurrentAdminSession();
   const count = Number(formData.get("stageCount") ?? 0);
 
   const updates = [];
@@ -761,6 +794,7 @@ function parseQuestionSlots(formData: FormData) {
 // --- Survey templates (named, reusable question lists — not tied to a stage) ---
 
 export async function createSurveyTemplate(formData: FormData) {
+  await requireCurrentAdminSession();
   const name = String(formData.get("name") ?? "").trim();
   if (!name) {
     throw new Error("Şablon adı zorunludur.");
@@ -777,6 +811,7 @@ export async function createSurveyTemplate(formData: FormData) {
 // DB constraint), this is purely so two templates never look identical in
 // the list by accident.
 export async function duplicateSurveyTemplate(id: string) {
+  await requireCurrentAdminSession();
   const source = await prisma.surveyTemplate.findUniqueOrThrow({
     where: { id },
     include: { items: { orderBy: { order: "asc" } } },
@@ -801,6 +836,7 @@ export async function duplicateSurveyTemplate(id: string) {
 }
 
 export async function renameSurveyTemplate(id: string, formData: FormData) {
+  await requireCurrentAdminSession();
   const name = String(formData.get("name") ?? "").trim();
   if (!name) {
     throw new Error("Şablon adı zorunludur.");
@@ -811,6 +847,7 @@ export async function renameSurveyTemplate(id: string, formData: FormData) {
 }
 
 export async function updateSurveyTemplate(id: string, formData: FormData) {
+  await requireCurrentAdminSession();
   // Renaming is handled entirely by the separate `renameSurveyTemplate` form
   // above this one on the page — this form only ever submits question fields,
   // so `name` is deliberately not read or required here.
@@ -829,6 +866,7 @@ export async function updateSurveyTemplate(id: string, formData: FormData) {
 }
 
 export async function deleteSurveyTemplate(id: string) {
+  await requireCurrentAdminSession();
   await prisma.surveyTemplate.delete({ where: { id } });
   revalidatePath("/presales/admin/survey-templates");
 }
@@ -836,6 +874,7 @@ export async function deleteSurveyTemplate(id: string) {
 // --- Surveys (per-case, optionally started from a template, then customized) ---
 
 export async function createSurveyInstance(formData: FormData) {
+  await requireCurrentAdminSession();
   const journeyId = String(formData.get("journeyId") ?? "").trim();
   const stageId = String(formData.get("stageId") ?? "").trim();
   const title = String(formData.get("title") ?? "").trim();
@@ -854,6 +893,7 @@ export async function createSurveyInstance(formData: FormData) {
 }
 
 export async function sendSurveyInstance(surveyInstanceId: string, journeyId: string) {
+  await requireCurrentAdminSession();
   await prisma.surveyInstance.update({
     where: { id: surveyInstanceId },
     data: { status: "sent", sentAt: new Date() },
@@ -867,6 +907,7 @@ export async function sendSurveyInstance(surveyInstanceId: string, journeyId: st
 // delete-and-recreate approach; safe here too since a draft survey can't yet
 // have any SurveyResponse rows (those only exist once a customer has seen it).
 export async function updateSurveyInstance(surveyInstanceId: string, journeyId: string, formData: FormData) {
+  await requireCurrentAdminSession();
   const survey = await prisma.surveyInstance.findUniqueOrThrow({ where: { id: surveyInstanceId } });
   if (survey.status !== "draft") {
     throw new Error("Sadece taslak durumundaki anketler düzenlenebilir.");
@@ -901,6 +942,7 @@ export async function updateSurveyInstance(surveyInstanceId: string, journeyId: 
 // deleteJourney — so the answers survive in Drive even after the DB rows
 // (SurveyResponse/SurveyQuestionSelection/SurveyInstance) are gone.
 export async function deleteSurveyInstance(surveyInstanceId: string, journeyId: string) {
+  await requireCurrentAdminSession();
   const survey = await prisma.surveyInstance.findUniqueOrThrow({
     where: { id: surveyInstanceId },
     include: { journey: { select: { accessToken: true } } },
@@ -920,6 +962,7 @@ export async function deleteSurveyInstance(surveyInstanceId: string, journeyId: 
 // --- Documents ---
 
 export async function uploadDocument(formData: FormData) {
+  await requireCurrentAdminSession();
   const journeyId = String(formData.get("journeyId") ?? "").trim();
   const stageId = String(formData.get("stageId") ?? "").trim() || null;
   const type = String(formData.get("type") ?? "other").trim();
@@ -933,8 +976,21 @@ export async function uploadDocument(formData: FormData) {
   if (file.size > MAX_UPLOAD_BYTES) {
     throw new Error(`Dosya çok büyük (maksimum ${MAX_UPLOAD_LABEL}).`);
   }
+  if (!ALLOWED_UPLOAD_MIME_TYPES.includes(file.type)) {
+    throw new Error(`Desteklenmeyen dosya türü — izin verilenler: ${ALLOWED_UPLOAD_LABEL}.`);
+  }
+  if (!(await fileContentMatchesDeclaredType(file))) {
+    throw new Error("Dosyanın içeriği, seçtiğin dosya türüyle uyuşmuyor.");
+  }
+  if (!DOCUMENT_TYPES.includes(type as (typeof DOCUMENT_TYPES)[number])) {
+    throw new Error("Geçersiz belge türü.");
+  }
 
   const journey = await prisma.journey.findUniqueOrThrow({ where: { id: journeyId } });
+  if (stageId) {
+    const stage = await prisma.journeyStage.findFirst({ where: { id: stageId, journeyId }, select: { id: true } });
+    if (!stage) throw new Error("Seçilen aşama bu journey'ye ait değil.");
+  }
 
   const { driveFileId, webViewLink, folderId } = await uploadFileToDrive({
     file,
@@ -973,6 +1029,7 @@ export async function uploadDocument(formData: FormData) {
 // file (e.g. it lives in the same Shared Drive, or is shared with the
 // service account's email directly) — otherwise the copy fails with a 404.
 export async function linkExistingDriveFile(formData: FormData) {
+  await requireCurrentAdminSession();
   const journeyId = String(formData.get("journeyId") ?? "").trim();
   const stageId = String(formData.get("stageId") ?? "").trim() || null;
   const type = String(formData.get("type") ?? "meeting_note").trim();
@@ -983,8 +1040,15 @@ export async function linkExistingDriveFile(formData: FormData) {
   if (!journeyId || !title || !driveSource) {
     throw new Error("Journey, başlık ve Drive dosya linki/ID'si zorunludur.");
   }
+  if (!DOCUMENT_TYPES.includes(type as (typeof DOCUMENT_TYPES)[number])) {
+    throw new Error("Geçersiz belge türü.");
+  }
 
   const journey = await prisma.journey.findUniqueOrThrow({ where: { id: journeyId } });
+  if (stageId) {
+    const stage = await prisma.journeyStage.findFirst({ where: { id: stageId, journeyId }, select: { id: true } });
+    if (!stage) throw new Error("Seçilen aşama bu journey'ye ait değil.");
+  }
 
   const { driveFileId, webViewLink, folderId } = await copyExistingDriveFile({
     sourceFileId: extractDriveFileId(driveSource),
@@ -1018,6 +1082,7 @@ export async function linkExistingDriveFile(formData: FormData) {
 // --- Sales reps ---
 
 export async function createSalesRep(formData: FormData) {
+  await requireCurrentAdminSession();
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim() || null;
@@ -1033,12 +1098,14 @@ export async function createSalesRep(formData: FormData) {
 }
 
 export async function setSalesRepActive(id: string, isActive: boolean) {
+  await requireCurrentAdminSession();
   await prisma.salesRep.update({ where: { id }, data: { isActive } });
   revalidatePath("/presales/admin/sales-reps");
   revalidatePath("/presales/admin/prospects/new");
 }
 
 export async function updateSalesRep(id: string, formData: FormData) {
+  await requireCurrentAdminSession();
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim() || null;
@@ -1055,6 +1122,7 @@ export async function updateSalesRep(id: string, formData: FormData) {
 }
 
 export async function deleteSalesRep(id: string) {
+  await requireCurrentAdminSession();
   // Journey.salesRepId -> SalesRep has ON DELETE SET NULL, so any case currently
   // assigned to this rep is simply left unassigned rather than blocking deletion.
   await prisma.salesRep.delete({ where: { id } });
@@ -1066,6 +1134,7 @@ export async function deleteSalesRep(id: string) {
 // schema.prisma for why this is a separate, customer-invisible role) ---
 
 export async function createTechnicalLead(formData: FormData) {
+  await requireCurrentAdminSession();
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim() || null;
@@ -1081,12 +1150,14 @@ export async function createTechnicalLead(formData: FormData) {
 }
 
 export async function setTechnicalLeadActive(id: string, isActive: boolean) {
+  await requireCurrentAdminSession();
   await prisma.technicalLead.update({ where: { id }, data: { isActive } });
   revalidatePath("/presales/admin/technical-leads");
   revalidatePath("/presales/admin/prospects/new");
 }
 
 export async function updateTechnicalLead(id: string, formData: FormData) {
+  await requireCurrentAdminSession();
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim() || null;
@@ -1103,6 +1174,7 @@ export async function updateTechnicalLead(id: string, formData: FormData) {
 }
 
 export async function deleteTechnicalLead(id: string) {
+  await requireCurrentAdminSession();
   // Journey.technicalLeadId -> TechnicalLead has ON DELETE SET NULL, same as
   // deleteSalesRep — any case currently assigned is simply left unassigned.
   await prisma.technicalLead.delete({ where: { id } });
@@ -1111,6 +1183,7 @@ export async function deleteTechnicalLead(id: string) {
 }
 
 export async function assignTechnicalLead(journeyId: string, formData: FormData) {
+  await requireCurrentAdminSession();
   const technicalLeadId = String(formData.get("technicalLeadId") ?? "").trim() || null;
   await prisma.journey.update({ where: { id: journeyId }, data: { technicalLeadId } });
   revalidatePath(`/presales/admin/journeys/${journeyId}`);
@@ -1120,6 +1193,7 @@ export async function assignTechnicalLead(journeyId: string, formData: FormData)
 // --- Products / expertise areas ---
 
 export async function createProduct(formData: FormData) {
+  await requireCurrentAdminSession();
   const name = String(formData.get("name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim() || null;
 
@@ -1133,12 +1207,14 @@ export async function createProduct(formData: FormData) {
 }
 
 export async function setProductActive(id: string, isActive: boolean) {
+  await requireCurrentAdminSession();
   await prisma.product.update({ where: { id }, data: { isActive } });
   revalidatePath("/presales/admin/products");
   revalidatePath("/presales/admin/prospects/new");
 }
 
 export async function deleteProduct(id: string) {
+  await requireCurrentAdminSession();
   // Journey.productId -> Product has ON DELETE SET NULL, so any case currently
   // assigned to this product is simply left unassigned rather than blocking
   // deletion — mirrors deleteSalesRep.
@@ -1148,6 +1224,7 @@ export async function deleteProduct(id: string) {
 }
 
 export async function assignProduct(journeyId: string, formData: FormData) {
+  await requireCurrentAdminSession();
   const existing = await prisma.journey.findUnique({ where: { id: journeyId }, select: { productId: true } });
   if (existing?.productId) {
     throw new Error("Ürün, journey oluşturulduktan sonra değiştirilemez.");
@@ -1162,6 +1239,7 @@ export async function assignProduct(journeyId: string, formData: FormData) {
 // case was created. Renaming the prospect therefore never desynchronizes an
 // existing folder from its journey.
 export async function updateProspectDetails(journeyId: string, formData: FormData) {
+  await requireCurrentAdminSession();
   const companyName = String(formData.get("companyName") ?? "").trim();
   const contactName = String(formData.get("contactName") ?? "").trim();
   const contactEmail = String(formData.get("contactEmail") ?? "").trim();
@@ -1200,6 +1278,7 @@ export async function updateProspectDetails(journeyId: string, formData: FormDat
 // is uploaded from a journey's Ayarlar tab since that's the only place an
 // admin is looking at one specific company at a time.
 export async function uploadCompanyLogo(journeyId: string, formData: FormData) {
+  await requireCurrentAdminSession();
   const file = formData.get("logo") as File | null;
   if (!file || file.size === 0) {
     throw new Error("Bir logo dosyası seçmelisin.");
@@ -1207,8 +1286,8 @@ export async function uploadCompanyLogo(journeyId: string, formData: FormData) {
   if (file.size > MAX_UPLOAD_BYTES) {
     throw new Error(`Dosya çok büyük (maksimum ${MAX_UPLOAD_LABEL}).`);
   }
-  if (!file.type.startsWith("image/")) {
-    throw new Error("Logo bir resim dosyası olmalı (PNG, JPG, SVG vb.).");
+  if (!ALLOWED_LOGO_MIME_TYPES.includes(file.type)) {
+    throw new Error("Logo PNG, JPG, WebP veya GIF formatında olmalı.");
   }
   if (!(await fileContentMatchesDeclaredType(file))) {
     throw new Error("Dosyanın içeriği, seçtiğin dosya türüyle uyuşmuyor.");
@@ -1241,6 +1320,7 @@ export async function uploadCompanyLogoFromUrl(
   _prevState: { error: string | null },
   formData: FormData
 ): Promise<{ error: string | null }> {
+  await requireCurrentAdminSession();
   const sourceUrl = String(formData.get("logoUrl") ?? "").trim();
   if (!sourceUrl) {
     return { error: "Bir link girmelisin." };
@@ -1264,6 +1344,7 @@ export async function uploadCompanyLogoFromUrl(
 }
 
 export async function removeCompanyLogo(journeyId: string) {
+  await requireCurrentAdminSession();
   const journey = await prisma.journey.findUniqueOrThrow({
     where: { id: journeyId },
     include: { prospect: true },
@@ -1287,6 +1368,7 @@ export async function removeCompanyLogo(journeyId: string) {
 // an admin nudge the visible portion left/center/right per company instead
 // of every logo being forced to the same fixed position.
 export async function setProspectLogoAlign(journeyId: string, formData: FormData) {
+  await requireCurrentAdminSession();
   const logoAlign = String(formData.get("logoAlign") ?? "left").trim();
   if (!["left", "center", "right"].includes(logoAlign)) {
     throw new Error("Geçersiz hizalama.");
@@ -1306,6 +1388,7 @@ export async function setProspectLogoAlign(journeyId: string, formData: FormData
 // force a password reset too. Whatever is typed gets hashed before it ever
 // touches the database.
 export async function updateAdminCredentials(formData: FormData) {
+  await requireCurrentAdminSession();
   const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "").trim();
 
@@ -1342,6 +1425,7 @@ export async function updateAdminCredentials(formData: FormData) {
 // and normal logout just clears the one browser's cookie. Bumping the same
 // `sessionEpoch` a credential change already bumps.
 export async function revokeAllSessions() {
+  await requireCurrentAdminSession();
   const existing = await prisma.adminCredential.findFirst();
   if (!existing) {
     throw new Error("Henüz kayıtlı bir giriş bilgisi yok.");

@@ -7,8 +7,9 @@ export const metadata = { title: "Spark | Ereteam", robots: { index: false, foll
 
 const themeInitScript = `(function(){try{var t=localStorage.getItem("spark-theme");if(t!=="dark"&&t!=="light")t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.setAttribute("data-spark-theme",t)}catch(e){}})();`;
 
-export default async function SparkPage({ searchParams }: { searchParams?: { year?: string | string[] } }) {
+export default async function SparkPage({ searchParams: searchParamsPromise }: { searchParams: Promise<{ year?: string | string[] }> }) {
   try {
+    const searchParams = await searchParamsPromise;
     const rawYear = Array.isArray(searchParams?.year) ? searchParams.year[0] : searchParams?.year;
     if (rawYear && !/^20\d{2}$/.test(rawYear)) throw new Error("Geçersiz rapor yılı.");
     const requestedYear = rawYear ? Number(rawYear) : undefined;

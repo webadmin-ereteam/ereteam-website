@@ -23,8 +23,9 @@ import { SubmitButton } from "../../../../_components/SubmitButton";
 import { FileSizeInput } from "../../../../_components/FileSizeInput";
 import { LogoUrlForm } from "./LogoUrlForm";
 
-export default async function JourneySettingsTab({ params }: { params: { id: string } }) {
-  const journey = await prisma.journey.findUnique({ where: { id: params.id }, include: { prospect: true } });
+export default async function JourneySettingsTab({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const journey = await prisma.journey.findUnique({ where: { id }, include: { prospect: true } });
   if (!journey) notFound();
 
   const salesReps = await prisma.salesRep.findMany({ where: { isActive: true }, orderBy: { name: "asc" } });

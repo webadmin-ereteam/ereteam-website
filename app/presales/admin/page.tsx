@@ -14,7 +14,7 @@ import { JourneyListWithSelection, type JourneyRow } from "./JourneyListWithSele
 // it, so each filter reads as one deliberate object rather than a plain
 // label+input pair. `focus-within` lights the whole chip up (not just the
 // invisible select inside it) so keyboard/click focus is still legible.
-const filterSelectClass = "cursor-pointer border-0 bg-transparent p-0 text-[13px] font-medium text-text-body focus:outline-none";
+const filterSelectClass = "cursor-pointer border-0 bg-transparent p-0 text-[13px] font-medium text-text-body focus:outline-hidden";
 
 function isJourneyClosed(journey: { status: string; archived: boolean }) {
   return journey.status !== "active" || journey.archived;
@@ -60,9 +60,9 @@ function StatCard({
 }
 
 export default async function AdminDashboardPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: {
+  searchParams: Promise<{
     status?: string;
     salesRepId?: string;
     technicalLeadId?: string;
@@ -73,8 +73,9 @@ export default async function AdminDashboardPage({
     action?: string;
     closeDate?: string;
     createdDate?: string;
-  };
+  }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const [journeys, salesReps, technicalLeads, products] = await Promise.all([
     prisma.journey.findMany({
       include: {
@@ -190,7 +191,7 @@ export default async function AdminDashboardPage({
               name="q"
               defaultValue={searchParams.q ?? ""}
               placeholder="Şirket, kişi veya e-posta"
-              className="w-56 rounded-full border border-gray-200 bg-white py-[7px] pl-8 pr-3.5 text-[13px] tracking-tight transition-colors focus:border-brand-primary focus:outline-none"
+              className="w-56 rounded-full border border-gray-200 bg-white py-[7px] pl-8 pr-3.5 text-[13px] tracking-tight transition-colors focus:border-brand-primary focus:outline-hidden"
             />
           </div>
 

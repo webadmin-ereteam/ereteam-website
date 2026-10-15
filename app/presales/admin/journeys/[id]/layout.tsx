@@ -24,10 +24,11 @@ export default async function JourneyLayout({
   params,
 }: {
   children: React.ReactNode;
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const journey = await prisma.journey.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: { prospect: true, salesRep: true },
   });
 
@@ -81,7 +82,7 @@ export default async function JourneyLayout({
         </div>
       </div>
 
-      <JourneyTabs journeyId={params.id} />
+      <JourneyTabs journeyId={id} />
 
       {children}
     </div>

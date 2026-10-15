@@ -6,8 +6,10 @@ import { schemas } from "./lib/sanity/schemas";
 export default defineConfig({
   name: "ereteam",
   title: "Ereteam CMS",
-  projectId: "oe7hnrwl",
-  dataset: "production",
+  // Driven by the same env var the website's runtime client reads, so Studio
+  // and the site can never point at different Sanity projects.
+  projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || "oe7hnrwl",
+  dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || "production",
   basePath: "/studio",
   plugins: [
     structureTool({

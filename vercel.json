@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/spark",
       "schedule": "0 20 31 12 *"
+    },
+    {
+      "path": "/api/cron/rate-limits",
+      "schedule": "30 2 * * *"
     }
   ]
 }

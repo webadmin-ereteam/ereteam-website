@@ -3,9 +3,10 @@ import { prisma } from "@/lib/presales/db";
 import { buildSurveyExportBuffer, surveyExportFileName, contentDispositionHeader } from "@/lib/presales/surveyExcel";
 import { isJourneyLinkActive } from "@/lib/presales/journeyLink";
 
-export async function GET(_req: NextRequest, { params }: { params: { token: string; surveyId: string } }) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ token: string; surveyId: string }> }) {
+  const { token, surveyId } = await params;
   const survey = await prisma.surveyInstance.findFirst({
-    where: { id: params.surveyId, status: "completed", journey: { accessToken: params.token } },
+    where: { id: surveyId, status: "completed", journey: { accessToken: token } },
     include: { journey: true, selections: { include: { response: true }, orderBy: { order: "asc" } } },
   });
 

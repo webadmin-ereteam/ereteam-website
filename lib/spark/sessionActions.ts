@@ -10,16 +10,16 @@ const SPARK_SESSION_COOKIE = "spark_session";
 
 export async function loginSpark(formData: FormData) {
   const password = String(formData.get("password") ?? "").trim();
-  const lock = await checkLoginLock();
+  const lock = await checkLoginLock("spark");
   if (lock.locked) redirect(`/spark/login?error=locked&retry=${lock.retryAfterMinutes}`);
 
   const storedPassword = process.env.SPARK_PASSWORD?.trim();
   const ok = Boolean(storedPassword) && await verifyPassword(password, storedPassword!);
-  await recordLoginResult(ok);
+  await recordLoginResult("spark", ok);
   if (!ok) redirect("/spark/login?error=1");
 
   const token = await createSessionToken(0, "spark");
-  cookies().set(SPARK_SESSION_COOKIE, token, {
+  (await cookies()).set(SPARK_SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",

@@ -11,9 +11,10 @@ const SURVEY_STATUS_BADGE: Record<string, "gray" | "amber" | "green"> = {
   completed: "green",
 };
 
-export default async function JourneySurveysTab({ params }: { params: { id: string } }) {
+export default async function JourneySurveysTab({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const journey = await prisma.journey.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: { surveyInstances: { include: { stage: true }, orderBy: { createdAt: "desc" } } },
   });
 

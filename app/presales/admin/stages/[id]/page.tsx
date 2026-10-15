@@ -7,9 +7,10 @@ import { Card, PageHeader, inputClass, labelClass, buttonPrimaryClass, buttonSec
 import { SubmitButton } from "../../../_components/SubmitButton";
 import { StageDefinitionsList } from "../StageDefinitionsList";
 
-export default async function StageTemplateEditorPage({ params }: { params: { id: string } }) {
+export default async function StageTemplateEditorPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const template = await prisma.stageTemplate.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: { stages: { orderBy: { order: "asc" } } },
   });
 

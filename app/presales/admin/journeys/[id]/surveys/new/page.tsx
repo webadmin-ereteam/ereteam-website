@@ -10,14 +10,15 @@ export default async function NewSurveyPage({
   params,
   searchParams,
 }: {
-  params: { id: string };
-  searchParams: { stageId?: string; templateId?: string };
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ stageId?: string; templateId?: string }>;
 }) {
-  const journey = await prisma.journey.findUnique({ where: { id: params.id } });
+  const [{ id }, resolvedSearchParams] = await Promise.all([params, searchParams]);
+  const journey = await prisma.journey.findUnique({ where: { id } });
   if (!journey) notFound();
 
   const stages = await prisma.journeyStage.findMany({
-    where: { journeyId: params.id, isActive: true, surveysEnabled: true },
+    where: { journeyId: id, isActive: true, surveysEnabled: true },
     orderBy: { order: "asc" },
   });
 
@@ -33,20 +34,20 @@ export default async function NewSurveyPage({
   // surveys-enabled one) is what an admin creating a new survey almost
   // always means.
   const allActiveStages = await prisma.journeyStage.findMany({
-    where: { journeyId: params.id, isActive: true },
+    where: { journeyId: id, isActive: true },
     orderBy: { order: "asc" },
   });
   const currentStage = findCurrentStage(allActiveStages);
   const currentStageTakesSurveys = !!currentStage && stages.some((s) => s.id === currentStage.id);
 
-  const selectedStageId = searchParams.stageId ?? (currentStageTakesSurveys ? currentStage!.id : stages[0]?.id);
+  const selectedStageId = resolvedSearchParams.stageId ?? (currentStageTakesSurveys ? currentStage!.id : stages[0]?.id);
   const selectedStage = selectedStageId ? stages.find((s) => s.id === selectedStageId) : null;
 
   const templates = await prisma.surveyTemplate.findMany({ orderBy: { name: "asc" } });
 
-  const selectedTemplate = searchParams.templateId
+  const selectedTemplate = resolvedSearchParams.templateId
     ? await prisma.surveyTemplate.findUnique({
-        where: { id: searchParams.templateId },
+        where: { id: resolvedSearchParams.templateId },
         include: { items: { orderBy: { order: "asc" } } },
       })
     : null;
@@ -60,7 +61,7 @@ export default async function NewSurveyPage({
 
       <div className="mb-6 flex flex-wrap items-end gap-4">
         <form method="get" className="flex items-end gap-2">
-          {searchParams.templateId && <input type="hidden" name="templateId" value={searchParams.templateId} />}
+          {resolvedSearchParams.templateId && <input type="hidden" name="templateId" value={resolvedSearchParams.templateId} />}
           <div>
             <label className={labelClass}>Aşama</label>
             <select name="stageId" defaultValue={selectedStageId} className={`${inputClass} w-56`}>
@@ -79,7 +80,7 @@ export default async function NewSurveyPage({
             {selectedStageId && <input type="hidden" name="stageId" value={selectedStageId} />}
             <div>
               <label className={labelClass}>Şablondan Başla</label>
-              <select name="templateId" defaultValue={searchParams.templateId ?? ""} className={`${inputClass} w-64`}>
+              <select name="templateId" defaultValue={resolvedSearchParams.templateId ?? ""} className={`${inputClass} w-64`}>
                 <option value="">— Sıfırdan oluştur —</option>
                 {templates.map((t) => (
                   <option key={t.id} value={t.id}>

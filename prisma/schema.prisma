@@ -2,12 +2,14 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client"
-  output   = "../lib/generated/prisma"
+  provider        = "prisma-client"
+  output          = "../lib/generated/prisma"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Prospect {
@@ -228,7 +230,14 @@ model SurveyInstance {
   completedAt DateTime?
   createdAt   DateTime  @default(now())
 
-  selections SurveyQuestionSelection[]
+  responseWriteToken                 String?   @unique
+  responseWriteStartedAt             DateTime?
+  exportAttemptedAt                  DateTime?
+  salesNotificationAttemptedAt       DateTime?
+  technicalLeadNotificationAttemptedAt DateTime?
+
+  selections     SurveyQuestionSelection[]
+  exportDocument Document? @relation("SurveyExport")
 }
 
 model SurveyQuestionSelection {
@@ -273,6 +282,8 @@ model Document {
   source           String   @default("admin_upload") // admin_upload | customer_survey_upload
   surveyResponseId String?  @unique
   surveyResponse   SurveyResponse? @relation(fields: [surveyResponseId], references: [id])
+  surveyExportForId String? @unique
+  surveyExportFor   SurveyInstance? @relation("SurveyExport", fields: [surveyExportForId], references: [id], onDelete: SetNull)
   uploadedBy       String?
   uploadedAt       DateTime @default(now())
   notes            String?
@@ -302,14 +313,14 @@ model AdminCredential {
   sessionEpoch DateTime @default(now())
 }
 
-// Singleton row tracking failed admin login attempts, for basic brute-force
-// throttling on the one shared login endpoint — see lib/presales/loginRateLimit.ts.
-// Global rather than per-IP/per-user since the whole team shares one login.
-model AdminLoginAttempt {
-  id          String    @id @default(cuid())
-  failedCount Int       @default(0)
-  lockedUntil DateTime?
-  updatedAt   DateTime  @updatedAt
+model RateLimitBucket {
+  key         String
+  windowStart DateTime
+  count       Int      @default(1)
+  expiresAt   DateTime
+
+  @@id([key, windowStart])
+  @@index([expiresAt])
 }
 
 // Rolling Amplemarket activity feed for Spark. This stores source events, not

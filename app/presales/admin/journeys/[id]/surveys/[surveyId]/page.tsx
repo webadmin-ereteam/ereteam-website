@@ -14,10 +14,11 @@ const STATUS_BADGE: Record<string, "gray" | "amber" | "green"> = {
 export default async function SurveyResultsPage({
   params,
 }: {
-  params: { id: string; surveyId: string };
+  params: Promise<{ id: string; surveyId: string }>;
 }) {
+  const { id, surveyId } = await params;
   const survey = await prisma.surveyInstance.findFirst({
-    where: { id: params.surveyId, journeyId: params.id },
+    where: { id: surveyId, journeyId: id },
     include: {
       stage: true,
       selections: {
@@ -32,7 +33,7 @@ export default async function SurveyResultsPage({
   return (
     <div>
       <Link
-        href={`/presales/admin/journeys/${params.id}/surveys`}
+        href={`/presales/admin/journeys/${id}/surveys`}
         className="mb-4 inline-flex items-center gap-1 text-sm text-text-muted hover:text-brand-primary"
       >
         <ArrowLeft size={14} /> Anketlere geri dön
@@ -44,7 +45,7 @@ export default async function SurveyResultsPage({
           <div className="flex items-center gap-3">
             <Badge color={STATUS_BADGE[survey!.status] ?? "gray"}>{survey!.status}</Badge>
             <a
-              href={`/api/presales/admin/journeys/${params.id}/surveys/${params.surveyId}/export`}
+              href={`/api/presales/admin/journeys/${id}/surveys/${surveyId}/export`}
               className={buttonSecondaryClass}
             >
               <Download size={14} className="mr-1.5" /> Excel İndir

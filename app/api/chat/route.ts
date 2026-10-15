@@ -40,11 +40,11 @@ export async function POST(req: NextRequest) {
   let logContext: { sessionId: string; page: string; question: string } | null = null;
 
   try {
-    const limit = rateLimit(`chat:${getClientIp(req)}`, 20, 10 * 60 * 1000);
+    const limit = await rateLimit(`chat:${getClientIp(req)}`, 20, 10 * 60 * 1000);
     if (!limit.allowed) {
       return NextResponse.json(
-        { error: "Too many requests. Please try again shortly." },
-        { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
+        { error: limit.unavailable ? "Service temporarily unavailable" : "Too many requests. Please try again shortly." },
+        { status: limit.unavailable ? 503 : 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
       );
     }
 

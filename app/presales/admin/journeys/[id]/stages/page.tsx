@@ -5,9 +5,10 @@ import { Card, buttonPrimaryClass, inputClass } from "../../../../_components/ui
 import { SubmitButton } from "../../../../_components/SubmitButton";
 import { JourneyStagesList } from "./JourneyStagesList";
 
-export default async function JourneyStagesTab({ params }: { params: { id: string } }) {
+export default async function JourneyStagesTab({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const journey = await prisma.journey.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       stages: {
         orderBy: { order: "asc" },

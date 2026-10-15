@@ -11,9 +11,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid secret" }, { status: 401 });
   }
 
-  revalidateTag(CHAT_CACHE_TAG);
-  revalidateTag(LINKEDIN_CACHE_TAG);
-  revalidateTag(SORO_CACHE_TAG);
+  revalidateTag(CHAT_CACHE_TAG, "max");
+  revalidateTag(LINKEDIN_CACHE_TAG, "max");
+  revalidateTag(SORO_CACHE_TAG, "max");
   console.log("✅ Site content caches revalidated via webhook");
 
   return NextResponse.json({ revalidated: true });

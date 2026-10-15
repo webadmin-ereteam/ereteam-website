@@ -7,11 +7,12 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function AdminLoginPage({
-  searchParams,
+export default async function AdminLoginPage({
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: { error?: string; retry?: string; next?: string };
+  searchParams: Promise<{ error?: string; retry?: string; next?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-brand-dark to-[#0f2a3d] px-4">
       <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-brand-primary/[0.18] blur-[110px]" />
@@ -36,7 +37,6 @@ export default function AdminLoginPage({
           <input type="hidden" name="next" value={searchParams.next ?? "/presales/admin"} />
           <div>
             <label className={labelClass}>Kullanıcı Adı</label>
-            {/* eslint-disable-next-line jsx-a11y/no-autofocus */}
             <input name="username" required autoFocus className={`${inputClass} w-full`} />
           </div>
           <div>

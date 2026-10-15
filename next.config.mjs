@@ -4,6 +4,7 @@ const nextConfig = {
   // trivial info disclosure, no reason to keep it.
   poweredByHeader: false,
   images: {
+    qualities: [65, 75],
     remotePatterns: [
       {
         protocol: "https",

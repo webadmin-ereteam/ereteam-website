@@ -215,7 +215,7 @@ export default function ChatWidget() {
                         value={leadForm[field]}
                         onChange={(e) => setLeadForm((p) => ({ ...p, [field]: e.target.value }))}
                         placeholder={field === "name" ? "Your name *" : field === "email" ? "Work email *" : "Company (optional)"}
-                        className="w-full border border-[#071A2A]/16 bg-[#F3F0E8] px-3 py-2 text-[12px] text-[#071A2A] outline-none placeholder:text-[#7f8a91] focus:border-[#B96F38]"
+                        className="w-full border border-[#071A2A]/16 bg-[#F3F0E8] px-3 py-2 text-[12px] text-[#071A2A] outline-hidden placeholder:text-[#7f8a91] focus:border-[#B96F38]"
                         style={{ fontSize: 16 }}
                       />
                     ))}
@@ -224,7 +224,7 @@ export default function ChatWidget() {
                       onChange={(e) => setLeadForm((p) => ({ ...p, message: e.target.value }))}
                       placeholder="Your message (optional)"
                       rows={3}
-                      className="w-full resize-none border border-[#071A2A]/16 bg-[#F3F0E8] px-3 py-2 text-[12px] text-[#071A2A] outline-none placeholder:text-[#7f8a91] focus:border-[#B96F38]"
+                      className="w-full resize-none border border-[#071A2A]/16 bg-[#F3F0E8] px-3 py-2 text-[12px] text-[#071A2A] outline-hidden placeholder:text-[#7f8a91] focus:border-[#B96F38]"
                       style={{ fontSize: 16 }}
                     />
                     <div className="flex gap-2">
@@ -251,7 +251,7 @@ export default function ChatWidget() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
                   placeholder="Type your question..."
-                  className="flex-1 bg-transparent text-[13px] text-[#071A2A] outline-none placeholder:text-[#7f8a91]"
+                  className="flex-1 bg-transparent text-[13px] text-[#071A2A] outline-hidden placeholder:text-[#7f8a91]"
                   style={{ fontSize: 16 }} />
                 <button onClick={() => handleSend()} disabled={!input.trim() || loading}
                   className="flex h-8 w-8 flex-shrink-0 items-center justify-center bg-[#071A2A] transition-opacity hover:opacity-80 disabled:opacity-25">

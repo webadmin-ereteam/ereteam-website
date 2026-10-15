@@ -1,5 +1,13 @@
 # Presales Customer Journey Portal
 
+> Backend hardening note: survey draft/final writes are serialized with a
+> database-backed write claim. Final submission validates required and conditional
+> questions, choice membership, scale bounds, text limits, and file signatures on
+> the server. Completion locks the journey stage before advancing it, and Drive
+> export/sales/technical notifications use durable at-most-once attempt markers.
+> The migration `20261015120000_backend_hardening` must be deployed before this
+> code version.
+
 Internal tool, built **additively** on top of the Ereteam marketing site — it
 adds new files under the paths listed in "File map" below, plus a handful of
 one-line touches to shared marketing files (hiding the marketing nav/footer/chat

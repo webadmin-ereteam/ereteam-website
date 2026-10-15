@@ -9,10 +9,11 @@ import { getSoroArticle } from "@/lib/soro";
 
 export const dynamic = "force-dynamic";
 
-type PageProps = { params: { slug: string } };
+type PageProps = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const article = await getSoroArticle(params.slug);
+  const { slug } = await params;
+  const article = await getSoroArticle(slug);
   if (!article) return { title: "Article Not Found", robots: { index: false, follow: false } };
   return createPageMetadata({
     title: article.title,
@@ -28,7 +29,8 @@ function formatDate(value?: string) {
 }
 
 export default async function ArticlePage({ params }: PageProps) {
-  const article = await getSoroArticle(params.slug);
+  const { slug } = await params;
+  const article = await getSoroArticle(slug);
   if (!article) notFound();
   const path = `/insights/articles/${article.slug}`;
 

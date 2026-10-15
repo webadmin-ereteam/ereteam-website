@@ -36,6 +36,7 @@ export async function generateChatResponse(
       "Authorization": `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
+    signal: AbortSignal.timeout(30_000),
     body: JSON.stringify({
       model,
       messages: [
@@ -54,7 +55,7 @@ export async function generateChatResponse(
     }),
   });
 
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
     console.error("LLM API error:", JSON.stringify(data));

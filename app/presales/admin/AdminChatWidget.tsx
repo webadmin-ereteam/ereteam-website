@@ -130,7 +130,7 @@ export default function AdminChatWidget() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
                   placeholder="Bir soru sor..."
-                  className="flex-1 bg-transparent text-sm text-text-body outline-none placeholder:text-text-muted"
+                  className="flex-1 bg-transparent text-sm text-text-body outline-hidden placeholder:text-text-muted"
                 />
                 <button
                   onClick={() => send()}

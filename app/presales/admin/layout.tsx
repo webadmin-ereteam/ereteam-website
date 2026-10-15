@@ -1,9 +1,7 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import AdminNav from "./AdminNav";
 import AdminChatWidget from "./AdminChatWidget";
-import { SESSION_COOKIE_NAME, getSessionPayload } from "@/lib/presales/session";
-import { getCurrentSessionEpoch } from "@/lib/presales/auth";
+import { hasCurrentAdminSession } from "@/lib/presales/adminSession";
 
 export const metadata = {
   robots: { index: false, follow: false },
@@ -16,11 +14,7 @@ export default async function PresalesAdminLayout({ children }: { children: Reac
   // sessionEpoch (bumped by a password change or "Tüm Cihazlardan Çıkış
   // Yap") postdate the moment this specific token was issued? A stateless
   // token has no other way to be revoked before its own 7-day expiry.
-  const token = cookies().get(SESSION_COOKIE_NAME)?.value;
-  const payload = await getSessionPayload(token);
-  const currentEpoch = await getCurrentSessionEpoch();
-
-  if (!payload || (currentEpoch > 0 && payload.epoch < currentEpoch)) {
+  if (!(await hasCurrentAdminSession())) {
     // Can't cookies().delete() from a Server Component render (only a
     // Server Action/Route Handler can) — the stale cookie is left in place,
     // but it's inert: it will keep failing this same check on every request

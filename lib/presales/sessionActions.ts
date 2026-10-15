@@ -11,7 +11,7 @@ export async function loginAdmin(formData: FormData) {
   const password = String(formData.get("password") ?? "").trim();
   const next = String(formData.get("next") ?? "").trim() || "/presales/admin";
 
-  const lock = await checkLoginLock();
+  const lock = await checkLoginLock("presales");
   if (lock.locked) {
     redirect(
       `/presales/login?error=locked&retry=${lock.retryAfterMinutes}&next=${encodeURIComponent(next)}`
@@ -19,14 +19,14 @@ export async function loginAdmin(formData: FormData) {
   }
 
   const ok = await verifyAdminPassword(username, password);
-  await recordLoginResult(ok);
+  await recordLoginResult("presales", ok);
 
   if (!ok) {
     redirect(`/presales/login?error=1&next=${encodeURIComponent(next)}`);
   }
 
   const token = await createSessionToken(await getCurrentSessionEpoch());
-  cookies().set(SESSION_COOKIE_NAME, token, {
+  (await cookies()).set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -38,6 +38,6 @@ export async function loginAdmin(formData: FormData) {
 }
 
 export async function logoutAdmin() {
-  cookies().delete(SESSION_COOKIE_NAME);
+  (await cookies()).delete(SESSION_COOKIE_NAME);
   redirect("/presales/login");
 }

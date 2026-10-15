@@ -29,9 +29,10 @@ const DOCUMENT_COLORS: Record<string, string> = {
   other: "bg-gray-100 text-text-muted",
 };
 
-export default async function JourneyDocumentsPage({ params }: { params: { id: string } }) {
+export default async function JourneyDocumentsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const journey = await prisma.journey.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       documents: { include: { stage: true }, orderBy: { uploadedAt: "desc" } },
       prospect: true,
@@ -40,7 +41,7 @@ export default async function JourneyDocumentsPage({ params }: { params: { id: s
   if (!journey) notFound();
 
   const stages = await prisma.journeyStage.findMany({
-    where: { journeyId: params.id, isActive: true },
+    where: { journeyId: id, isActive: true },
     orderBy: { order: "asc" },
   });
 
