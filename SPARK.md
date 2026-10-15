@@ -121,7 +121,12 @@ The dashboard includes a password-protected Revenue Data Assistant. Groq is used
 only to translate the natural-language question into a constrained query plan.
 The server then queries HubSpot live and renders the result deterministically:
 single-value questions return a metric card, while record/detail questions return
-a table with HubSpot links. HubSpot result rows are not sent back to Groq for answer
+a table with HubSpot links. Record-table answers can be exported as an Excel
+workbook from the chat panel; the export contains the displayed rows (the
+assistant response limit is 100 records), the shown column labels, a HubSpot URL
+column, and a scope-derived `spark-chat-…` filename. The spreadsheet library loads
+only when the export is requested, matching the record-dialog export behavior.
+HubSpot result rows are not sent back to Groq for answer
 generation. The last five questions and compact result metadata are sent as
 conversation context so follow-up questions work; detailed record rows are excluded.
 The planner uses Groq strict JSON Schema output with automatic fallback

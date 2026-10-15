@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowUpRight, Bot, Database, Send, X } from "lucide-react";
+import { ArrowUpRight, Bot, Database, Download, Send, X } from "lucide-react";
 import styles from "./sparkChat.module.css";
 
 type Column = { key: string; label: string; format: "currency" | "date" | "text" };
@@ -51,7 +51,14 @@ function formatCell(value: string, format: Column["format"]) {
   return value;
 }
 
+function dataFileDate() {
+  const parts = new Intl.DateTimeFormat("en", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Europe/Istanbul" }).formatToParts(new Date());
+  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value;
+  return `${value("year")}-${value("month")}-${value("day")}`;
+}
+
 function ResultView({ result }: { result: QueryResult }) {
+  const [exporting, setExporting] = useState(false);
   const time = new Intl.DateTimeFormat("tr-TR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Istanbul" }).format(new Date(result.queriedAt));
   if (result.kind === "metric") return (
     <section className={styles.metricResult}>
@@ -72,11 +79,44 @@ function ResultView({ result }: { result: QueryResult }) {
   if (result.kind === "text") return (
     <section className={styles.textResult}><span>{result.title}</span><p>{result.text}</p><small>Yanıt {time}</small></section>
   );
+  const exportExcel = async () => {
+    if (!result.records.length || exporting) return;
+    setExporting(true);
+    try {
+      const XLSX = await import("xlsx");
+      const worksheet = XLSX.utils.json_to_sheet(result.records.map((record) => {
+        const row: Record<string, string | number> = {};
+        for (const column of result.columns) {
+          const value = record.values[column.key] ?? "";
+          if (column.format === "currency") {
+            const numeric = value === "" ? null : Number(value);
+            row[column.label] = numeric != null && Number.isFinite(numeric) ? numeric : value;
+          } else if (column.format === "date") {
+            row[column.label] = formatCell(value, "date");
+          } else {
+            row[column.label] = value;
+          }
+        }
+        row["HubSpot URL"] = record.url;
+        return row;
+      }));
+      worksheet["!cols"] = [...result.columns.map((column) => ({ wch: column.format === "currency" ? 16 : column.format === "date" ? 14 : 26 })), { wch: 48 }];
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Kayıtlar");
+      const scope = result.title.toLocaleLowerCase("tr-TR").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
+      XLSX.writeFile(workbook, `spark-chat-${scope || "kayitlar"}-${dataFileDate()}.xlsx`, { compression: true });
+    } finally {
+      setExporting(false);
+    }
+  };
   return (
     <section className={styles.recordsResult}>
       <div className={styles.resultHeader}>
         <div><b>{result.title}</b><p className={styles.interpretation}>{result.interpretation}</p><small>{result.totalRecords} kayıt · {result.shownRecords} gösteriliyor</small></div>
-        <span>Canlı {time}</span>
+        <div className={styles.resultActions}>
+          <span>Canlı {time}</span>
+          <button className={styles.exportButton} type="button" onClick={exportExcel} disabled={!result.records.length || exporting} title={result.totalRecords > result.records.length ? "Yanıt sınırlı sayıda kayıt taşır; Excel'e gösterilen kayıtlar indirilir." : undefined}><Download size={13} />{exporting ? "Hazırlanıyor" : "Excel indir"}</button>
+        </div>
       </div>
       {result.records.length ? <div className={styles.tableScroll}><table>
         <thead><tr>{result.columns.map((column) => <th key={column.key}>{column.label}</th>)}<th>HubSpot</th></tr></thead>
