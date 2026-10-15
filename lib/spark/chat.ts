@@ -234,6 +234,20 @@ export function resolveSparkDateRange(question: string, now = new Date()): DateR
       label: "Geçen hafta",
     };
   }
+  if (/\b(gelecek|onumuzdeki)\s+hafta\b/.test(text)) {
+    return {
+      start: shiftCalendarDay(year, month, day, -daysSinceMonday + 7),
+      endExclusive: shiftCalendarDay(year, month, day, -daysSinceMonday + 14),
+      label: "Gelecek hafta",
+    };
+  }
+  if (/\bbu\s+hafta\b/.test(text) && /\b(sonuna\s+kadar|tamami\w*|tum\w*)\b/.test(text)) {
+    return {
+      start: shiftCalendarDay(year, month, day, -daysSinceMonday),
+      endExclusive: shiftCalendarDay(year, month, day, -daysSinceMonday + 7),
+      label: "Bu hafta",
+    };
+  }
   if (/\bbu\s+hafta\b/.test(text)) {
     return {
       start: shiftCalendarDay(year, month, day, -daysSinceMonday),
@@ -250,6 +264,20 @@ export function resolveSparkDateRange(question: string, now = new Date()): DateR
     const nextMonth = month === 12 ? 1 : month + 1;
     const endExclusive = nextMonth === 12 ? isoDate(nextMonthYear + 1, 1, 1) : isoDate(nextMonthYear, nextMonth + 1, 1);
     return { start: isoDate(nextMonthYear, nextMonth, 1), endExclusive, label: "Gelecek ay" };
+  }
+  if (/\b(gelecek|onumuzdeki)\s+ceyrek\b/.test(text)) {
+    const nextStartMonth = Math.floor((month - 1) / 3) * 3 + 4;
+    const nextYear = nextStartMonth > 12 ? year + 1 : year;
+    const startMonth = ((nextStartMonth - 1) % 12) + 1;
+    const endMonth = startMonth === 10 ? 13 : startMonth + 3;
+    return {
+      start: isoDate(nextYear, startMonth, 1),
+      endExclusive: endMonth === 13 ? isoDate(nextYear + 1, 1, 1) : isoDate(nextYear, endMonth, 1),
+      label: "Gelecek çeyrek",
+    };
+  }
+  if (/\b(gelecek|onumuzdeki)\s+yil\b/.test(text)) {
+    return { start: isoDate(year + 1, 1, 1), endExclusive: isoDate(year + 2, 1, 1), label: "Gelecek yıl" };
   }
   if (/\bbu\s+ceyrek\b/.test(text)) {
     const startMonth = Math.floor((month - 1) / 3) * 3 + 1;
@@ -416,23 +444,41 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
   if (groupBy === "_revenue_group" || groupBy === "revenue_type") filters = filters.filter((filter) => filter.property !== "revenue_type");
   if (groupBy === "ereteam_domain" && !domain) filters = filters.filter((filter) => filter.property !== "ereteam_domain");
   if (groupBy === "dealtype" && !businessType) filters = filters.filter((filter) => filter.property !== "dealtype");
+  const invoiceDueDate = SPARK_CHAT_KNOWLEDGE.invoiceDueDate;
+  const dueDateIntent = object === "invoices" && invoiceDueDate.pattern.test(text);
+  const dueDateOverdue = dueDateIntent && invoiceDueDate.overduePattern.test(text);
   const enforcedRange = object === "orders" && /\bbeklenen\s+fatura/.test(text) && /\bbu\s+ay\b/.test(text)
     ? resolveSparkDateRange("bu ay sonuna kadar", now)
     : object === "deals" && /\bbu\s+ay\b/.test(text) && /\b(pipeline|aktif|acik\s+firsat|weighted|agirlikli)\b/.test(text)
       ? resolveSparkDateRange("bu ay sonuna kadar", now)
+    : dueDateIntent && /\bbu\s+ay\b/.test(text) && !/\bgecen\b/.test(text)
+      ? resolveSparkDateRange("bu ay sonuna kadar", now)
+    : dueDateIntent && /\bbu\s+hafta\b/.test(text) && !/\bgecen\b/.test(text)
+      ? resolveSparkDateRange("bu hafta sonuna kadar", now)
+    : dueDateIntent && /\bbu\s+yil\b/.test(text) && !/\bgecen\b/.test(text)
+      ? resolveSparkDateRange(`${dateParts(now).year}`, now)
     : range;
   if (enforcedRange) {
-    const knownDateProperties = new Set(Object.values(dateProperties));
+    const knownDateProperties = new Set([...Object.values(dateProperties), invoiceDueDate.property]);
     const plannedDealDate = plan.filters.find((filter) => filter.property === "createdate" || filter.property === "closedate")?.property;
     const dealDate = /\b(acilan|yeni|olusturulan)\b/.test(text) ? "createdate"
       : /\b(kapanan|kazanilan|kaybedilen)\b/.test(text) ? "closedate"
       : plannedDealDate ?? dateProperties.deals;
-    const dateProperty = object === "deals" ? dealDate : dateProperties[object];
+    const dateProperty = object === "deals" ? dealDate : dueDateIntent ? invoiceDueDate.property : dateProperties[object];
+    let endExclusive = enforcedRange.endExclusive;
+    if (dueDateOverdue) {
+      const today = resolveSparkDateRange("bugun", now)?.start;
+      if (today && today < endExclusive) endExclusive = today;
+    }
     filters = filters.filter((filter) => !knownDateProperties.has(filter.property));
     filters.push(
       { property: dateProperty, operator: "gte", value: enforcedRange.start },
-      { property: dateProperty, operator: "lt", value: enforcedRange.endExclusive },
+      { property: dateProperty, operator: "lt", value: endExclusive },
     );
+  } else if (dueDateOverdue) {
+    filters = filters.filter((filter) => filter.property !== invoiceDueDate.property);
+    const today = resolveSparkDateRange("bugun", now);
+    if (today) filters.push({ property: invoiceDueDate.property, operator: "lt", value: today.start });
   }
   if (object === "orders") {
     filters = filters.filter((filter) => !["_stage_label", "hs_pipeline_stage", "_is_open"].includes(filter.property));
@@ -526,14 +572,15 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
   const properties = object === plan.object ? plan.properties : [];
   const guarded = { ...plan, object, responseType, aggregate, groupBy, metricKind, properties, filters: uniqueFilters(filters), associatedDealFilters };
   if (weightedPipelineIntent) guarded.title = SPARK_CHAT_KNOWLEDGE.compositeMetrics.weightedPipeline.label;
+  const invoiceSubject = dueDateIntent ? (dueDateOverdue ? "vadesi geçmiş fatura" : "ödemesi olan fatura") : "fatura";
   if (enforcedRange && responseType === "records") {
     const subject = object === "orders" && /\bbeklenen\s+fatura/.test(text)
       ? "beklenen fatura"
-      : object === "invoices" ? "fatura" : object === "orders" ? "order" : "deal";
+      : object === "invoices" ? invoiceSubject : object === "orders" ? "order" : "deal";
     guarded.title = `${enforcedRange.label} ${subject} detayları`;
   }
   if (range && responseType === "metric") {
-    const subject = object === "invoices" ? "fatura" : object === "orders" ? "order" : "deal";
+    const subject = object === "invoices" ? invoiceSubject : object === "orders" ? "order" : "deal";
     const measure = aggregate?.operation === "count" ? "sayısı" : aggregate?.operation === "average" ? "ortalama tutarı" : "tutarı";
     guarded.title = `${range.label} ${subject} ${measure}`;
   }
@@ -866,6 +913,7 @@ function labelMap(catalog: HubSpotProperty[]) {
   const labels = new Map([...catalog.map((property) => [property.name, property.label] as const), ["_owner_name", "Owner"], ["_stage_label", "Stage"]]);
   labels.set("hs_processed_date", "Tarih");
   labels.set("hs_invoice_date", "Fatura tarihi");
+  labels.set("hs_due_date", "Ödeme tarihi");
   labels.set("hs_homecurrency_amount", "Tutar (USD)");
   labels.set("hs_amount_billed_in_company_currency", "Tutar (USD)");
   labels.set("amount_in_home_currency", "Tutar (USD)");
@@ -916,7 +964,8 @@ function interpretation(plan: QueryPlan, catalog: HubSpotProperty[]) {
   const labels = labelMap(catalog);
   const dateProperty = plan.object === "deals"
     ? plan.filters.find((filter) => filter.property === "createdate" || filter.property === "closedate")?.property
-    : dateProperties[plan.object];
+    : plan.filters.find((filter) => filter.property === dateProperties[plan.object] || filter.property === SPARK_CHAT_KNOWLEDGE.invoiceDueDate.property)?.property
+      ?? dateProperties[plan.object];
   const start = dateProperty ? plan.filters.find((filter) => filter.property === dateProperty && filter.operator === "gte")?.value : null;
   const end = dateProperty ? plan.filters.find((filter) => filter.property === dateProperty && filter.operator === "lt")?.value : null;
   const period = start && end ? `${formatPlanDate(start)}–${formatPlanDate(end, true)}` : "Tüm tarihler";
@@ -1034,9 +1083,11 @@ async function executeCompositeRevenueFromPlan(
   catalogs: Record<ObjectType, HubSpotProperty[]>,
 ): Promise<SparkChatExecutionResult> {
   const commonFilters = plan.filters.filter((filter) => SPARK_CHAT_KNOWLEDGE.filterContracts.common.includes(filter.property as never));
-  const sourceDateFilters = plan.filters.filter((filter) => Object.values(dateProperties).includes(filter.property));
+  const dueDateIntent = SPARK_CHAT_KNOWLEDGE.invoiceDueDate.pattern.test(semanticText(question));
+  const sourceDateFilters = plan.filters.filter((filter) => Object.values(dateProperties).includes(filter.property)
+    || (dueDateIntent && filter.property === SPARK_CHAT_KNOWLEDGE.invoiceDueDate.property));
   const componentPlan = (object: "invoices" | "orders"): QueryPlan => {
-    const dateProperty = dateProperties[object];
+    const dateProperty = object === "invoices" && dueDateIntent ? SPARK_CHAT_KNOWLEDGE.invoiceDueDate.property : dateProperties[object];
     let filters: QueryPlan["filters"] = [
       ...commonFilters,
       ...sourceDateFilters.map((filter) => ({ ...filter, property: dateProperty })),

@@ -143,9 +143,9 @@ retry with one period and one metric. The assistant is
 read-only, never exposes tokens to the browser, rate
 limits requests, and only works with a valid `spark_session`. Calculations use the
 approved USD fields. Common Turkish periods (`bu/geçen/gelecek ay`, named months,
-`bu çeyrek`, `bu/geçen yıl`,
+`bu/gelecek çeyrek`, `bu/geçen/gelecek yıl`,
 `ilk/ikinci/üçüncü/dördüncü çeyrek`, `Q1–Q4`, `yılın ilk/ikinci yarısı`, `H1/H2`,
-`YTD/yılbaşından bugüne`, `MTD/aybaşından bugüne`, `bu/geçen hafta`, `bugün`,
+`YTD/yılbaşından bugüne`, `MTD/aybaşından bugüne`, `bu/geçen/gelecek hafta`, `bugün`,
 `dün`, `son N gün` up to 365 days), record type,
 amount/count intent and the matching
 HubSpot date/amount fields are enforced deterministically after planning. Invalid
@@ -176,6 +176,20 @@ recalculate HubSpot's projected amount. Country, owner, stage, vendor, revenue t
 domain and customer breakdown requests retain their validated `groupBy` dimension.
 Current-month active and weighted pipeline use the full close-date calendar month,
 matching the dashboard rather than stopping at today.
+
+Invoice payment-date wording (`ödemesi/vadesi/due date` plus a period, for example
+`ödemesi bu ay olan faturalar` or `vadesi bu hafta gelen faturalar`) targets the live
+invoice `hs_due_date` property instead of the billing date `hs_invoice_date`.
+Payment dates are forward-looking, so relative due-date periods cover the full
+calendar period: `bu hafta` spans Monday through Sunday, `bu ay` the whole
+calendar month and `bu yıl` the whole year, while named months, quarters,
+half-years, `geçen ay/hafta`, `gelecek ay/hafta`, `gelecek çeyrek` and `gelecek yıl`
+keep their standard full ranges. `Vadesi geçmiş/gecikmiş faturalar` returns invoices
+whose due date is before today and can be combined with a period (`bu ay vadesi
+geçmiş`). Invoice record answers and their Excel export include the `Ödeme tarihi`
+column, and a planner-emitted due-date filter on ordinary invoice questions is
+replaced by the invoice-date filter so `hs_due_date` is never applied without
+payment-date wording.
 Invoice queries first validate that the live catalog contains the custom `status`
 enum with one option whose internal value case-insensitively equals `invoiced` and
 one whose internal value case-insensitively equals `cancelled`. In this portal the
@@ -288,6 +302,9 @@ snapshot records a budget-source error and uses target `0` until configuration i
 ## HubSpot field contract
 
 - Invoice amount/date: `hs_amount_billed_in_company_currency`, `hs_invoice_date`
+- Invoice due/payment date: `hs_due_date`; payment-date intent (`ödemesi/vadesi/due date`)
+  filters on it with full calendar periods, and `vadesi geçmiş` means before today.
+  `hs_invoice_date` remains the billing date for ordinary invoice-date questions.
 - Invoice status: custom enum `status`. The live catalog is validated case-insensitively
   for one `invoiced` and one `cancelled` option, and the cancelled option's exact
   internal value (currently `Cancelled` in this portal) is excluded from every

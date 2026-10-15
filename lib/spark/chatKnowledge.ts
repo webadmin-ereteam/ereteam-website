@@ -57,8 +57,8 @@ export const SPARK_CHAT_KNOWLEDGE = {
       label: "Fatura",
       dateProperty: "hs_invoice_date",
       amountProperty: "hs_amount_billed_in_company_currency",
-      requiredProperties: ["hs_number", "invoice_name", "hs_invoice_latest_company_name", "hs_invoice_date", "hs_amount_billed_in_company_currency", "status", "country", "vendor_name", "revenue_type", "ereteam_domain", "hubspot_owner_id"],
-      coreFields: ["hs_number", "invoice_name", "_company_name", "hs_invoice_date", "hs_amount_billed_in_company_currency", "country", "vendor_name", "revenue_type", "ereteam_domain", "_owner_name"],
+      requiredProperties: ["hs_number", "invoice_name", "hs_invoice_latest_company_name", "hs_invoice_date", "hs_due_date", "hs_amount_billed_in_company_currency", "status", "country", "vendor_name", "revenue_type", "ereteam_domain", "hubspot_owner_id"],
+      coreFields: ["hs_number", "invoice_name", "_company_name", "hs_invoice_date", "hs_due_date", "hs_amount_billed_in_company_currency", "country", "vendor_name", "revenue_type", "ereteam_domain", "_owner_name"],
     },
     orders: {
       label: "Order",
@@ -67,6 +67,12 @@ export const SPARK_CHAT_KNOWLEDGE = {
       requiredProperties: ["hs_order_name", "hs_pipeline_stage", "hs_processed_date", "hs_homecurrency_amount", "country", "vendor_name", "revenue_type", "ereteam_domain", "hubspot_owner_id"],
       coreFields: ["hs_order_name", "_company_name", "hs_processed_date", "hs_homecurrency_amount", "country", "vendor_name", "revenue_type", "ereteam_domain", "_owner_name", "_stage_label"],
     },
+  },
+  invoiceDueDate: {
+    property: "hs_due_date",
+    pattern: /\b(odeme\w*|vade\w*|due\s*date)\b/,
+    overduePattern: /\b(?:vade\w*|odeme\w*)\s+(?:gecmis|gecmiste|gecik\w*)\b/,
+    label: "Ödeme tarihi",
   },
   countries: [
     { value: "Turkiye", pattern: /\b(turkiye(?:['’]?(?:de|den|nin|ye|yi|li|deki))?|turkey|tr)\b/ },
@@ -164,6 +170,7 @@ export const SPARK_CHAT_KNOWLEDGE = {
   plannerRules: [
     "Order tarihi yalnızca hs_processed_date, USD tutarı yalnızca hs_homecurrency_amount.",
     "Fatura tarihi yalnızca hs_invoice_date, USD tutarı yalnızca hs_amount_billed_in_company_currency.",
+    'Fatura ödeme/vade tarihi hs_due_date alanıdır. "Ödemesi/vadesi/due date\'i {dönem} olan faturalar" sorularında dönem filtresini hs_due_date\'e uygula; hs_invoice_date fatura kesim tarihidir. "Vadesi geçmiş/gecikmiş faturalar" hs_due_date\'i bugünden önce olan faturalardır.',
     "Deal USD tutarı yalnızca amount_in_home_currency; deal tarih bağlamına göre closedate veya createdate.",
     "Genel amount, TL tutarı veya başka para birimi property'lerini kullanma.",
     '"Beklenen fatura/gelir toplamı" aynı dönem için kesilen faturalar ile açık order toplamıdır. Detay/liste sorusuysa yalnız açık order kayıtlarını getir.',
@@ -184,6 +191,7 @@ export const SPARK_CHAT_KNOWLEDGE = {
     "Owner adını kullanıcının yazdığı biçimde _owner_name filtresine koy. Çalışma zamanı bu değeri canlı HubSpot owner listesindeki en yakın güvenli tam adla eşleştirir.",
     '"Yılın ilk yarısı" ve H1, 1 Ocak dahil–1 Temmuz hariç; "yılın ikinci yarısı" ve H2, 1 Temmuz dahil–sonraki 1 Ocak hariç aralığıdır.',
     "Çeyrek ifadelerinde ilk/1. çeyrek/Q1 Ocak–Mart, ikinci/Q2 Nisan–Haziran, üçüncü/Q3 Temmuz–Eylül, dördüncü/son/Q4 Ekim–Aralık takvim aralığıdır.",
+    "Gelecek/önümüzdeki hafta, gelecek/önümüzdeki çeyrek ve gelecek/önümüzdeki yıl ifadeleri tam takvim aralığıdır: gelecek hafta pazartesiden sonraki pazartesiye, gelecek çeyrek bir sonraki çeyrek sınırlarına, gelecek yıl 1 Ocak–31 Aralık aralığına.",
     "Kırılım, bazında, karşılaştırma veya iki rakam istenirse groupBy alanına ilgili property adını yaz; kategoriyi tek bir filtreye indirgeme. Boş sınıflandırmaları uydurma ve kırılımda Belirtilmemiş olarak koru.",
     "Müşteri/firma/şirket bazında kırılım için _company_name; owner bazında _owner_name; stage/aşama bazında _stage_label kullan.",
     "Weighted pipeline ülke, owner, stage, vendor, revenue type veya domain bazında sorulursa groupBy değerini koru ve hs_projected_amount_in_home_currency alanını grupla.",
@@ -229,6 +237,14 @@ export const SPARK_CHAT_KNOWLEDGE = {
     { question: "Kaç tane açık fırsat var?", object: "deals", expectedResponseType: "metric", expectedFilterProperties: ["_is_open"] },
     { question: "Ortalama açık order tutarı", object: "orders", expectedResponseType: "metric", expectedFilterProperties: ["_is_open"] },
     { question: "Gelecek ay açık order toplamı", object: "orders", expectedResponseType: "metric", expectedFilterProperties: ["hs_processed_date", "_is_open"], expectedDateRange: ["2026-09-01", "2026-10-01"] },
+    { question: "Ödemesi bu ay olan faturaları göster", object: "invoices", expectedResponseType: "records", expectedFilterProperties: ["hs_due_date"], expectedDateProperty: "hs_due_date", expectedDateRange: ["2026-08-01", "2026-09-01"] },
+    { question: "Vadesi bu hafta olan faturaların toplamı ne kadar?", object: "invoices", expectedDateProperty: "hs_due_date", expectedDateRange: ["2026-08-03", "2026-08-10"] },
+    { question: "Ödemesi bu yıl olan faturaların toplamı ne kadar?", object: "invoices", expectedDateProperty: "hs_due_date", expectedDateRange: ["2026-01-01", "2027-01-01"] },
+    { question: "Ödemesi geçen ay olan faturaların toplamı", object: "invoices", expectedDateProperty: "hs_due_date", expectedDateRange: ["2026-07-01", "2026-08-01"] },
+    { question: "Ödemesi gelecek hafta olan faturaları göster", object: "invoices", expectedResponseType: "records", expectedFilterProperties: ["hs_due_date"], expectedDateProperty: "hs_due_date", expectedDateRange: ["2026-08-10", "2026-08-17"] },
+    { question: "Ödemesi gelecek yıl olan faturaların toplamı", object: "invoices", expectedDateProperty: "hs_due_date", expectedDateRange: ["2027-01-01", "2028-01-01"] },
+    { question: "Vadesi geçmiş faturaları göster", object: "invoices", expectedResponseType: "records", expectedFilterProperties: ["hs_due_date"] },
+    { question: "Bu ay faturalarının toplamı ne kadar?", object: "invoices", plannerFilters: [{ property: "hs_due_date", operator: "gte", value: "2026-08-01" }], expectedDateRange: ["2026-08-01", "2026-08-10"], expectedForbiddenProperties: ["hs_due_date"] },
   ],
 } as const;
 

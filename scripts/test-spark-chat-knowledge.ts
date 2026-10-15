@@ -58,6 +58,10 @@ assert.deepEqual(resolveSparkDateRange("Bu ay sonuna kadar", new Date("2026-08-1
 assert.deepEqual(resolveSparkDateRange("YTD faturalar", new Date("2026-08-14T12:00:00Z")), { start: "2026-01-01", endExclusive: "2026-08-15", label: "Yılbaşından bugüne" });
 assert.deepEqual(resolveSparkDateRange("MTD faturalar", new Date("2026-08-14T12:00:00Z")), { start: "2026-08-01", endExclusive: "2026-08-15", label: "Aybaşından bugüne" });
 assert.deepEqual(resolveSparkDateRange("Bu hafta açılan fırsatlar", new Date("2026-08-14T12:00:00Z")), { start: "2026-08-10", endExclusive: "2026-08-15", label: "Bu hafta" });
+assert.deepEqual(resolveSparkDateRange("Bu hafta sonuna kadar ödemesi gelen faturalar", new Date("2026-08-14T12:00:00Z")), { start: "2026-08-10", endExclusive: "2026-08-17", label: "Bu hafta" });
+assert.deepEqual(resolveSparkDateRange("Gelecek hafta ödemeleri", new Date("2026-08-14T12:00:00Z")), { start: "2026-08-17", endExclusive: "2026-08-24", label: "Gelecek hafta" });
+assert.deepEqual(resolveSparkDateRange("Önümüzdeki çeyrek ödemeleri", new Date("2026-08-14T12:00:00Z")), { start: "2026-10-01", endExclusive: "2027-01-01", label: "Gelecek çeyrek" });
+assert.deepEqual(resolveSparkDateRange("Gelecek yıl vadesi gelen faturalar", new Date("2026-08-14T12:00:00Z")), { start: "2027-01-01", endExclusive: "2028-01-01", label: "Gelecek yıl" });
 assert.deepEqual(resolveSparkDateRange("Geçen hafta kazanılan fırsatlar", new Date("2026-08-14T12:00:00Z")), { start: "2026-08-03", endExclusive: "2026-08-10", label: "Geçen hafta" });
 assert.deepEqual(resolveSparkDateRange("Son 90 gün", new Date("2026-08-14T12:00:00Z")), { start: "2026-05-17", endExclusive: "2026-08-15", label: "Son 90 gün" });
 assert.deepEqual(resolveSparkDateRange("Ağustos 2026 faturaları", new Date("2026-09-21T12:00:00Z")), { start: "2026-08-01", endExclusive: "2026-09-01", label: "agustos 2026" });
@@ -166,6 +170,16 @@ assert.equal(weightedFollowup.metricKind, "weighted_pipeline");
 assert.equal(weightedFollowup.aggregate?.property, "hs_projected_amount_in_home_currency");
 assert.equal(weightedFollowup.filters.find((filter) => filter.property === "country")?.value, "Turkiye");
 
+const overdueBasePlan = {
+  responseType: "records" as const, title: "Regresyon testi", object: "invoices" as const, metricKind: null, properties: [], filters: [], associatedDealFilters: [],
+  aggregate: null, groupBy: null, answer: null, sort: null, limit: 50,
+};
+const overduePlan = applySparkQueryGuardrails(overdueBasePlan, "Vadesi geçmiş faturaları göster", new Date("2026-08-09T12:00:00Z"), []);
+assert.equal(overduePlan.filters.find((filter) => filter.property === "hs_due_date" && filter.operator === "lt")?.value, "2026-08-09", "Vadesi geçmiş faturaların ödeme tarihi bugünden önce olmalı");
+const overdueMonthPlan = applySparkQueryGuardrails(overdueBasePlan, "Bu ay vadesi geçmiş faturaları göster", new Date("2026-08-09T12:00:00Z"), []);
+assert.equal(overdueMonthPlan.filters.find((filter) => filter.property === "hs_due_date" && filter.operator === "gte")?.value, "2026-08-01", "Bu ay vadesi geçmiş faturaların dönem başlangıcı yanlış");
+assert.equal(overdueMonthPlan.filters.find((filter) => filter.property === "hs_due_date" && filter.operator === "lt")?.value, "2026-08-09", "Bu ay vadesi geçmiş faturaların dönem bitişi bugün olmalı");
+
 for (const testCase of SPARK_CHAT_KNOWLEDGE.regressionCases) {
   const plan = applySparkQueryGuardrails({
     responseType: "records",
@@ -202,7 +216,7 @@ for (const testCase of SPARK_CHAT_KNOWLEDGE.regressionCases) {
   if ("expectedGroupBy" in testCase) assert.equal(plan.groupBy, testCase.expectedGroupBy, `${testCase.question}: kırılım alanı yanlış`);
   if ("expectedFilterProperties" in testCase) assert.ok(testCase.expectedFilterProperties.every((property) => plan.filters.some((filter) => filter.property === property)), `${testCase.question}: zorunlu filtrelerden biri eksik`);
   if ("expectedDateRange" in testCase) {
-    const dateProperty = SPARK_CHAT_KNOWLEDGE.objects[testCase.object].dateProperty;
+    const dateProperty = "expectedDateProperty" in testCase ? testCase.expectedDateProperty : SPARK_CHAT_KNOWLEDGE.objects[testCase.object].dateProperty;
     assert.equal(plan.filters.find((filter) => filter.property === dateProperty && filter.operator === "gte")?.value, testCase.expectedDateRange[0], `${testCase.question}: dönem başlangıcı yanlış`);
     assert.equal(plan.filters.find((filter) => filter.property === dateProperty && filter.operator === "lt")?.value, testCase.expectedDateRange[1], `${testCase.question}: dönem bitişi yanlış`);
   }
