@@ -43,6 +43,7 @@ export async function collectSparkData(
   const dealStage = (deal: HubSpotObject) => dealStages.get(deal.properties.dealstage || "");
   const isWon = (deal: HubSpotObject) => hubspotDealState(deal, dealStages) === "won";
   const isLost = (deal: HubSpotObject) => hubspotDealState(deal, dealStages) === "lost";
+  const isNewBusiness = (deal: HubSpotObject) => hubspotHelpers.lower(deal.properties.dealtype) === "newbusiness";
   const openDeals = deals.filter((deal) => hubspotDealState(deal, dealStages) === "open");
   const yearOpenDeals = openDeals.filter((deal) => isReportingYear(deal.properties.closedate, year));
   const yearOpenOrders = orders.filter((order) =>
@@ -60,13 +61,13 @@ export async function collectSparkData(
   const monthInvoices = invoiceRows.filter((row) => isReportingMonth(row.date, year, month));
   const monthOrders = orderRows.filter((row) => isReportingMonth(row.date, year, month));
   const weeklyNewDeals = yearOpenDeals
-    .filter((deal) => isBetween(deal.properties.createdate, start, end))
+    .filter((deal) => isNewBusiness(deal) && isBetween(deal.properties.createdate, start, end))
     .map((row) => toDealRecord(row, { dateProperty: "createdate" }));
   const weeklyWon = deals
-    .filter((deal) => isWon(deal) && isReportingYear(deal.properties.closedate, year) && isBetween(deal.properties.closedate, start, end))
+    .filter((deal) => isNewBusiness(deal) && isWon(deal) && isReportingYear(deal.properties.closedate, year) && isBetween(deal.properties.closedate, start, end))
     .map((row) => toDealRecord(row, { dateProperty: "closedate" }));
   const weeklyLost = deals
-    .filter((deal) => isLost(deal) && isReportingYear(deal.properties.closedate, year) && isBetween(deal.properties.closedate, start, end))
+    .filter((deal) => isNewBusiness(deal) && isLost(deal) && isReportingYear(deal.properties.closedate, year) && isBetween(deal.properties.closedate, start, end))
     .map((row) => toDealRecord(row, { dateProperty: "closedate" }));
   const currentMonthOpenDeals = yearOpenDeals
     .filter((deal) => isReportingMonth(deal.properties.closedate, year, month))
@@ -74,7 +75,7 @@ export async function collectSparkData(
     .sort((left, right) => new Date(left.date || 0).getTime() - new Date(right.date || 0).getTime());
   const weightedAmount = (deal: HubSpotObject) => hubspotHelpers.amount(deal, "hs_projected_amount_in_home_currency");
 
-  const newBusinessDeals = deals.filter((deal) => isWon(deal) && hubspotHelpers.lower(deal.properties.dealtype) === "newbusiness");
+  const newBusinessDeals = deals.filter((deal) => isWon(deal) && isNewBusiness(deal));
   const newBusinessIds = new Set(newBusinessDeals.map((deal) => deal.id));
   const sameYearNewBusiness = newBusinessDeals.filter((deal) => isReportingYear(deal.properties.closedate, year));
   const sameYearIds = new Set(sameYearNewBusiness.map((deal) => deal.id));

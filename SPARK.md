@@ -375,10 +375,12 @@ The technical order-date property name is never rendered in the UI.
   from its column header. Text uses Turkish alphabetical ordering; dates, age and
   amounts use chronological or numeric ordering. The active direction is visible in
   the header, and Excel export preserves the filtered, sorted row order.
-- Weekly new deals are currently Open, have `closedate` in the reporting year,
-  and have `createdate` in the rolling window covering the current Istanbul day plus
-  the seven preceding calendar days (`Bugün + son 7 gün`). Weekly Won/Lost records
-  use their explicit state and a reporting-year `closedate` in that same window.
+- Weekly new deals have `dealtype = newbusiness`, are currently Open, have `closedate`
+  in the reporting year, and have `createdate` in the rolling window covering the
+  current Istanbul day plus the seven preceding calendar days (`Bugün + son 7 gün`).
+  Weekly Won/Lost records use the same New Business filter, their explicit state, and
+  a reporting-year `closedate` in that same window. The card title visibly states this
+  scope, and its amounts, counts, and drill-downs all use these filtered populations.
 - The 12-month operating table shows all reporting-year non-cancelled invoices, reporting-year open orders, active
   close-date pipeline and HubSpot projected weighted pipeline for every month in
   the reporting year. By default, completed months are condensed into one YTD row

@@ -1065,7 +1065,7 @@ export default function Dashboard({
             <span className={styles.cardDrilldown}><List size={12} /> İlgili kayıtları gör</span>
           </button>
           <article className={styles.weeklyCard}>
-            <div className={styles.cardTitle}><span>{isCurrent ? "Bugün + son 7 gün" : isPlanning ? `Bugün + son 7 günde eklenen ${year} planı` : "Snapshot günü + önceki 7 gün"} · Pipeline hareketi</span><small>{formatDate(data.periodStart)} – {formatDate(data.periodEnd)}</small></div>
+            <div className={styles.cardTitle}><span>{isCurrent ? "Bugün + son 7 gün" : isPlanning ? `Bugün + son 7 günde eklenen ${year} planı` : "Snapshot günü + önceki 7 gün"} · Pipeline hareketi · Yalnız New Business</span><small>{formatDate(data.periodStart)} – {formatDate(data.periodEnd)}</small></div>
             <div className={styles.weeklyMetrics}>
               <OpenRecordsButton rows={overviewWeeklyNew} label="Bugün + son 7 günde açılan fırsatlar" onOpen={openRecords}><span>Yeni pipeline</span><b>{privateMoney(overviewWeeklyNewPipeline, privacyMode)}</b><small>{privateCount(overviewWeeklyNew.length, privacyMode)} fırsat</small></OpenRecordsButton>
               <OpenRecordsButton rows={overviewWeeklyWon} label="Bugün + son 7 günde kazanılan fırsatlar" onOpen={openRecords}><span>Won pipeline</span><b>{privateMoney(won, privacyMode)}</b><small>{privateCount(overviewWeeklyWon.length, privacyMode)} fırsat</small></OpenRecordsButton>
