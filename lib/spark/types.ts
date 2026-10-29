@@ -12,6 +12,7 @@ export type SparkRecord = {
   url: string;
   carryover?: boolean;
   stage?: string;
+  dealType?: string;
   weightedAmount?: number;
   ageDays?: number;
   issues?: string[];

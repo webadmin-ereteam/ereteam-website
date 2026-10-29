@@ -151,7 +151,7 @@ const issueProperties: Record<string, EditableProperty> = {
   "Invoice status Paid değil": "hs_invoice_status",
 };
 const editablePropertyFor = (row: SparkRecord) => row.issues?.map((issue) => issueProperties[issue]).find(Boolean);
-type RecordSortKey = "name" | "objectType" | "stage" | "date" | "ageDays" | "amount" | "weightedAmount" | "contribution" | "owner" | "issues";
+type RecordSortKey = "name" | "objectType" | "stage" | "dealType" | "date" | "ageDays" | "amount" | "weightedAmount" | "contribution" | "owner" | "issues";
 type RecordSort = { key: RecordSortKey; direction: "asc" | "desc" } | null;
 const recordContribution = (row: SparkRecord, mode: RecordValueMode) => {
   if (mode === "weighted") return row.weightedAmount ?? 0;
@@ -239,6 +239,7 @@ function RecordTable({
 }) {
   const showObjectType = rows.some((row) => row.objectType);
   const showStage = rows.some((row) => row.stage);
+  const showDealType = rows.some((row) => row.objectType === "Deal");
   const showAge = rows.some((row) => row.ageDays != null);
   const showWeighted = rows.some((row) => row.weightedAmount != null);
   const showIssue = rows.some((row) => row.issues?.length);
@@ -402,6 +403,7 @@ function RecordTable({
             {sortableHeader("name", "Kayıt")}
             {showObjectType ? sortableHeader("objectType", "Tür") : null}
             {showStage ? sortableHeader("stage", "Stage") : null}
+            {showDealType ? sortableHeader("dealType", "Deal type") : null}
             {sortableHeader("date", "Tarih")}
             {showAge ? sortableHeader("ageDays", "Yaş") : null}
             {sortableHeader("amount", "Tutar")}
@@ -418,6 +420,7 @@ function RecordTable({
               <td><a href={row.url} target="_blank" rel="noreferrer">{row.name}<ArrowUpRight size={12} /></a></td>
               {showObjectType ? <td><span className={styles.objectPill}>{row.objectType || "-"}</span></td> : null}
               {showStage ? <td><span className={styles.stagePill}>{row.stage || "-"}</span></td> : null}
+              {showDealType ? <td>{row.dealType || "-"}</td> : null}
               <td>{formatDate(row.date)}</td>
               {showAge ? <td>{row.ageDays != null ? `${row.ageDays} gün` : "-"}</td> : null}
               <td><b>{exactMoney(row.amount)}</b></td>
@@ -513,7 +516,7 @@ function RecordDialog({
   const filteredRows = rows.filter((row) => {
     const rowCountry = countryGroup(row.country) || "Belirtilmemiş";
     const rowOwner = row.owner || "Belirtilmemiş";
-    const matchesQuery = !normalizedQuery || [row.name, row.objectType, row.stage, rowOwner, rowCountry, row.issues?.join(" "), formatDate(row.date)]
+    const matchesQuery = !normalizedQuery || [row.name, row.objectType, row.stage, row.dealType, rowOwner, rowCountry, row.issues?.join(" "), formatDate(row.date)]
       .filter(Boolean)
       .join(" ")
       .toLocaleLowerCase("tr-TR")
@@ -561,6 +564,7 @@ function RecordDialog({
       const worksheet = XLSX.utils.json_to_sheet(sortedRows.map((row) => ({
         "Kayıt": row.name,
         "Tür": row.objectType ?? "",
+        "Deal type": row.dealType ?? "",
         "Tarih": formatDate(row.date),
         "Tutar (USD)": row.amount,
         "Weighted (USD)": row.weightedAmount ?? "",
@@ -574,7 +578,7 @@ function RecordDialog({
         "HubSpot URL": row.url,
       })));
       worksheet["!cols"] = [
-        { wch: 42 }, { wch: 10 }, { wch: 14 }, { wch: 16 }, { wch: 18 },
+        { wch: 42 }, { wch: 10 }, { wch: 18 }, { wch: 14 }, { wch: 16 }, { wch: 18 },
         { wch: 18 }, { wch: 22 }, { wch: 24 }, { wch: 24 }, { wch: 12 },
         { wch: 10 }, { wch: 28 }, { wch: 48 },
       ];

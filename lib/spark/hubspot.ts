@@ -246,6 +246,7 @@ export function dealRecord(
   options: { dateProperty?: "createdate" | "closedate"; stage?: string; now?: Date; issues?: string[] } = {},
 ): SparkRecord {
   const createdAt = new Date(row.properties.createdate || "").getTime();
+  const dealType = lower(row.properties.dealtype);
   const ageDays = Number.isFinite(createdAt) && options.now
     ? Math.max(0, Math.floor((options.now.getTime() - createdAt) / 86_400_000))
     : undefined;
@@ -262,6 +263,7 @@ export function dealRecord(
     revenueTypes: (row.properties.revenue_type ?? "").split(";").map((value) => value.trim()).filter(Boolean),
     domain: row.properties.ereteam_domain?.trim(),
     stage: options.stage,
+    dealType: dealType === "newbusiness" ? "New Business" : dealType === "existingbusiness" ? "Existing Business" : row.properties.dealtype?.trim() || "Belirtilmemiş",
     weightedAmount: amount(row, "hs_projected_amount_in_home_currency"),
     ageDays,
     issues: options.issues,

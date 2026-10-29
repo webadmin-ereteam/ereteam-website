@@ -437,7 +437,9 @@ The technical order-date property name is never rendered in the UI.
   provides equivalent complete reporting-year lists for non-cancelled invoices and
   Open orders.
   Every record-detail modal can export its current rows to an Excel workbook with
-  record metadata and HubSpot URLs. Text, object-type, stage, owner, and country
+  record metadata and HubSpot URLs. Deal rows show a sortable `Deal type` column with
+  `New Business` or `Existing Business`; the value is searchable and included in Excel.
+  Text, object-type, stage, owner, and country
   filters apply to the displayed count, amount, table, and Excel export. The
   modal summary cards update with those filters and show record count, total amount,
   weighted amount when available, and TR/US amount-count splits when country data is
