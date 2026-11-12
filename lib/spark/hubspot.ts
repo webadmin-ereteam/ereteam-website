@@ -51,9 +51,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   throw new Error(`HubSpot ${path}: istek tamamlanamadı`);
 }
 
-function batchResults<T>(result: { results: T[]; errors?: unknown[]; numErrors?: number }) {
+function batchResults<T>(result: { results: T[]; errors?: Array<{ category?: string; status?: string }>; numErrors?: number }, context: string) {
   if (!Array.isArray(result.results) || result.errors?.length || (result.numErrors ?? 0) > 0) {
-    throw new Error("HubSpot toplu işlemi eksik veya hatalı sonuçlandı. Bazı kayıtlar işlenmiş olabilir; veriyi yenileyip kontrol edin.");
+    const categories = [...new Set((result.errors ?? []).map((error) => error.category || error.status || "unknown"))].join(", ");
+    throw new Error(`HubSpot toplu işlemi eksik veya hatalı sonuçlandı (${context}; ${result.numErrors ?? result.errors?.length ?? 0} hata${categories ? `; ${categories}` : ""}). Bazı kayıtlar işlenmiş olabilir; veriyi yenileyip kontrol edin.`);
   }
   return result.results;
 }
@@ -82,7 +83,7 @@ export async function fetchHubSpotObjectsByIds(objectType: string, ids: string[]
       `${objectPath(objectType)}/batch/read`,
       { method: "POST", body: JSON.stringify({ properties, inputs }) },
     );
-    rows.push(...batchResults(result));
+    rows.push(...batchResults(result, `${objectType} batch read`));
   }
   return rows;
 }
@@ -116,7 +117,7 @@ export async function updateHubSpotObjectPropertiesBatch(
       `${objectPath(objectType)}/batch/update`,
       { method: "POST", body: JSON.stringify({ inputs: records.slice(index, index + 10) }) },
     );
-    const updated = batchResults(result);
+    const updated = batchResults(result, `${objectType} batch update`);
     const updatedIds = new Set(updated.map((row) => row.id));
     if (records.slice(index, index + 10).some((row) => !updatedIds.has(row.id))) {
       throw new Error("HubSpot tüm kayıtların güncellendiğini doğrulamadı. Bazı kayıtlar işlenmiş olabilir; veriyi yenileyip kontrol edin.");
@@ -184,7 +185,7 @@ export async function fetchHubSpotAssociations(
         { method: "POST", body: JSON.stringify({ inputs }) }
       );
       inputs = [];
-      for (const row of batchResults(result)) {
+      for (const row of batchResults(result, `${from} → ${to} associations`)) {
         map.set(row.from.id, Array.from(new Set([...(map.get(row.from.id) ?? []), ...row.to.map((item) => String(item.toObjectId))])));
         const after = row.paging?.next?.after;
         if (after) {
