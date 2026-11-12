@@ -51,9 +51,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   throw new Error(`HubSpot ${path}: istek tamamlanamadı`);
 }
 
-function batchResults<T>(result: { results: T[]; errors?: Array<{ category?: string; status?: string }>; numErrors?: number }, context: string) {
+function batchResults<T>(result: { results: T[]; errors?: Array<{ category?: string; status?: string; message?: string; context?: Record<string, string[]> }>; numErrors?: number }, context: string) {
   if (!Array.isArray(result.results) || result.errors?.length || (result.numErrors ?? 0) > 0) {
-    const categories = [...new Set((result.errors ?? []).map((error) => error.category || error.status || "unknown"))].join(", ");
+    const categories = [...new Set((result.errors ?? []).map((error) => `${error.category || error.status || "unknown"}: ${error.message?.slice(0, 160) ?? ""} [${Object.keys(error.context ?? {}).join(",")}]`))].slice(0, 2).join(", ");
     throw new Error(`HubSpot toplu işlemi eksik veya hatalı sonuçlandı (${context}; ${result.numErrors ?? result.errors?.length ?? 0} hata${categories ? `; ${categories}` : ""}). Bazı kayıtlar işlenmiş olabilir; veriyi yenileyip kontrol edin.`);
   }
   return result.results;
@@ -180,12 +180,24 @@ export async function fetchHubSpotAssociations(
     let inputs: Array<{ id: string; after?: string }> = ids.slice(index, index + 100).map((id) => ({ id }));
     const seenCursors = new Set<string>();
     while (inputs.length) {
-      const result = await request<{ results: Array<{ from: { id: string }; to: Array<{ toObjectId: number | string }>; paging?: { next?: { after: string } } }> }>(
+      const result = await request<{ results: Array<{ from: { id: string }; to: Array<{ toObjectId: number | string }>; paging?: { next?: { after: string } } }>; errors?: Array<{ category?: string; message?: string; context?: Record<string, string[]> }>; numErrors?: number }>(
         `/crm/associations/${API_VERSION}/${from}/${to}/batch/read`,
         { method: "POST", body: JSON.stringify({ inputs }) }
       );
+      const requestedIds = new Set(inputs.map((input) => input.id));
+      // HubSpot represents an existing record with no links as OBJECT_NOT_FOUND
+      // in batch reads. Only its explicit, ID-scoped empty-association response
+      // is normal; missing objects, scope errors and other partial failures fail.
+      const errors = result.errors?.filter((error) => {
+        const emptyIds = error.context?.fromObjectId;
+        if (error.category !== "OBJECT_NOT_FOUND" || !/^No associations found/i.test(error.message ?? "")
+          || !emptyIds?.length || emptyIds.some((id) => !requestedIds.has(id))) return true;
+        for (const id of emptyIds) if (!map.has(id)) map.set(id, []);
+        return false;
+      });
+      const checked = errors && result.errors?.length ? { ...result, errors, numErrors: errors.length } : result;
       inputs = [];
-      for (const row of batchResults(result, `${from} → ${to} associations`)) {
+      for (const row of batchResults(checked, `${from} → ${to} associations`)) {
         map.set(row.from.id, Array.from(new Set([...(map.get(row.from.id) ?? []), ...row.to.map((item) => String(item.toObjectId))])));
         const after = row.paging?.next?.after;
         if (after) {

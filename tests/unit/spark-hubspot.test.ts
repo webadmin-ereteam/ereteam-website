@@ -100,6 +100,15 @@ describe("Spark date-based HubSpot transport", () => {
     expect(call(1).body).toEqual({ inputs: [{ id: "1", after: "p2" }] });
   });
 
+  it("accepts only explicit ID-scoped no-association errors, not missing objects", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ results: [], numErrors: 1, errors: [{ category: "OBJECT_NOT_FOUND", message: "No associations found for object", context: { fromObjectId: ["1"] } }] }), { status: 207 }));
+    expect(await fetchHubSpotAssociations("invoices", ["1"])).toEqual(new Map([["1", []]]));
+    fetchMock.mockResolvedValueOnce(reply({ results: [], numErrors: 1, errors: [{ category: "OBJECT_NOT_FOUND", message: "Object not found", context: { fromObjectId: ["1"] } }] }));
+    await expect(fetchHubSpotAssociations("invoices", ["1"])).rejects.toThrow(/toplu işlemi/);
+    fetchMock.mockResolvedValueOnce(reply({ results: [], numErrors: 1, errors: [{ category: "OBJECT_NOT_FOUND", message: "No associations found", context: { fromObjectId: ["other"] } }] }));
+    await expect(fetchHubSpotAssociations("invoices", ["1"])).rejects.toThrow(/toplu işlemi/);
+  });
+
   it("fails rather than looping forever on a repeated association cursor", async () => {
     fetchMock.mockImplementation(async () => reply({ results: [{ from: { id: "1" }, to: [], paging: { next: { after: "same" } } }] }));
     await expect(fetchHubSpotAssociations("orders", ["1"])).rejects.toThrow(/ilerlemiyor/);

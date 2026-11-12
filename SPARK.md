@@ -10,7 +10,7 @@ this file; do not use `PRESALES.md` as Spark documentation.
 - `/spark` — latest password-protected dashboard; `?year=YYYY` opens an available planning year or annual archive
 - `/spark/login` — shared internal login
 - `/api/cron/spark` — Vercel Cron endpoint
-- `/api/spark/refresh` — Spark-session-protected manual refresh with a ten-minute cooldown
+- `/api/spark/refresh` — Spark-session-protected manual refresh
 - `/api/spark/hygiene` — Spark-session-protected CRM enum catalog and allowlisted record updates
 - `/api/spark/chat` — Spark-session-protected, salt-okunur canlı HubSpot veri asistanı
 - `/api/spark/amplemarket/webhook` — legacy authenticated Amplemarket meeting receiver; not used by the dashboard
@@ -88,11 +88,11 @@ chat periods refer to the actual current year. HubSpot links can show a record's
 state rather than its frozen snapshot state. Source health is stored with each snapshot;
 a budget-source failure or a not-yet-defined target is shown as a distinct amber banner
 instead of being silently presented as target zero. The header also shows the exact Istanbul update time. Authenticated users can
-request a quiet manual refresh; requests made within ten minutes of the latest
-generated report reuse the current snapshot instead of calling the sources. A
-ten-minute distributed refresh lease in the snapshot table additionally guarantees
-that only one collection runs at a time across cron deliveries, manual requests, and
-separate serverless instances; a concurrent attempt returns an explicit
+request a quiet manual refresh at any time, including immediately after a successful
+refresh. A distributed refresh lease in the snapshot table guarantees that only one
+collection runs at a time across cron deliveries, manual requests, and separate
+serverless instances; the lease is released when collection finishes and its ten-minute
+expiry recovers abandoned runs. A concurrent attempt returns an explicit
 "already running" error instead of duplicating HubSpot reads. A refresh superseded by
 a newer concurrent run reports the newer stored snapshot, never its own older result.
 The browser does not poll or refresh Spark on an interval, but the stale-data check
