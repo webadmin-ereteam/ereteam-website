@@ -390,6 +390,10 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
   }
 
   let filters = [...plan.filters];
+  if (object !== plan.object && plan.object === "invoices" && object === "orders"
+    && !/\b(status|paid|odenmis|iptal|cancelled|canceled|invoiced)\b/.test(text)) {
+    filters = filters.filter((filter) => !["status", "hs_invoice_status"].includes(filter.property));
+  }
   let associatedDealFilters = [...plan.associatedDealFilters];
   const plannedOwnerValues = [...filters, ...associatedDealFilters]
     .filter((filter) => ["_owner_name", "hubspot_owner_id"].includes(filter.property))
@@ -576,7 +580,14 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
   if (weightedPipelineIntent && responseType === "records" && !properties.includes(SPARK_CHAT_KNOWLEDGE.compositeMetrics.weightedPipeline.property)) {
     properties.push(SPARK_CHAT_KNOWLEDGE.compositeMetrics.weightedPipeline.property);
   }
-  const guarded = { ...plan, object, responseType, aggregate, groupBy, metricKind, properties, filters: uniqueFilters(filters), associatedDealFilters };
+  const sort = object !== plan.object && plan.sort
+    ? ["createdate", "closedate", ...Object.values(dateProperties), SPARK_CHAT_KNOWLEDGE.invoiceDueDate.property].includes(plan.sort.property)
+      ? { ...plan.sort, property: dateProperties[object] }
+      : plan.sort.property === amountProperties[plan.object]
+        ? { ...plan.sort, property: amountProperties[object] }
+        : plan.sort
+    : plan.sort;
+  const guarded = { ...plan, object, responseType, aggregate, groupBy, metricKind, properties, sort, filters: uniqueFilters(filters), associatedDealFilters };
   if (weightedPipelineIntent) guarded.title = SPARK_CHAT_KNOWLEDGE.compositeMetrics.weightedPipeline.label;
   const invoiceSubject = dueDateIntent ? (dueDateOverdue ? "vadesi geçmiş fatura" : "ödemesi olan fatura") : "fatura";
   if (enforcedRange && responseType === "records") {

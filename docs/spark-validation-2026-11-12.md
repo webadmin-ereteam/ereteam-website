@@ -3,8 +3,8 @@
 ## Scope and fixes
 
 Read and write paths share the `2026-09` HubSpot transport. The Service Key has
-deals/invoices/orders read and write scopes, companies/owners read scopes,
-deals/invoices/orders schema read scopes and order pipeline read scope. Credentials
+all 22 scopes of the legacy app, including the runtime's deals/invoices/orders
+read/write, companies/owners read, schema read and order pipeline read scopes. Credentials
 remain in Vercel, not in this report or repository.
 
 This validation found and corrected:
@@ -37,6 +37,11 @@ This validation found and corrected:
 9. A weighted-pipeline detail request was forced into a metric. It now returns
    records with the projected-amount column and retains the validated weighted
    context for subsequent questions.
+10. A live expected-invoice detail question exposed a corrected object retaining
+    invoice-specific sort/status fields. When invoice intent is corrected to
+    orders, date/amount sorting now uses the approved order fields. An unsolicited
+    invoice status filter is removed; explicitly requested filters still undergo
+    catalog validation rather than being silently weakened.
 
 ## Automated evidence
 
@@ -100,3 +105,48 @@ management must supply the 2027 targets before that year's target ratios are use
 - Finish complete-keyboard/archive checks when a historical snapshot is available.
 - Keep API version and Service Key lifecycle monitoring current. Tests cannot
   guarantee the future availability or behavior of an external API.
+
+## Live permission comparison
+
+The legacy app still exists under **Spark Dashboard** (app ID `48480812`). Its
+Auth screen exposes 22 scopes. The replacement **Spark** Service Key (ID
+`61485015`) initially exposed 12, covering the current runtime. The user explicitly
+approved adding the remaining ten scopes. The saved detail page now exposes
+**all 22 with zero missing and zero extra scopes** compared with the old app.
+
+| Scope | Legacy app | Service Key |
+| --- | --- | --- |
+| `crm.objects.deals.read` | Yes | Yes |
+| `crm.objects.deals.write` | Yes | Yes |
+| `crm.objects.invoices.read` | Yes | Yes |
+| `crm.objects.invoices.write` | Yes | Yes |
+| `crm.objects.orders.read` | Yes | Yes |
+| `crm.objects.orders.write` | Yes | Yes |
+| `crm.objects.companies.read` | Yes | Yes |
+| `crm.objects.owners.read` | Yes | Yes |
+| `crm.schemas.deals.read` | Yes | Yes |
+| `crm.schemas.invoices.read` | Yes | Yes |
+| `crm.schemas.orders.read` | Yes | Yes |
+| `crm.pipelines.orders.read` | Yes | Yes |
+| `crm.objects.line_items.read` | Yes | Yes |
+| `crm.objects.line_items.write` | Yes | Yes |
+| `crm.import` | Yes | Yes |
+| `crm.objects.users.read` | Yes | Yes |
+| `crm.objects.products.read` | Yes | Yes |
+| `settings.currencies.read` | Yes | Yes |
+| `settings.currencies.write` | Yes | Yes |
+| `crm.pipelines.stage_permissions.read` | Yes | Yes |
+| `crm.objects.contacts.read` | Yes | Yes |
+| `crm.schemas.companies.read` | Yes | Yes |
+
+Paid updates use the existing invoice-write scope. Classification updates use the
+matching deal/invoice/order-write scopes. Invoice-to-Deal links have both invoice
+and deal write access. The remaining ten legacy scopes are not used by the current
+Spark source; some relate to historical invoice/line-item/currency migration.
+The scope update retained the same Service Key; no token rotation or second
+credential entry was needed. Scope parity is confirmed from HubSpot's saved UI;
+it does not substitute for executing live writes on designated test records.
+
+After the final pipeline changes, a fresh production refresh succeeded at 20:38
+Istanbul. The exact original pipeline question returned USD 1,355,000 and 20 records
+at 20:39, matching the dashboard; its detail follow-up returned 20 records.

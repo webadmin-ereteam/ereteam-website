@@ -200,6 +200,7 @@ export const SPARK_CHAT_KNOWLEDGE = {
     "Kullanıcının istediği hiçbir dönem, owner, stage, tür veya bağlantı filtresini sessizce atlama. Katalogda olmayan property uydurma.",
     "Kullanıcının açıkça istemediği ülke, vendor, müşteri, revenue type, domain veya iş tipi filtresini ekleme. Geçerli bir HubSpot property olması, kendiliğinden filtre uygulama izni değildir.",
     "Order sorgularındaki zorunlu _is_open filtresi dışında stage, pipeline, açık, won/kazanılan, lost/kaybedilen veya beklenen fatura açıkça söylenmedikçe dealstage, hs_is_closed, hs_is_closed_won, hs_pipeline_stage, _stage_label, _is_open, _is_closed ya da _is_won filtresi ekleme.",
+    "Beklenen fatura detayları orders nesnesidir. Invoice planı orders olarak düzeltildiğinde invoice tarih/tutar sıralamasını order tarih/tutar alanına taşı; kullanıcının istemediği invoice status filtresini yeni nesneye taşıma.",
   ],
   regressionCases: [
     { question: "2026 aktif pipeline toplam tutarı ve fırsat sayısı nedir?", object: "deals", plannerMetricKind: "weighted_pipeline", expectedMetricKind: null, expectedResponseType: "metric", expectedAggregateProperty: "amount_in_home_currency", plannerFilters: [{ property: "createdate", operator: "gte", value: "2026-01-01" }], expectedFilterProperties: ["closedate", "_is_open"], expectedForbiddenProperties: ["createdate"], expectedDateRange: ["2026-01-01", "2027-01-01"] },

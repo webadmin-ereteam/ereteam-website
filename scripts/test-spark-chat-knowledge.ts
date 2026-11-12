@@ -23,12 +23,12 @@ const recoveredExpectedDetails = applySparkQueryGuardrails({
   object: "invoices",
   metricKind: "expected_revenue",
   properties: ["hs_invoice_date", "hs_amount_billed_in_company_currency"],
-  filters: [],
+  filters: [{ property: "status", operator: "neq", value: "Cancelled" }],
   associatedDealFilters: [],
   aggregate: { operation: "sum", property: "hs_amount_billed_in_company_currency" },
   groupBy: null,
   answer: null,
-  sort: null,
+  sort: { property: "hs_due_date", direction: "asc" },
   limit: 100,
 }, "Bu ay beklenen faturaların detaylarını göster", new Date("2026-08-15T12:00:00Z"), []);
 assert.equal(recoveredExpectedDetails.object, "orders");
@@ -36,6 +36,8 @@ assert.equal(recoveredExpectedDetails.responseType, "records");
 assert.deepEqual(recoveredExpectedDetails.properties, []);
 assert.equal(recoveredExpectedDetails.metricKind, null);
 assert.equal(recoveredExpectedDetails.filters.find((filter) => filter.property === "_is_open")?.value, "true");
+assert.equal(recoveredExpectedDetails.filters.some((filter) => filter.property === "status"), false);
+assert.deepEqual(recoveredExpectedDetails.sort, { property: "hs_processed_date", direction: "asc" });
 
 assert.equal(sparkChatComparableValue("2027-01-01"), Date.parse("2026-12-31T21:00:00Z"), "İstanbul takvim günü UTC sınırı yanlış");
 assert.ok(sparkChatComparableValue("2026-12-31T21:00:00Z") >= sparkChatComparableValue("2027-01-01"), "1 Ocak İstanbul kaydı 2026 aralığına girmemeli");
