@@ -190,7 +190,12 @@ export async function fetchHubSpotAssociations(
       // is normal; missing objects, scope errors and other partial failures fail.
       const errors = result.errors?.filter((error) => {
         const emptyIds = error.context?.fromObjectId;
-        if (error.category !== "OBJECT_NOT_FOUND" || !/^No associations found/i.test(error.message ?? "")
+        const sourceName = from === "invoices" ? "invoice" : from === "orders" ? "order" : "deal";
+        const targetName = to === "deals" ? "deal" : "company";
+        const portalEmptyMessage = error.message?.match(new RegExp(`^No ${targetName} is associated with ${sourceName} (\\d+)\\.?$`, "i"));
+        const explicitEmpty = /^No associations found/i.test(error.message ?? "")
+          || (portalEmptyMessage && emptyIds?.includes(portalEmptyMessage[1]));
+        if (error.category !== "OBJECT_NOT_FOUND" || !explicitEmpty
           || !emptyIds?.length || emptyIds.some((id) => !requestedIds.has(id))) return true;
         for (const id of emptyIds) if (!map.has(id)) map.set(id, []);
         return false;

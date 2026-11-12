@@ -21,15 +21,25 @@ This validation found and corrected:
    to `closedate`; explicit creation-date requests retain `createdate`. Superseded
    date filters are removed.
 5. Successful empty HTTP 204 responses no longer cause JSON parsing errors.
+6. Live association reads revealed HubSpot's ID-scoped `OBJECT_NOT_FOUND` response
+   with messages such as `No deal is associated with invoice <id>.` This means
+   an empty link set, not an unavailable object. Only explicit empty-link messages
+   matching the requested source ID are normalized. Genuine missing-object,
+   permission and other partial errors still fail.
+7. The pre-existing local refresh lease changes were validated and included:
+   leases are released on success and failure using an ownership token, and
+   simultaneous manual requests coalesce. A failed refresh no longer unnecessarily
+   blocks another attempt for ten minutes.
 
 ## Automated evidence
 
 | Area | Verification |
 | --- | --- |
-| Transport | Object pagination, 100-record reads, 10-record invoice writes, all endpoint families, authorization rejection, partial 207 and missing IDs, association pagination/repeated cursors, empty 204 |
+| Transport | Object pagination, 100-record reads, 10-record invoice writes, all endpoint families, authorization rejection, partial 207 and missing IDs, association pagination/repeated cursors, explicit empty-link messages, empty 204 |
 | Hygiene routes | 21 cases: Spark audience, Paid-only invoice restriction, enum allowlist/hidden values, 50-record cap, mixed-object validation before writing, multi-select sets, readback mismatch/missing records, denied writes, missing/already-associated invoices, association readback, fail-closed rate limiting |
 | Collector | Five cases: headline/month/funnel population reconciliation, custom Cancelled exclusion, Paid hygiene independent of invoicing, negative adjustments, New Business carry-over, missing-close-date exception, weighted source values, Istanbul year boundary, malformed amounts and missing planning-year targets |
 | Chat semantics | 45 regression scenarios plus owner/date/field and context assertions in the knowledge runner; the exact previously observed pipeline question is included with an incorrect planner-createdate filter |
+| Refresh | Seven tests for lease ownership/contention/release on failure/success, current+planning writes only, manual request coalescing and retry after failure |
 | Existing tests | Full `npm test`, production build and scoped lint are required before release |
 
 Tests use fixtures and mocked HubSpot responses. They verify code behavior but
@@ -51,19 +61,29 @@ HubSpot property histories, and the browser's removal of a real corrected issue
 remain unverified**. Those need a designated test record or an actual intended
 business correction. The automated server tests cover those success/error flows.
 
-Excel download, responsive widths, complete keyboard navigation, historical-year
-navigation and every UI action have not all been re-exercised in this run; do not
-describe this report as a complete UI end-to-end certification. Active native
-browser changes by the user interrupted further UI interactions.
+Additional live UI checks passed: combined overview filters and forecast modal,
+sorting, empty search with zero filtered totals, Escape dismissal, privacy masking
+with disabled refresh/detail actions, theme switching, and 2027 planning navigation
+with missing-target warning and hidden live chat. The actual downloaded Excel file
+contains 35 rows, all HubSpot URLs, forecast calculation labels and a contribution
+sum of USD 830,446.44298, matching the displayed USD 830,446.44.
 
-The existing local refresh/caching edits predated this audit and are not part of
-the audit fix commit. A missing 2027 target is an explicit supported warning state;
+Unauthenticated requests to hygiene GET/PATCH/POST, chat, manual refresh and cron
+returned HTTP 401. The report-year URL redirected to login with its year preserved.
+
+Responsive widths, complete keyboard navigation and historical-year navigation
+have not all been re-exercised in this run. The portal exposes only current and
+planning snapshots, so an actual frozen historical snapshot is unavailable for a
+live archive test. Do not describe this as complete UI end-to-end certification.
+
+A missing 2027 target is an explicit supported warning state;
 management must supply the 2027 targets before that year's target ratios are used.
 
 ## Remaining operational checks
 
 - Verify a legitimate Paid operation and Invoice-to-Deal correction on designated
   records, then check HubSpot values/history, refresh and the hygiene counts.
-- Finish the outstanding browser/export/responsive checks in an available session.
+- Finish the outstanding responsive/complete-keyboard/archive checks when the
+  required browser conditions and historical snapshot are available.
 - Keep API version and Service Key lifecycle monitoring current. Tests cannot
   guarantee the future availability or behavior of an external API.

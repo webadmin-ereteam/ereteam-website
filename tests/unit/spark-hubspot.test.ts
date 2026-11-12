@@ -109,6 +109,11 @@ describe("Spark date-based HubSpot transport", () => {
     await expect(fetchHubSpotAssociations("invoices", ["1"])).rejects.toThrow(/toplu işlemi/);
   });
 
+  it.each([["invoices", "deals", "No deal is associated with invoice 1."], ["orders", "deals", "No deal is associated with order 1."], ["deals", "companies", "No company is associated with deal 1."]] as const)("normalizes live portal empty-link messages for %s → %s", async (from, to, message) => {
+    fetchMock.mockResolvedValueOnce(reply({ results: [], numErrors: 1, errors: [{ category: "OBJECT_NOT_FOUND", message, context: { fromObjectId: ["1"] } }] }));
+    expect(await fetchHubSpotAssociations(from, ["1"], to)).toEqual(new Map([["1", []]]));
+  });
+
   it("fails rather than looping forever on a repeated association cursor", async () => {
     fetchMock.mockImplementation(async () => reply({ results: [{ from: { id: "1" }, to: [], paging: { next: { after: "same" } } }] }));
     await expect(fetchHubSpotAssociations("orders", ["1"])).rejects.toThrow(/ilerlemiyor/);
