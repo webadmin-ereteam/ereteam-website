@@ -336,7 +336,9 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
   const revenueIntent = detectSparkRevenueIntent(text);
   const domain = detectSparkDomain(text);
   const businessType = detectSparkDealBusinessType(text);
-  const plannedWeightedPipeline = SPARK_CHAT_KNOWLEDGE.compositeMetrics.weightedPipeline.pattern.test(text) || plan.metricKind === "weighted_pipeline";
+  const explicitWeightedPipeline = SPARK_CHAT_KNOWLEDGE.compositeMetrics.weightedPipeline.pattern.test(text);
+  const plainPipelineIntent = !explicitWeightedPipeline && /\b(pipeline|aktif|acik\s+(?:deal|firsat))\b/.test(text);
+  const plannedWeightedPipeline = explicitWeightedPipeline || (plan.metricKind === "weighted_pipeline" && !plainPipelineIntent);
   const stageIntent = /\b(pipeline|stage|asama|durum|aktif|kapali|acik\s+(deal|firsat|order|siparis)|open|won|lost|kazanilan|kaybedilen|beklenen\s+fatura)\b/.test(text);
   const possessiveOwner = text.match(/\b([a-z]{2,30})['’]?(?:nin|nun|in|un)\s+(?:deal\w*|firsat\w*|fatura\w*|order\w*|siparis\w*)\b/)?.[1];
   const companyIntent = SPARK_CHAT_KNOWLEDGE.companies.triggerPattern.test(text);
@@ -355,7 +357,7 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
   let groupBy = requestedGroupBy ?? (followsPrevious && !collapsesBreakdown ? previous?.groupBy ?? null : null);
   const asksAverage = /\bortalama\b/.test(text);
   const amountUnitIntent = /\bkac\s+(?:dolar|usd|milyon|bin)\b/.test(text);
-  const asksCount = /\b(kac|sayi|adet)/.test(text) && !/\bne\s+kadar\b/.test(text) && !amountUnitIntent;
+  const asksCount = /\b(kac|sayi|adet)/.test(text) && !/\b(ne\s+kadar|tutar|ciro)/.test(text) && !amountUnitIntent;
   const asksAmount = /\b(ne\s+kadar(?:i)?|tutar|toplam|ciro)/.test(text) || amountUnitIntent;
   const asksRecords = /\b(hangi|liste|goster|detay|kayit)/.test(text) && !asksAmount && !asksCount && !asksAverage;
 
@@ -382,7 +384,7 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
   } else if (responseType === "metric" && aggregate && aggregate.operation !== "count") {
     aggregate = { ...aggregate, property: amountProperties[object] };
   }
-  if (weightedPipelineIntent) {
+  if (weightedPipelineIntent && !asksRecords) {
     responseType = "metric";
     aggregate = { operation: "sum", property: SPARK_CHAT_KNOWLEDGE.compositeMetrics.weightedPipeline.property };
   }
@@ -567,10 +569,13 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
     ? plan.metricKind
     : null;
   const inheritedMetricKind = filterOnlyFollowup ? previous?.metricKind ?? null : null;
-  const metricKind = responseType === "metric"
+  const metricKind = responseType === "records" && weightedPipelineIntent ? "weighted_pipeline" : responseType === "metric"
     ? weightedPipelineIntent ? "weighted_pipeline" : detectedCompositeMetric ?? plannerCompositeMetric ?? inheritedMetricKind
     : null;
-  const properties = object === plan.object ? plan.properties : [];
+  const properties = object === plan.object ? [...plan.properties] : [];
+  if (weightedPipelineIntent && responseType === "records" && !properties.includes(SPARK_CHAT_KNOWLEDGE.compositeMetrics.weightedPipeline.property)) {
+    properties.push(SPARK_CHAT_KNOWLEDGE.compositeMetrics.weightedPipeline.property);
+  }
   const guarded = { ...plan, object, responseType, aggregate, groupBy, metricKind, properties, filters: uniqueFilters(filters), associatedDealFilters };
   if (weightedPipelineIntent) guarded.title = SPARK_CHAT_KNOWLEDGE.compositeMetrics.weightedPipeline.label;
   const invoiceSubject = dueDateIntent ? (dueDateOverdue ? "vadesi geçmiş fatura" : "ödemesi olan fatura") : "fatura";
