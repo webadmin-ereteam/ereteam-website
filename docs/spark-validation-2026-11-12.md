@@ -150,3 +150,14 @@ it does not substitute for executing live writes on designated test records.
 After the final pipeline changes, a fresh production refresh succeeded at 20:38
 Istanbul. The exact original pipeline question returned USD 1,355,000 and 20 records
 at 20:39, matching the dashboard; its detail follow-up returned 20 records.
+
+The final code release `e0e85b4` reached Ready through the GitHub-triggered Vercel
+deployment `dpl_Ckzeezfy5kLzuYA5j7FWwK6VBZQK`, including `ereteam.com` and
+`www.ereteam.com`. The previously failing exact question, “Bu ay beklenen
+faturaların detaylarını göster”, then returned eight open orders for November,
+matching the dashboard's monthly order count. An unknown-company invoice query
+returned the expected concise empty result. A further manual refresh succeeded
+at **20:51 Istanbul**, retaining 168 invoices, 23 open orders and 20 active deals.
+The six unauthenticated API checks were repeated during the final review; all
+returned 401. This final review changes documentation only; the 130-check suite,
+production build and scoped lint had passed on the same runtime source.

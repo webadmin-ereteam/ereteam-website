@@ -312,6 +312,11 @@ HubSpot writes are not rolled back. Association reads follow per-record cursors
 and reject repeated cursors rather than silently truncating or looping.
 Pipeline questions use `closedate` unless creation-date wording is explicit;
 both candidate date fields are cleared before the approved range is installed.
+Plain active-pipeline questions cannot inherit a planner-selected weighted metric;
+explicit weighted details remain record lists with the projected-amount field.
+When expected-invoice intent corrects an invoice plan to orders, known date/amount
+sort fields are remapped to the order contract and unsolicited invoice status
+filters are removed. Explicit or unknown filters still require catalog validation.
 See `docs/spark-validation-2026-11-12.md` for coverage and live-test limitations.
 
 Spark's shared `lib/spark/hubspot.ts` transport pins HubSpot API version `2026-09`:
@@ -327,6 +332,17 @@ hold the replacement Service Key without introducing OAuth or a new environment
 variable. Service Key creation and the production credential cutover must be
 verified separately from the API code migration. Spark needs data read/write
 access, but does not subscribe to HubSpot webhooks.
+
+The production cutover was completed on 2026-11-12. The `Spark` Service Key
+(`61485015`, portal `147286586`) is stored in Vercel under the existing variable.
+After explicit user approval, its saved 22 scopes were compared with the legacy
+`Spark Dashboard` app (`48480812`): zero missing and zero extra. The legacy app was
+retained; the scope expansion did not rotate the new key. All 22 scopes are listed
+in the validation report. Fresh production collection and live chatbot reads pass.
+The chatbot remains read-only; authenticated hygiene routes perform allowlisted
+HubSpot writes. No designated test Invoice/Deal exists, so actual Paid transitions
+and association changes remain unverified live; mocked success/error tests and
+server-side readback checks do not replace that verification.
 
 Before cutover, check that the new key covers deals, invoices, orders and companies
 reads, owners and the property/pipeline catalogs, plus deals/invoices/orders writes
