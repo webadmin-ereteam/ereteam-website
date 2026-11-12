@@ -301,6 +301,40 @@ snapshot records a budget-source error and uses target `0` until configuration i
 
 ## HubSpot field contract
 
+### API transport and credential migration
+
+Spark's shared `lib/spark/hubspot.ts` transport pins HubSpot API version `2026-09`:
+objects use `/crm/objects/2026-09`, properties `/crm/properties/2026-09`,
+pipelines `/crm/pipelines/2026-09`, owners `/crm/owners/2026-09`, and batch
+associations `/crm/associations/2026-09`. Deals use the documented canonical
+object type ID `0-3` for object endpoints. Dashboard collection, live chat and
+hygiene updates all share this transport. Financial fields and reporting rules
+are unchanged. Do not automatically retry requests against legacy API versions.
+
+`HUBSPOT_ACCESS_TOKEN` remains the server-only Bearer credential variable; it can
+hold the replacement Service Key without introducing OAuth or a new environment
+variable. Service Key creation and the production credential cutover must be
+verified separately from the API code migration. Spark needs data read/write
+access, but does not subscribe to HubSpot webhooks.
+
+Before cutover, check that the new key covers deals, invoices, orders and companies
+reads, owners and the property/pipeline catalogs, plus deals/invoices/orders writes
+and Invoice-to-Deal associations used by hygiene. Verify the actual available
+scopes in the portal rather than copying unrelated historical migration scopes.
+Keep the old credential available until live read comparisons and deployment
+verification pass. Never paste credentials into chat, logs, source files or commits.
+
+Transport regression tests: `npx vitest run --config vitest.config.mjs tests/unit/spark-hubspot.test.ts`.
+They mock the API; passing them is not proof of live scope or record parity.
+Before production cutover, compare read-only responses and resulting report totals,
+and validate hygiene writes using designated test records in a test account.
+
+References: [API migration](https://developers.hubspot.com/docs/api-reference/legacy/migration-guide),
+[object APIs](https://developers.hubspot.com/docs/api-reference/latest/crm/using-object-apis),
+[Service Keys](https://developers.hubspot.com/blog/hubspot-service-keys-the-right-api-credential-for-data-integrations).
+
+### Financial fields
+
 - Invoice amount/date: `hs_amount_billed_in_company_currency`, `hs_invoice_date`
 - Invoice due/payment date: `hs_due_date`; payment-date intent (`ödemesi/vadesi/due date`)
   filters on it with full calendar periods, and `vadesi geçmiş` means before today.

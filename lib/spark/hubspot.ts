@@ -17,6 +17,11 @@ export type StageMap = Map<string, {
 }>;
 
 const PORTAL_ID = "147286586";
+const API_VERSION = "2026-09";
+
+// The date-based Deals reference uses its canonical object type ID.
+const objectPath = (objectType: string) =>
+  `/crm/objects/${API_VERSION}/${objectType === "deals" ? "0-3" : objectType}`;
 
 function token() {
   const value = process.env.HUBSPOT_ACCESS_TOKEN;
@@ -53,7 +58,7 @@ export async function fetchHubSpotObjects(objectType: string, properties: string
     const params = new URLSearchParams({ limit: "100", properties: properties.join(",") });
     if (after) params.set("after", after);
     const page = await request<{ results: HubSpotObject[]; paging?: { next?: { after: string } } }>(
-      `/crm/v3/objects/${objectType}?${params}`
+      `${objectPath(objectType)}?${params}`
     );
     rows.push(...page.results);
     after = page.paging?.next?.after;
@@ -67,7 +72,7 @@ export async function fetchHubSpotObjectsByIds(objectType: string, ids: string[]
   for (let index = 0; index < uniqueIds.length; index += 100) {
     const inputs = uniqueIds.slice(index, index + 100).map((id) => ({ id }));
     const result = await request<{ results: HubSpotObject[] }>(
-      `/crm/v3/objects/${objectType}/batch/read`,
+      `${objectPath(objectType)}/batch/read`,
       { method: "POST", body: JSON.stringify({ properties, inputs }) },
     );
     rows.push(...result.results);
@@ -77,7 +82,7 @@ export async function fetchHubSpotObjectsByIds(objectType: string, ids: string[]
 
 export async function fetchHubSpotPropertyCatalog(objectType: string) {
   const result = await request<{ results: HubSpotProperty[] }>(
-    `/crm/v3/properties/${objectType}?archived=false`,
+    `/crm/properties/${API_VERSION}/${objectType}?archived=false`,
   );
   return result.results;
 }
@@ -88,7 +93,7 @@ export async function updateHubSpotObjectProperties(
   properties: Record<string, string>,
 ) {
   return request<HubSpotObject>(
-    `/crm/v3/objects/${objectType}/${encodeURIComponent(id)}`,
+    `${objectPath(objectType)}/${encodeURIComponent(id)}`,
     { method: "PATCH", body: JSON.stringify({ properties }) },
   );
 }
@@ -101,7 +106,7 @@ export async function updateHubSpotObjectPropertiesBatch(
   // HubSpot's Invoice batch endpoint returns intermittent 500s for larger payloads.
   for (let index = 0; index < records.length; index += 10) {
     const result = await request<{ results: HubSpotObject[] }>(
-      `/crm/v3/objects/${objectType}/batch/update`,
+      `${objectPath(objectType)}/batch/update`,
       { method: "POST", body: JSON.stringify({ inputs: records.slice(index, index + 10) }) },
     );
     results.push(...result.results);
@@ -119,7 +124,7 @@ export async function fetchHubSpotStages(objectType: "deals" | "orders") {
       metadata?: { probability?: string; isClosed?: string };
     }>;
   }> }>(
-    `/crm/v3/pipelines/${objectType}`
+    `/crm/pipelines/${API_VERSION}/${objectType}`
   );
   const map: StageMap = new Map();
   for (const pipeline of result.results) {
@@ -145,7 +150,7 @@ export async function fetchHubSpotOwners() {
     const result = await request<{
       results: Array<{ id: string; firstName?: string; lastName?: string; email?: string }>;
       paging?: { next?: { after: string } };
-    }>(`/crm/v3/owners?${params}`);
+    }>(`/crm/owners/${API_VERSION}?${params}`);
     owners.push(...result.results);
     after = result.paging?.next?.after;
   } while (after);
@@ -161,7 +166,7 @@ export async function fetchHubSpotAssociations(
   for (let index = 0; index < ids.length; index += 100) {
     const inputs = ids.slice(index, index + 100).map((id) => ({ id }));
     const result = await request<{ results: Array<{ from: { id: string }; to: Array<{ toObjectId: number }> }> }>(
-      `/crm/v4/associations/${from}/${to}/batch/read`,
+      `/crm/associations/${API_VERSION}/${from}/${to}/batch/read`,
       { method: "POST", body: JSON.stringify({ inputs }) }
     );
     for (const row of result.results) map.set(row.from.id, row.to.map((item) => String(item.toObjectId)));
@@ -171,7 +176,7 @@ export async function fetchHubSpotAssociations(
 
 export async function associateHubSpotInvoiceToDeal(invoiceId: string, dealId: string) {
   return request<unknown>(
-    `/crm/v4/objects/invoices/${encodeURIComponent(invoiceId)}/associations/default/deals/${encodeURIComponent(dealId)}`,
+    `${objectPath("invoices")}/${encodeURIComponent(invoiceId)}/associations/default/deals/${encodeURIComponent(dealId)}`,
     { method: "PUT" },
   );
 }
