@@ -459,10 +459,11 @@ export function applySparkQueryGuardrails(plan: QueryPlan, question: string, now
       ? resolveSparkDateRange(`${dateParts(now).year}`, now)
     : range;
   if (enforcedRange) {
-    const knownDateProperties = new Set([...Object.values(dateProperties), invoiceDueDate.property]);
+    const knownDateProperties = new Set([...Object.values(dateProperties), "createdate", "closedate", invoiceDueDate.property]);
     const plannedDealDate = plan.filters.find((filter) => filter.property === "createdate" || filter.property === "closedate")?.property;
-    const dealDate = /\b(acilan|yeni|olusturulan)\b/.test(text) ? "createdate"
+    const dealDate = /\b(acilan|olusturulan|createdate|created\s+date|olusturulma\s+tarihi)\b/.test(text) ? "createdate"
       : /\b(kapanan|kazanilan|kaybedilen)\b/.test(text) ? "closedate"
+      : /\b(pipeline|aktif|acik\s+(?:deal|firsat)|weighted|agirlikli)\b/.test(text) ? "closedate"
       : plannedDealDate ?? dateProperties.deals;
     const dateProperty = object === "deals" ? dealDate : dueDateIntent ? invoiceDueDate.property : dateProperties[object];
     let endExclusive = enforcedRange.endExclusive;

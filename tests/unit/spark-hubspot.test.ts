@@ -71,7 +71,10 @@ describe("Spark date-based HubSpot transport", () => {
   });
 
   it("preserves PATCH payloads and ten-record invoice update batches", async () => {
-    fetchMock.mockImplementation(async () => reply({ results: [] }));
+    fetchMock.mockImplementation(async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      return reply({ results: body.inputs ?? [] });
+    });
     await updateHubSpotObjectProperties("deals", "11", { country: "USA" });
     expect(call(0).url.pathname).toBe("/crm/objects/2026-09/0-3/11");
     expect(call(0).init.method).toBe("PATCH");
@@ -81,6 +84,31 @@ describe("Spark date-based HubSpot transport", () => {
     expect(call(1).url.pathname).toBe("/crm/objects/2026-09/invoices/batch/update");
     expect(call(1).body.inputs).toEqual(records.slice(0, 10));
     expect(call(2).body.inputs).toEqual(records.slice(10));
+  });
+
+  it("rejects partial batch writes even when HubSpot returns HTTP 207", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ results: [{ id: "1", properties: {} }], numErrors: 1, errors: [{ message: "failed" }] }), { status: 207 }));
+    await expect(updateHubSpotObjectPropertiesBatch("invoices", [{ id: "1", properties: { hs_invoice_status: "paid" } }, { id: "2", properties: { hs_invoice_status: "paid" } }])).rejects.toThrow(/toplu işlemi/);
+    fetchMock.mockResolvedValueOnce(reply({ results: [] }));
+    await expect(updateHubSpotObjectPropertiesBatch("orders", [{ id: "1", properties: { country: "USA" } }])).rejects.toThrow(/tüm kayıtların/);
+  });
+
+  it("follows per-record association cursors and merges pages", async () => {
+    fetchMock.mockResolvedValueOnce(reply({ results: [{ from: { id: "1" }, to: [{ toObjectId: 10 }], paging: { next: { after: "p2" } } }, { from: { id: "2" }, to: [] }] }))
+      .mockResolvedValueOnce(reply({ results: [{ from: { id: "1" }, to: [{ toObjectId: 10 }, { toObjectId: 11 }] }] }));
+    expect(await fetchHubSpotAssociations("invoices", ["1", "2"])).toEqual(new Map([["1", ["10", "11"]], ["2", []]]));
+    expect(call(1).body).toEqual({ inputs: [{ id: "1", after: "p2" }] });
+  });
+
+  it("fails rather than looping forever on a repeated association cursor", async () => {
+    fetchMock.mockImplementation(async () => reply({ results: [{ from: { id: "1" }, to: [], paging: { next: { after: "same" } } }] }));
+    await expect(fetchHubSpotAssociations("orders", ["1"])).rejects.toThrow(/ilerlemiyor/);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("accepts an empty 204 response from an association write", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    await expect(associateHubSpotInvoiceToDeal("1", "2")).resolves.toBeUndefined();
   });
 
   it("surfaces authorization errors without falling back to legacy APIs", async () => {

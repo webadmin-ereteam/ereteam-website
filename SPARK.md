@@ -303,6 +303,17 @@ snapshot records a budget-source error and uses target `0` until configuration i
 
 ### API transport and credential migration
 
+The 2026-11-12 validation adds fail-closed batch handling: an HTTP 2xx/207
+response containing errors or missing updated IDs is not success. Hygiene writes
+are read back from HubSpot before the API acknowledges them, including Invoice
+`hs_invoice_status = paid`, multi-select enum sets and Invoice-to-Deal links.
+Partial failures explicitly instruct the user to refresh because already completed
+HubSpot writes are not rolled back. Association reads follow per-record cursors
+and reject repeated cursors rather than silently truncating or looping.
+Pipeline questions use `closedate` unless creation-date wording is explicit;
+both candidate date fields are cleared before the approved range is installed.
+See `docs/spark-validation-2026-11-12.md` for coverage and live-test limitations.
+
 Spark's shared `lib/spark/hubspot.ts` transport pins HubSpot API version `2026-09`:
 objects use `/crm/objects/2026-09`, properties `/crm/properties/2026-09`,
 pipelines `/crm/pipelines/2026-09`, owners `/crm/owners/2026-09`, and batch

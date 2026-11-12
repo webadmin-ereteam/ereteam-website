@@ -41,7 +41,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       cache: "no-store",
       signal: AbortSignal.timeout(20_000),
     });
-    if (response.ok) return response.json() as Promise<T>;
+    if (response.ok) return response.status === 204 ? undefined as T : response.json() as Promise<T>;
     const retryable = response.status === 429 || response.status >= 500;
     if (!retryable || attempt === 2) throw new Error(`HubSpot ${path}: ${response.status}`);
     const retryAfter = Number(response.headers.get("retry-after"));
@@ -49,6 +49,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     await new Promise((resolve) => setTimeout(resolve, Math.min(delay, 5_000)));
   }
   throw new Error(`HubSpot ${path}: istek tamamlanamadı`);
+}
+
+function batchResults<T>(result: { results: T[]; errors?: unknown[]; numErrors?: number }) {
+  if (!Array.isArray(result.results) || result.errors?.length || (result.numErrors ?? 0) > 0) {
+    throw new Error("HubSpot toplu işlemi eksik veya hatalı sonuçlandı. Bazı kayıtlar işlenmiş olabilir; veriyi yenileyip kontrol edin.");
+  }
+  return result.results;
 }
 
 export async function fetchHubSpotObjects(objectType: string, properties: string[]) {
@@ -75,7 +82,7 @@ export async function fetchHubSpotObjectsByIds(objectType: string, ids: string[]
       `${objectPath(objectType)}/batch/read`,
       { method: "POST", body: JSON.stringify({ properties, inputs }) },
     );
-    rows.push(...result.results);
+    rows.push(...batchResults(result));
   }
   return rows;
 }
@@ -109,7 +116,12 @@ export async function updateHubSpotObjectPropertiesBatch(
       `${objectPath(objectType)}/batch/update`,
       { method: "POST", body: JSON.stringify({ inputs: records.slice(index, index + 10) }) },
     );
-    results.push(...result.results);
+    const updated = batchResults(result);
+    const updatedIds = new Set(updated.map((row) => row.id));
+    if (records.slice(index, index + 10).some((row) => !updatedIds.has(row.id))) {
+      throw new Error("HubSpot tüm kayıtların güncellendiğini doğrulamadı. Bazı kayıtlar işlenmiş olabilir; veriyi yenileyip kontrol edin.");
+    }
+    results.push(...updated);
   }
   return results;
 }
@@ -164,12 +176,25 @@ export async function fetchHubSpotAssociations(
 ) {
   const map = new Map<string, string[]>();
   for (let index = 0; index < ids.length; index += 100) {
-    const inputs = ids.slice(index, index + 100).map((id) => ({ id }));
-    const result = await request<{ results: Array<{ from: { id: string }; to: Array<{ toObjectId: number }> }> }>(
-      `/crm/associations/${API_VERSION}/${from}/${to}/batch/read`,
-      { method: "POST", body: JSON.stringify({ inputs }) }
-    );
-    for (const row of result.results) map.set(row.from.id, row.to.map((item) => String(item.toObjectId)));
+    let inputs: Array<{ id: string; after?: string }> = ids.slice(index, index + 100).map((id) => ({ id }));
+    const seenCursors = new Set<string>();
+    while (inputs.length) {
+      const result = await request<{ results: Array<{ from: { id: string }; to: Array<{ toObjectId: number | string }>; paging?: { next?: { after: string } } }> }>(
+        `/crm/associations/${API_VERSION}/${from}/${to}/batch/read`,
+        { method: "POST", body: JSON.stringify({ inputs }) }
+      );
+      inputs = [];
+      for (const row of batchResults(result)) {
+        map.set(row.from.id, Array.from(new Set([...(map.get(row.from.id) ?? []), ...row.to.map((item) => String(item.toObjectId))])));
+        const after = row.paging?.next?.after;
+        if (after) {
+          const cursor = `${row.from.id}:${after}`;
+          if (seenCursors.has(cursor)) throw new Error("HubSpot ilişki sayfalaması ilerlemiyor.");
+          seenCursors.add(cursor);
+          inputs.push({ id: row.from.id, after });
+        }
+      }
+    }
   }
   return map;
 }

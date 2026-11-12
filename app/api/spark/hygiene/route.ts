@@ -118,6 +118,10 @@ export async function POST(request: NextRequest) {
     }
 
     await associateHubSpotInvoiceToDeal(invoiceId, dealId);
+    const verified = await fetchHubSpotAssociations("invoices", [invoiceId]);
+    if (!verified.get(invoiceId)?.includes(dealId)) {
+      throw new Error("Deal bağlantısı HubSpot'tan doğrulanamadı. Veriyi yenileyip kontrol edin.");
+    }
     return NextResponse.json({ ok: true, invoiceId, dealId });
   } catch (error) {
     return NextResponse.json(
@@ -158,15 +162,25 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    await Promise.all(uniqueObjectTypes.map((objectType) => {
+    await Promise.all(uniqueObjectTypes.map(async (objectType) => {
       const property = catalogs.get(objectType)?.find((item) => item.name === parsed.data.property);
       const value = property?.fieldType === "checkbox" ? parsed.data.values.join(";") : parsed.data.values[0];
-      return updateHubSpotObjectPropertiesBatch(
+      await updateHubSpotObjectPropertiesBatch(
         objectTypes[objectType],
         parsed.data.records
           .filter((record) => record.objectType === objectType)
           .map((record) => ({ id: record.id, properties: { [parsed.data.property]: value } })),
       );
+      const ids = parsed.data.records.filter((record) => record.objectType === objectType).map((record) => record.id);
+      const verified = await fetchHubSpotObjectsByIds(objectTypes[objectType], ids, [parsed.data.property]);
+      const byId = new Map(verified.map((row) => [row.id, row.properties[parsed.data.property]]));
+      const expected = new Set(parsed.data.values);
+      if (ids.some((id) => {
+        const actual = byId.get(id);
+        if (property?.fieldType !== "checkbox") return actual !== value;
+        const tokens = new Set((actual ?? "").split(";").map((item) => item.trim()).filter(Boolean));
+        return tokens.size !== expected.size || [...expected].some((item) => !tokens.has(item));
+      })) throw new Error("Güncelleme HubSpot'tan doğrulanamadı. Bazı kayıtlar işlenmiş olabilir; veriyi yenileyip kontrol edin.");
     }));
     return NextResponse.json({
       ok: true,
